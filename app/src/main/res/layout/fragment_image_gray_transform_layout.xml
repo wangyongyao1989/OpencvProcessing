@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F5F5">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- 顶部：返回 + 标题 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_back"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="← 返回"
+                android:textAllCaps="false"
+                tools:ignore="HardcodedText" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:text="图像的灰度变换（《数字图像与视频处理》2.2 节）"
+                android:textColor="#000000"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                tools:ignore="HardcodedText" />
+        </LinearLayout>
+
+        <!-- 9 个 checkbar：3x3 网格，一次仅选一个 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="请选择一种灰度变换方法（一次仅选中一项）："
+            android:textColor="#000000"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            tools:ignore="HardcodedText" />
+
+        <GridLayout
+            android:id="@+id/gl_options"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:columnCount="2"
+            android:alignmentMode="alignMargins">
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cb_01_original"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="2dp"
+                android:paddingHorizontal="4dp"
+                android:text="① 显示原始图像"
+                android:textColor="#000000"
+                android:textSize="14sp"
+                android:checked="true"
+                tools:ignore="HardcodedText" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cb_02_linear"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="2dp"
+                android:paddingHorizontal="4dp"
+                android:text="② 灰度线性变换 (式 2-1)"
+                android:textColor="#000000"
+                android:textSize="14sp"
+                tools:ignore="HardcodedText" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cb_03_invert"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="2dp"
+                android:paddingHorizontal="4dp"
+                android:text="③ 反转变换 (图 2-3)"
+                android:textColor="#000000"
+                android:textSize="14sp"
+                tools:ignore="HardcodedText" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cb_04_piecewise"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="2dp"
+                android:paddingHorizontal="4dp"
+                android:text="④ 分段线性 (式 2-2/2-3)"
+                android:textColor="#000000"
+                android:textSize="14sp"
+                tools:ignore="HardcodedText" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cb_05_clip"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="2dp"
+                android:paddingHorizontal="4dp"
+                android:text="⑤ 削波 (图 2-6, 式 2-3)"
+                android:textColor="#000000"
+                android:textSize="14sp"
+                tools:ignore="HardcodedText" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cb_06_threshold"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="2dp"
+                android:paddingHorizontal="4dp"
+                android:text="⑥ 阈值化 (图 2-7, 式 2-3)"
+                android:textColor="#000000"
+                android:textSize="14sp"
+                tools:ignore="HardcodedText" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cb_07_log"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="2dp"
+                android:paddingHorizontal="4dp"
+                android:text="⑦ 对数变换 (式 2-4)"
+                android:textColor="#000000"
+                android:textSize="14sp"
+                tools:ignore="HardcodedText" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cb_08_gamma"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="2dp"
+                android:paddingHorizontal="4dp"
+                android:text="⑧ 伽马变换 (式 2-5)"
+                android:textColor="#000000"
+                android:textSize="14sp"
+                tools:ignore="HardcodedText" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cb_09_histeq"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="2dp"
+                android:paddingHorizontal="4dp"
+                android:text="⑨ 直方图均衡化 (式 2-14)"
+                android:textColor="#000000"
+                android:textSize="14sp"
+                tools:ignore="HardcodedText" />
+        </GridLayout>
+
+        <!-- 并排图像：原图 vs 处理后 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:baselineAligned="false">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="原 图"
+                    android:textColor="#000000"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    tools:ignore="HardcodedText" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="300dp"
+                    android:layout_marginTop="6dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="2dp">
+
+                    <com.wangyao.opencvprocessing.view.ZoomImageView
+                        android:id="@+id/iv_original"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="原图"
+                        android:background="#FFFFFF" />
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_result_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="处理后"
+                    android:textColor="#000000"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    tools:ignore="HardcodedText" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="300dp"
+                    android:layout_marginTop="6dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="2dp">
+
+                    <com.wangyao.opencvprocessing.view.ZoomImageView
+                        android:id="@+id/iv_result"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="处理后图像"
+                        android:background="#FFFFFF" />
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 原理及公式卡片 -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="24dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/teal_700"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="原理及公式"
+                    android:textColor="#018786"
+                    android:textStyle="bold"
+                    android:textSize="18sp"
+                    tools:ignore="HardcodedText" />
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="260dp"
+                    android:layout_marginTop="8dp"
+                    android:fillViewport="true">
+
+                    <TextView
+                        android:id="@+id/tv_formula"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:lineSpacingExtra="4dp"
+                        android:textSize="16sp"
+                        android:textColor="#000000"
+                        tools:text="公式内容将在此处显示。" />
+                </ScrollView>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
