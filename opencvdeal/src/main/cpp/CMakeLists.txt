@@ -24,6 +24,7 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
         ImageProcessor.cpp
         JniHelper.cpp
         CtSeriesProcessor.cpp
+        GrayTransform.cpp
 )
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE

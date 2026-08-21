@@ -26,97 +26,41 @@ object OpencvDealJni {
     @JvmStatic
     external fun getOpencvVersion(): String
 
-    /**
-     * 调窗对比：重负载（裁剪/HU/去噪/重采样/增强）只跑一次，
-     * 8-bit 映射按 windowMethods 列表逐个执行。
-     */
-    @JvmStatic
-    external fun processMedicalCTCompareWindows(
-        rawBuffer: ByteArray,
-        width: Int,
-        height: Int,
-        bitDepth: Int,
-        bigEndian: Boolean,
-        isUint16: Boolean,
-        ops: IntArray,
-        params: DoubleArray,
-        windowMethods: IntArray,
-        outDisplays: Array<ByteArray?>,
-        outInfo: IntArray,
-        outHuRange: DoubleArray?
-    )
 
-    /**
-     * 获取经过算子链处理（如裁剪）后的 16-bit 原始像素数据。
-     * 用于写入 DICOM 文件。
-     */
-    @JvmStatic
-    external fun getProcessedRawPixels(
-        rawBuffer: ByteArray,
-        width: Int,
-        height: Int,
-        bitDepth: Int,
-        bigEndian: Boolean,
-        isUint16: Boolean,
-        ops: IntArray,
-        params: DoubleArray,
-        windowMethod: Int,
-        outInfo: IntArray
-    ): ByteArray?
 
-    /**
-     * 图像后处理：对比度、亮度、锐化、反色、伪彩、浮雕。
-     */
-    @JvmStatic
-    external fun processImage(
-        bitmap: Bitmap,
-        contrast: Double,
-        brightness: Double,
-        sharpenDegree: Double,
-        invert: Boolean,
-        falseColor: Boolean,
-        relief: Boolean,
-        min: Double,
-        max: Double
-    ): Bitmap?
+    // =========================================================================
+    // 灰度变换方法（基于《数字图像与视频处理》2.2 节）
+    // =========================================================================
 
-    /**
-     * 图像旋转。
-     */
+    /** 灰度的线性变换 (式 2-1)：将灰度范围 [a,b] 线性映射到 [c,d] */
     @JvmStatic
-    external fun applyRotation(bitmap: Bitmap, angle: Double): Bitmap?
+    external fun grayLinearTransform(bitmap: Bitmap, a: Double, b: Double, c: Double, d: Double): Bitmap?
 
-    // 细粒度接口 (基于 Mat 地址)
+    /** 图像的反转变换 (图 2-3)：黑变白、白变黑 */
     @JvmStatic
-    external fun convertToGrayScale(bitmap: Bitmap): Long
+    external fun grayInvertTransform(bitmap: Bitmap): Bitmap?
 
+    /** 三段分段线性变换 / 对比度扩展 (式 2-3)：压缩 [0,a] 和 [b,255]，扩展 [a,b] */
     @JvmStatic
-    external fun appBrightnessContrast(
-        matAddr: Long,
-        contrast: Double,
-        brightness: Double,
-        min: Double,
-        max: Double
-    ): Long
+    external fun grayPiecewiseLinear(bitmap: Bitmap, a: Double, b: Double, c: Double, d: Double): Bitmap?
 
+    /** 削波处理 (图 2-6)：抑制 [0,a] 和 [b,255]，扩展 [a,b] */
     @JvmStatic
-    external fun applySharpen(matAddr: Long, sharpen: Double, min: Double, max: Double): Long
+    external fun grayClipTransform(bitmap: Bitmap, a: Double, b: Double): Bitmap?
 
+    /** 阈值化 (图 2-7)：大于阈值为白，否则为黑，得到二值图像 */
     @JvmStatic
-    external fun applyInvertedColor(matAddr: Long, invert: Boolean): Long
+    external fun grayThresholdTransform(bitmap: Bitmap, threshold: Double): Bitmap?
 
+    /** 对数变换 (式 2-4)：扩展低灰度范围，压缩高灰度范围 */
     @JvmStatic
-    external fun applyFalseColor(matAddr: Long, falseColor: Boolean): Long
+    external fun grayLogTransform(bitmap: Bitmap, c: Double): Bitmap?
 
+    /** 伽马（指数）变换 (式 2-5)：γ>1 压缩高灰度，γ<1 压缩低灰度 */
     @JvmStatic
-    external fun applyRotationMat(matAddr: Long, angle: Double): Long
+    external fun grayGammaTransform(bitmap: Bitmap, c: Double, gamma: Double): Bitmap?
 
+    /** 直方图均衡化 (式 2-14)：使灰度分布均匀，增大对比度 */
     @JvmStatic
-    external fun applyEmbossingEffect(matAddr: Long, embossed: Boolean): Long
-
-    @JvmStatic
-    external fun convertMatToBitmap(matAddr: Long, width: Int, height: Int): Bitmap?
-
-    @JvmStatic
-    external fun releaseMat(matAddr: Long)
+    external fun grayHistogramEqualize(bitmap: Bitmap): Bitmap?
 }
