@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.TextView
 import com.wangyao.opencvprocessing.databinding.ActivityMainBinding
+import com.wangyao.opencvdeal.jni.OpencvDealJni
 
 class MainActivity : AppCompatActivity() {
 
@@ -15,8 +16,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Example of a call to a native method
-        binding.sampleText.text = stringFromJNI()
+        // 显示 OpenCV 版本号（由 opencvdeal 模块提供）
+        binding.sampleText.text = "OpenCV version: ${OpencvDealJni.getOpencvVersion()}"
     }
 
     /**
