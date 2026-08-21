@@ -8,6 +8,16 @@
 namespace JniHelper {
 
     /**
+     * @brief 辅助函数：将灰度 cv::Mat 转换为 ARGB_8888 Bitmap
+     */
+    jobject grayMatToBitmap(JNIEnv *env, const cv::Mat &gray, int width, int height);
+
+    /**
+     * @brief 辅助函数：将 Android Bitmap 转换为 cv::Mat (RGBA)
+     */
+    cv::Mat bitmapToMat(JNIEnv *env, jobject bitmap);
+
+    /**
      * @brief 从 rawBuffer 构造 cv::Mat（不拷贝）。
      */
     cv::Mat wrapRawMat(const uint8_t *data, int width, int height,
@@ -25,4 +35,4 @@ namespace JniHelper {
 
 }
 
-#endif //RAWPIXELDEAL_JNIHELPER_H
+#endif //OPENCVDEAL_JNIHELPER_H
