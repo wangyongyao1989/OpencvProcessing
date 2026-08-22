@@ -23,6 +23,9 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
         GrayTransform.cpp
         ImageSmoothDenoise.cpp
         ImageSharpen.cpp
+        ImageHomomorphic.cpp
+        ImageRetinex.cpp
+        ImageColorEnhance.cpp
         JniHelper.cpp
 )
 

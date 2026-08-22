@@ -137,4 +137,88 @@ object OpencvDealJni {
     /** 高斯高通滤波锐化 (式 2-79)：平滑过渡无振铃 */
     @JvmStatic
     external fun sharpGaussianHighPass(bitmap: Bitmap, d0: Double): Bitmap?
+
+
+    // =========================================================================
+    // 图像的同态滤波方法（基于《数字图像与视频处理》2.5 节）
+    // =========================================================================
+
+    /** 同态滤波全流程 (式 2-81~2-87)：ln→DFT→H·F→IDFT→exp，压缩照度增强反射 */
+    @JvmStatic
+    external fun homoFilter(bitmap: Bitmap, d0: Double, c: Double,
+                            hl: Double, hh: Double): Bitmap?
+
+    /** 对数域可视化 (式 2-82)：z = ln f，乘性模型转加性 */
+    @JvmStatic
+    external fun homoLogDomain(bitmap: Bitmap): Bitmap?
+
+    /** 照度分量 i 估计 (式 2-81)：低频缓变光照场 */
+    @JvmStatic
+    external fun homoIllumination(bitmap: Bitmap): Bitmap?
+
+    /** 反射分量 r 估计 (式 2-81)：高频细节/边缘 */
+    @JvmStatic
+    external fun homoReflectance(bitmap: Bitmap): Bitmap?
+
+
+    // =========================================================================
+    // 基于 Retinex 理论的图像增强方法（基于 2.6 节）
+    // =========================================================================
+
+    /** 光照分量 L 估计 (式 2-88, 2-92)：高斯环绕卷积 */
+    @JvmStatic
+    external fun retinexIllumination(bitmap: Bitmap, sigma: Double): Bitmap?
+
+    /** 反射分量 r 可视化 (式 2-89~2-91)：灰度显示 */
+    @JvmStatic
+    external fun retinexReflectance(bitmap: Bitmap, sigma: Double): Bitmap?
+
+    /** SSR 单尺度 Retinex (式 2-91, 2-92) */
+    @JvmStatic
+    external fun retinexSSR(bitmap: Bitmap, sigma: Double): Bitmap?
+
+    /** MSR 多尺度 Retinex (式 2-93, 2-94)：多尺度加权融合 */
+    @JvmStatic
+    external fun retinexMSR(bitmap: Bitmap, sigmas: DoubleArray): Bitmap?
+
+    /** MSRCR 带颜色恢复的多尺度 Retinex (式 2-95, 2-96) */
+    @JvmStatic
+    external fun retinexMSRCR(bitmap: Bitmap, sigmas: DoubleArray): Bitmap?
+
+
+    // =========================================================================
+    // 彩色增强方法（基于 2.7 节：伪彩色 + 假彩色）
+    // =========================================================================
+
+    /** 灰度分层法 两层切割 (图 2-47)：两种颜色伪彩色 */
+    @JvmStatic
+    external fun colorGraySlice2(bitmap: Bitmap, l1: Int): Bitmap?
+
+    /** 灰度分层法 多平面切割 (图 2-48)：M+1 种颜色伪彩色 */
+    @JvmStatic
+    external fun colorGraySliceMulti(bitmap: Bitmap, m: Int): Bitmap?
+
+    /** 灰度级彩色变换 (图 2-49)：三通道不同变换特性合成连续彩色 */
+    @JvmStatic
+    external fun colorGrayLevelTransform(bitmap: Bitmap): Bitmap?
+
+    /** 频率域滤波法伪彩色 (图 2-50)：低通/带通/高通 → R/G/B */
+    @JvmStatic
+    external fun colorFrequencyPseudo(bitmap: Bitmap): Bitmap?
+
+    /** 假彩色 线性映射 (式 2-97)：通道轮换矩阵 */
+    @JvmStatic
+    external fun colorFalseLinear(bitmap: Bitmap): Bitmap?
+
+    /** 假彩色 细节赋予绿色 (式 2-97)：人眼对绿色灵敏 */
+    @JvmStatic
+    external fun colorFalseGreen(bitmap: Bitmap): Bitmap?
+
+    /** 假彩色 细节赋予蓝色 (式 2-97)：蓝色对比灵敏度高 */
+    @JvmStatic
+    external fun colorFalseBlue(bitmap: Bitmap): Bitmap?
+
+    /** 假彩色 多光谱合成 (式 2-98)：波段差分变换 */
+    @JvmStatic
+    external fun colorFalseMultiSpectral(bitmap: Bitmap): Bitmap?
 }

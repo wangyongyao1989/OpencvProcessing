@@ -10,10 +10,13 @@ import com.wangyao.opencvprocessing.databinding.FragmentImageEnhanceLayoutBindin
 
 /**
  * 二级菜单：图像增强（《数字图像与视频处理》第 2 章）。
- * 提供三个子功能入口：
+ * 提供六个子功能入口：
  * - 图像灰度变换（2.2 节）→ ImageGrayTransformFragment
  * - 图像平滑与去噪（2.3 节）→ ImageSmoothDenoiseFragment
  * - 图像锐化（2.4 节）→ ImageSharpenFragment
+ * - 图像的同态滤波（2.5 节）→ ImageHomomorphicFragment
+ * - 基于 Retinex 理论的图像增强（2.6 节）→ ImageRetinexFragment
+ * - 彩色增强（2.7 节）→ ImageColorEnhanceFragment
  */
 class ImageEnhanceFragment : BaseFragment() {
 
@@ -55,6 +58,24 @@ class ImageEnhanceFragment : BaseFragment() {
         binding.btnSharpen.setOnClickListener {
             ffViewModel.switchFragment
                 .postValue(FFViewModel.FRAGMENT_STATUS.IMAGE_SHARPEN)
+        }
+
+        // 三级页：图像的同态滤波
+        binding.btnHomomorphic.setOnClickListener {
+            ffViewModel.switchFragment
+                .postValue(FFViewModel.FRAGMENT_STATUS.IMAGE_HOMOMORPHIC)
+        }
+
+        // 三级页：基于 Retinex 理论的图像增强
+        binding.btnRetinex.setOnClickListener {
+            ffViewModel.switchFragment
+                .postValue(FFViewModel.FRAGMENT_STATUS.IMAGE_RETINEX)
+        }
+
+        // 三级页：彩色增强
+        binding.btnColorEnhance.setOnClickListener {
+            ffViewModel.switchFragment
+                .postValue(FFViewModel.FRAGMENT_STATUS.IMAGE_COLOR_ENHANCE)
         }
     }
 }

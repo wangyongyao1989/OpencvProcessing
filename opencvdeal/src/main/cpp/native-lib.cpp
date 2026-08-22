@@ -10,6 +10,9 @@
 #include "include/GrayTransform.h"
 #include "include/ImageSmoothDenoise.h"
 #include "include/ImageSharpen.h"
+#include "include/ImageHomomorphic.h"
+#include "include/ImageRetinex.h"
+#include "include/ImageColorEnhance.h"
 
 #define TAG "OpencvDealJni"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  TAG, __VA_ARGS__)
@@ -339,6 +342,240 @@ Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpGaussianHighPass(JNIEnv *env,
 
 
 // =============================================================================
+// 图像的同态滤波 JNI 方法（基于《数字图像与视频处理》2.5 节）
+// =============================================================================
+
+// --- 同态滤波全流程 (式 2-81 ~ 式 2-87) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_homoFilter(JNIEnv *env, jclass,
+                                                         jobject bitmap,
+                                                         jdouble d0, jdouble c,
+                                                         jdouble hl, jdouble hh) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageHomomorphic::homomorphicFilter(src, d0, c, hl, hh);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 对数域可视化 (式 2-82) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_homoLogDomain(JNIEnv *env, jclass,
+                                                            jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageHomomorphic::logDomainImage(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 照度分量估计 (式 2-81 低频分量) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_homoIllumination(JNIEnv *env, jclass,
+                                                               jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageHomomorphic::illuminationComponent(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 反射分量估计 (式 2-81 高频分量) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_homoReflectance(JNIEnv *env, jclass,
+                                                              jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageHomomorphic::reflectanceComponent(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// =============================================================================
+// 基于 Retinex 理论的图像增强 JNI 方法（基于 2.6 节）
+// =============================================================================
+
+// --- 光照分量估计 (式 2-88, 式 2-92) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_retinexIllumination(JNIEnv *env, jclass,
+                                                                  jobject bitmap,
+                                                                  jdouble sigma) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageRetinex::illuminationEstimate(src, sigma);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 反射分量可视化 (式 2-89 ~ 式 2-91) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_retinexReflectance(JNIEnv *env, jclass,
+                                                                 jobject bitmap,
+                                                                 jdouble sigma) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageRetinex::reflectanceGray(src, sigma);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- SSR 单尺度 Retinex (式 2-91, 式 2-92) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_retinexSSR(JNIEnv *env, jclass,
+                                                         jobject bitmap,
+                                                         jdouble sigma) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageRetinex::ssr(src, sigma);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- MSR 多尺度 Retinex (式 2-93, 式 2-94) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_retinexMSR(JNIEnv *env, jclass,
+                                                         jobject bitmap,
+                                                         jdoubleArray sigmas) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+
+    jsize len = env->GetArrayLength(sigmas);
+    std::vector<double> vec(len);
+    env->GetDoubleArrayRegion(sigmas, 0, len, vec.data());
+    cv::Mat result = ImageRetinex::msr(src, vec);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- MSRCR 带颜色恢复的多尺度 Retinex (式 2-95, 式 2-96) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_retinexMSRCR(JNIEnv *env, jclass,
+                                                           jobject bitmap,
+                                                           jdoubleArray sigmas) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+
+    jsize len = env->GetArrayLength(sigmas);
+    std::vector<double> vec(len);
+    env->GetDoubleArrayRegion(sigmas, 0, len, vec.data());
+    cv::Mat result = ImageRetinex::msrcr(src, vec);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// =============================================================================
+// 彩色增强 JNI 方法（基于 2.7 节：伪彩色 + 假彩色）
+// =============================================================================
+
+// --- 灰度分层法 两层切割 (图 2-47) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorGraySlice2(JNIEnv *env, jclass,
+                                                              jobject bitmap,
+                                                              jint l1) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageColorEnhance::graySlice2(src, l1);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 灰度分层法 多平面切割 (图 2-48) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorGraySliceMulti(JNIEnv *env, jclass,
+                                                                  jobject bitmap,
+                                                                  jint m) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageColorEnhance::graySliceMulti(src, m);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 灰度级彩色变换 (图 2-49) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorGrayLevelTransform(JNIEnv *env, jclass,
+                                                                      jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageColorEnhance::grayLevelColorTransform(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 频率域滤波法伪彩色 (图 2-50) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorFrequencyPseudo(JNIEnv *env, jclass,
+                                                                   jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageColorEnhance::frequencyPseudoColor(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 假彩色 线性映射 (式 2-97) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorFalseLinear(JNIEnv *env, jclass,
+                                                               jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageColorEnhance::falseColorLinear(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 假彩色 细节赋予绿色 (式 2-97) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorFalseGreen(JNIEnv *env, jclass,
+                                                              jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageColorEnhance::falseColorGreenSensitive(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 假彩色 细节赋予蓝色 (式 2-97) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorFalseBlue(JNIEnv *env, jclass,
+                                                             jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageColorEnhance::falseColorBlueDetail(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 假彩色 多光谱合成 (式 2-98) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorFalseMultiSpectral(JNIEnv *env, jclass,
+                                                                      jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageColorEnhance::falseColorMultiSpectral(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+
+// =============================================================================
 // JNI 注册
 // =============================================================================
 static const char *const kClassName = "com/wangyao/opencvdeal/jni/OpencvDealJni";
@@ -396,6 +633,43 @@ static const JNINativeMethod kMethods[] = {
                 (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpIdealHighPass},
         {"sharpGaussianHighPass",  "(Landroid/graphics/Bitmap;D)Landroid/graphics/Bitmap;",
                 (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpGaussianHighPass},
+        // 同态滤波方法
+        {"homoFilter",             "(Landroid/graphics/Bitmap;DDDD)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_homoFilter},
+        {"homoLogDomain",          "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_homoLogDomain},
+        {"homoIllumination",       "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_homoIllumination},
+        {"homoReflectance",        "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_homoReflectance},
+        // Retinex 增强方法
+        {"retinexIllumination",    "(Landroid/graphics/Bitmap;D)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_retinexIllumination},
+        {"retinexReflectance",     "(Landroid/graphics/Bitmap;D)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_retinexReflectance},
+        {"retinexSSR",             "(Landroid/graphics/Bitmap;D)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_retinexSSR},
+        {"retinexMSR",             "(Landroid/graphics/Bitmap;[D)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_retinexMSR},
+        {"retinexMSRCR",           "(Landroid/graphics/Bitmap;[D)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_retinexMSRCR},
+        // 彩色增强方法
+        {"colorGraySlice2",        "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorGraySlice2},
+        {"colorGraySliceMulti",    "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorGraySliceMulti},
+        {"colorGrayLevelTransform", "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorGrayLevelTransform},
+        {"colorFrequencyPseudo",   "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorFrequencyPseudo},
+        {"colorFalseLinear",       "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorFalseLinear},
+        {"colorFalseGreen",        "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorFalseGreen},
+        {"colorFalseBlue",         "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorFalseBlue},
+        {"colorFalseMultiSpectral", "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorFalseMultiSpectral},
 };
 
 extern "C" jint JNICALL JNI_OnLoad(JavaVM *vm, void *) {
