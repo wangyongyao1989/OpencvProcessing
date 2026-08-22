@@ -17,6 +17,8 @@ import com.wangyao.opencvprocessing.fragment.ImageColorEnhanceFragment
 import com.wangyao.opencvprocessing.fragment.ImageSharpenFragment
 import com.wangyao.opencvprocessing.fragment.ImageSmoothDenoiseFragment
 import com.wangyao.opencvprocessing.fragment.MainFragment
+import com.wangyao.opencvprocessing.fragment.MorphOpFragment
+import com.wangyao.opencvprocessing.fragment.MorphologyFragment
 
 /**
  * 应用唯一的 Activity，负责：
@@ -57,11 +59,17 @@ class MainActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // 三级返回链：三级功能页 → 二级菜单「图像增强」 → 主界面 → 退出
+                // 三级返回链：
+                // 图像增强族三级页 → 二级「图像增强」 → 主界面 → 退出
+                // 形态学三级页 → 二级「形态学图像处理」 → 主界面 → 退出
                 when (currentFragment) {
                     is MainFragment -> finish()
                     is ImageEnhanceFragment ->
                         selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
+                    is MorphologyFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
+                    is MorphOpFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.MORPHOLOGY)
                     else -> selectFragment(FFViewModel.FRAGMENT_STATUS.IMAGE_ENHANCE)
                 }
             }
@@ -84,6 +92,15 @@ class MainActivity : AppCompatActivity() {
                 FFViewModel.FRAGMENT_STATUS.IMAGE_HOMOMORPHIC -> ImageHomomorphicFragment()
                 FFViewModel.FRAGMENT_STATUS.IMAGE_RETINEX -> ImageRetinexFragment()
                 FFViewModel.FRAGMENT_STATUS.IMAGE_COLOR_ENHANCE -> ImageColorEnhanceFragment()
+                FFViewModel.FRAGMENT_STATUS.MORPHOLOGY -> MorphologyFragment()
+                FFViewModel.FRAGMENT_STATUS.MORPH_BIN_BASIC ->
+                    MorphOpFragment.instantiate(FFViewModel.FRAGMENT_STATUS.MORPH_BIN_BASIC)
+                FFViewModel.FRAGMENT_STATUS.MORPH_BIN_PROCESS ->
+                    MorphOpFragment.instantiate(FFViewModel.FRAGMENT_STATUS.MORPH_BIN_PROCESS)
+                FFViewModel.FRAGMENT_STATUS.MORPH_GRAY_BASIC ->
+                    MorphOpFragment.instantiate(FFViewModel.FRAGMENT_STATUS.MORPH_GRAY_BASIC)
+                FFViewModel.FRAGMENT_STATUS.MORPH_GRAY_PROCESS ->
+                    MorphOpFragment.instantiate(FFViewModel.FRAGMENT_STATUS.MORPH_GRAY_PROCESS)
             }
         }
 

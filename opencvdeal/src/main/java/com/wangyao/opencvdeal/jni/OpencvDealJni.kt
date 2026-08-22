@@ -221,4 +221,102 @@ object OpencvDealJni {
     /** 假彩色 多光谱合成 (式 2-98)：波段差分变换 */
     @JvmStatic
     external fun colorFalseMultiSpectral(bitmap: Bitmap): Bitmap?
+
+
+    // =========================================================================
+    // 形态学图像处理方法（基于《数字图像与视频处理》第 3 章）
+    // shape：0=矩形结构元素，1=圆形（椭圆）结构元素
+    // =========================================================================
+
+    /** Otsu 自动阈值二值化（二值形态学运算预处理） */
+    @JvmStatic
+    external fun morphBinarize(bitmap: Bitmap): Bitmap?
+
+    /** 二值腐蚀 (式 3-9)：A㊀B = {x | B+x ⊆ A}，缩小目标 */
+    @JvmStatic
+    external fun morphBinErode(bitmap: Bitmap, ksize: Int, shape: Int): Bitmap?
+
+    /** 二值膨胀 (式 3-10/3-11)：扩大目标、桥接裂缝 */
+    @JvmStatic
+    external fun morphBinDilate(bitmap: Bitmap, ksize: Int, shape: Int): Bitmap?
+
+    /** 二值开运算 (式 3-15/3-16)：先腐蚀后膨胀，去亮噪声毛刺 */
+    @JvmStatic
+    external fun morphBinOpen(bitmap: Bitmap, ksize: Int, shape: Int): Bitmap?
+
+    /** 二值闭运算 (式 3-17)：先膨胀后腐蚀，填暗孔洞细缝 */
+    @JvmStatic
+    external fun morphBinClose(bitmap: Bitmap, ksize: Int, shape: Int): Bitmap?
+
+    /** 对偶性 (式 3-13/3-14)：Aᶜ㊀B̂ = (A⊕B)ᶜ */
+    @JvmStatic
+    external fun morphBinDuality(bitmap: Bitmap, ksize: Int): Bitmap?
+
+    /** 内边缘 (式 3-20)：β内(A) = A − (A㊀B) */
+    @JvmStatic
+    external fun morphBinInnerEdge(bitmap: Bitmap, ksize: Int): Bitmap?
+
+    /** 外边缘 (式 3-21)：β外(A) = (A⊕B) − A */
+    @JvmStatic
+    external fun morphBinOuterEdge(bitmap: Bitmap, ksize: Int): Bitmap?
+
+    /** 梯度边缘 (式 3-22)：β梯度(A) = (A⊕B) − (A㊀B) */
+    @JvmStatic
+    external fun morphBinGradEdge(bitmap: Bitmap, ksize: Int): Bitmap?
+
+    /** 区域填充 (式 3-23)：Xk = (X(k-1)⊕B) ∩ Aᶜ 迭代 */
+    @JvmStatic
+    external fun morphBinFillHoles(bitmap: Bitmap, ksize: Int): Bitmap?
+
+    /** 骨架抽取 (式 3-24~3-28)：S(A) = ∪Sn(A) */
+    @JvmStatic
+    external fun morphBinSkeleton(bitmap: Bitmap, ksize: Int): Bitmap?
+
+    /** 细化 (式 3-29~3-31)：保持连通性的单像素宽骨架 */
+    @JvmStatic
+    external fun morphBinThinning(bitmap: Bitmap): Bitmap?
+
+    /** 形态开-闭滤波 (式 3-34)：去前景+背景噪声 */
+    @JvmStatic
+    external fun morphBinOpenCloseFilter(bitmap: Bitmap, ksize: Int): Bitmap?
+
+    /** 灰度腐蚀 (式 3-36/3-37)：min 滤波，变暗去亮细节 */
+    @JvmStatic
+    external fun morphGrayErode(bitmap: Bitmap, ksize: Int, shape: Int): Bitmap?
+
+    /** 灰度膨胀 (式 3-38/3-39)：max 滤波，变亮去暗细节 */
+    @JvmStatic
+    external fun morphGrayDilate(bitmap: Bitmap, ksize: Int, shape: Int): Bitmap?
+
+    /** 灰度开运算 (式 3-42)：削平比结构元素小的亮峰 */
+    @JvmStatic
+    external fun morphGrayOpen(bitmap: Bitmap, ksize: Int, shape: Int): Bitmap?
+
+    /** 灰度闭运算 (式 3-43)：填充比结构元素小的暗谷 */
+    @JvmStatic
+    external fun morphGrayClose(bitmap: Bitmap, ksize: Int, shape: Int): Bitmap?
+
+    /** 形态学梯度 (式 3-46)：g = (f⊕b) − (f㊀b) */
+    @JvmStatic
+    external fun morphGrayGradient(bitmap: Bitmap, ksize: Int, shape: Int): Bitmap?
+
+    /** 形态开-闭平滑 (式 3-47) */
+    @JvmStatic
+    external fun morphGrayOpenClose(bitmap: Bitmap, ksize: Int, shape: Int): Bitmap?
+
+    /** 形态闭-开平滑 (式 3-48) */
+    @JvmStatic
+    external fun morphGrayCloseOpen(bitmap: Bitmap, ksize: Int, shape: Int): Bitmap?
+
+    /** Top-Hat 高帽变换 (式 3-49)：f − (f°b) 检测亮波峰 */
+    @JvmStatic
+    external fun morphGrayTopHat(bitmap: Bitmap, ksize: Int, shape: Int): Bitmap?
+
+    /** Bottom-Hat 低帽变换 (表 3-1)：(f·b) − f 检测暗波谷 */
+    @JvmStatic
+    external fun morphGrayBottomHat(bitmap: Bitmap, ksize: Int, shape: Int): Bitmap?
+
+    /** Top-Hat 增强：f + TopHat − BottomHat */
+    @JvmStatic
+    external fun morphGrayTopHatEnhance(bitmap: Bitmap, ksize: Int, shape: Int): Bitmap?
 }

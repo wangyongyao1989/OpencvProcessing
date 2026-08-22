@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ZoomImageView 自定义属性 -->
+    <declare-styleable name="ZoomImageView">
+        <!-- 是否启用手势缩放/拖动；装饰性图标设为 false 以免拦截父容器点击 -->
+        <attr name="zoomEnabled" format="boolean" />
+    </declare-styleable>
+</resources>

@@ -13,6 +13,7 @@
 #include "include/ImageHomomorphic.h"
 #include "include/ImageRetinex.h"
 #include "include/ImageColorEnhance.h"
+#include "include/ImageMorphology.h"
 
 #define TAG "OpencvDealJni"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  TAG, __VA_ARGS__)
@@ -576,6 +577,308 @@ Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorFalseMultiSpectral(JNIEnv *en
 
 
 // =============================================================================
+// 形态学图像处理 JNI 方法（基于《数字图像与视频处理》第 3 章）
+// =============================================================================
+
+// --- Otsu 二值化（二值形态学预处理） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinarize(JNIEnv *env, jclass,
+                                                            jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::binarize(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 二值腐蚀 (式 3-9) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinErode(JNIEnv *env, jclass,
+                                                            jobject bitmap,
+                                                            jint ksize, jint shape) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::binaryErode(src, ksize, shape);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 二值膨胀 (式 3-10/3-11) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinDilate(JNIEnv *env, jclass,
+                                                             jobject bitmap,
+                                                             jint ksize, jint shape) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::binaryDilate(src, ksize, shape);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 二值开运算 (式 3-15/3-16) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinOpen(JNIEnv *env, jclass,
+                                                           jobject bitmap,
+                                                           jint ksize, jint shape) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::binaryOpen(src, ksize, shape);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 二值闭运算 (式 3-17) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinClose(JNIEnv *env, jclass,
+                                                            jobject bitmap,
+                                                            jint ksize, jint shape) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::binaryClose(src, ksize, shape);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 膨胀/腐蚀对偶性 (式 3-13/3-14)：Aᶜ㊀B̂ = (A⊕B)ᶜ ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinDuality(JNIEnv *env, jclass,
+                                                              jobject bitmap,
+                                                              jint ksize) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::binaryDuality(src, ksize);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 内边缘 (式 3-20) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinInnerEdge(JNIEnv *env, jclass,
+                                                                jobject bitmap,
+                                                                jint ksize) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::binaryInnerEdge(src, ksize);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 外边缘 (式 3-21) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinOuterEdge(JNIEnv *env, jclass,
+                                                                jobject bitmap,
+                                                                jint ksize) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::binaryOuterEdge(src, ksize);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 梯度边缘 (式 3-22) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinGradEdge(JNIEnv *env, jclass,
+                                                               jobject bitmap,
+                                                               jint ksize) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::binaryGradientEdge(src, ksize);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 区域填充 (式 3-23) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinFillHoles(JNIEnv *env, jclass,
+                                                                jobject bitmap,
+                                                                jint ksize) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::binaryFillHoles(src, ksize);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 骨架抽取 (式 3-24~3-28) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinSkeleton(JNIEnv *env, jclass,
+                                                               jobject bitmap,
+                                                               jint ksize) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::binarySkeleton(src, ksize);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 细化 (式 3-29~3-31) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinThinning(JNIEnv *env, jclass,
+                                                               jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::binaryThinning(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 形态开-闭滤波 (式 3-34) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinOpenCloseFilter(JNIEnv *env, jclass,
+                                                                      jobject bitmap,
+                                                                      jint ksize) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::binaryOpenCloseFilter(src, ksize);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 灰度腐蚀 (式 3-36/3-37) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayErode(JNIEnv *env, jclass,
+                                                             jobject bitmap,
+                                                             jint ksize, jint shape) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::grayErode(src, ksize, shape);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 灰度膨胀 (式 3-38/3-39) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayDilate(JNIEnv *env, jclass,
+                                                              jobject bitmap,
+                                                              jint ksize, jint shape) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::grayDilate(src, ksize, shape);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 灰度开运算 (式 3-42) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayOpen(JNIEnv *env, jclass,
+                                                            jobject bitmap,
+                                                            jint ksize, jint shape) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::grayOpen(src, ksize, shape);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 灰度闭运算 (式 3-43) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayClose(JNIEnv *env, jclass,
+                                                             jobject bitmap,
+                                                             jint ksize, jint shape) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::grayClose(src, ksize, shape);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 形态学梯度 (式 3-46) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayGradient(JNIEnv *env, jclass,
+                                                                jobject bitmap,
+                                                                jint ksize, jint shape) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::grayMorphGradient(src, ksize, shape);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 形态开-闭平滑 (式 3-47) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayOpenClose(JNIEnv *env, jclass,
+                                                                 jobject bitmap,
+                                                                 jint ksize, jint shape) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::grayOpenClose(src, ksize, shape);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 形态闭-开平滑 (式 3-48) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayCloseOpen(JNIEnv *env, jclass,
+                                                                 jobject bitmap,
+                                                                 jint ksize, jint shape) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::grayCloseOpen(src, ksize, shape);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- Top-Hat 高帽 (式 3-49) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayTopHat(JNIEnv *env, jclass,
+                                                              jobject bitmap,
+                                                              jint ksize, jint shape) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::grayTopHat(src, ksize, shape);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- Bottom-Hat 低帽 (表 3-1) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayBottomHat(JNIEnv *env, jclass,
+                                                                 jobject bitmap,
+                                                                 jint ksize, jint shape) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::grayBottomHat(src, ksize, shape);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- Top-Hat 增强（式 3-49 应用） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayTopHatEnhance(JNIEnv *env, jclass,
+                                                                     jobject bitmap,
+                                                                     jint ksize, jint shape) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageMorphology::grayTopHatEnhance(src, ksize, shape);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+
+// =============================================================================
 // JNI 注册
 // =============================================================================
 static const char *const kClassName = "com/wangyao/opencvdeal/jni/OpencvDealJni";
@@ -670,6 +973,53 @@ static const JNINativeMethod kMethods[] = {
                 (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorFalseBlue},
         {"colorFalseMultiSpectral", "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
                 (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_colorFalseMultiSpectral},
+        // 形态学图像处理方法
+        {"morphBinarize",           "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinarize},
+        {"morphBinErode",           "(Landroid/graphics/Bitmap;II)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinErode},
+        {"morphBinDilate",          "(Landroid/graphics/Bitmap;II)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinDilate},
+        {"morphBinOpen",            "(Landroid/graphics/Bitmap;II)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinOpen},
+        {"morphBinClose",           "(Landroid/graphics/Bitmap;II)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinClose},
+        {"morphBinDuality",         "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinDuality},
+        {"morphBinInnerEdge",       "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinInnerEdge},
+        {"morphBinOuterEdge",       "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinOuterEdge},
+        {"morphBinGradEdge",        "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinGradEdge},
+        {"morphBinFillHoles",       "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinFillHoles},
+        {"morphBinSkeleton",        "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinSkeleton},
+        {"morphBinThinning",        "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinThinning},
+        {"morphBinOpenCloseFilter", "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphBinOpenCloseFilter},
+        {"morphGrayErode",          "(Landroid/graphics/Bitmap;II)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayErode},
+        {"morphGrayDilate",         "(Landroid/graphics/Bitmap;II)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayDilate},
+        {"morphGrayOpen",           "(Landroid/graphics/Bitmap;II)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayOpen},
+        {"morphGrayClose",          "(Landroid/graphics/Bitmap;II)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayClose},
+        {"morphGrayGradient",       "(Landroid/graphics/Bitmap;II)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayGradient},
+        {"morphGrayOpenClose",      "(Landroid/graphics/Bitmap;II)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayOpenClose},
+        {"morphGrayCloseOpen",      "(Landroid/graphics/Bitmap;II)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayCloseOpen},
+        {"morphGrayTopHat",         "(Landroid/graphics/Bitmap;II)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayTopHat},
+        {"morphGrayBottomHat",      "(Landroid/graphics/Bitmap;II)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayBottomHat},
+        {"morphGrayTopHatEnhance",  "(Landroid/graphics/Bitmap;II)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayTopHatEnhance},
 };
 
 extern "C" jint JNICALL JNI_OnLoad(JavaVM *vm, void *) {

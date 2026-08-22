@@ -33,10 +33,16 @@ class MainFragment : BaseFragment() {
     }
 
     override fun initListener() {
-        // 点击「图像增强」卡片进入二级菜单（灰度变换 / 平滑去噪）
+        // 点击「图像增强」卡片进入二级菜单（灰度变换 / 平滑去噪 / 锐化 / 同态 / Retinex / 彩色）
         binding.btnImageEnhance.setOnClickListener {
             ffViewModel.switchFragment
                 .postValue(FFViewModel.FRAGMENT_STATUS.IMAGE_ENHANCE)
+        }
+
+        // 点击「形态学图像处理」卡片进入二级菜单（二值/灰度形态学）
+        binding.btnMorphology.setOnClickListener {
+            ffViewModel.switchFragment
+                .postValue(FFViewModel.FRAGMENT_STATUS.MORPHOLOGY)
         }
     }
 }

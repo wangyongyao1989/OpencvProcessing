@@ -19,6 +19,11 @@ class FFViewModel : ViewModel() {
         IMAGE_HOMOMORPHIC,    // 三级：图像的同态滤波
         IMAGE_RETINEX,        // 三级：基于 Retinex 理论的图像增强
         IMAGE_COLOR_ENHANCE,  // 三级：彩色增强
+        MORPHOLOGY,           // 二级：形态学图像处理（二值/灰度形态学菜单）
+        MORPH_BIN_BASIC,      // 三级：二值形态学基本运算
+        MORPH_BIN_PROCESS,    // 三级：二值图像的形态学处理
+        MORPH_GRAY_BASIC,     // 三级：灰度形态学基本运算
+        MORPH_GRAY_PROCESS,   // 三级：灰度图像的形态学处理
     }
 
     val switchFragment: MutableLiveData<FRAGMENT_STATUS> = MutableLiveData()
