@@ -24,6 +24,11 @@ class FFViewModel : ViewModel() {
         MORPH_BIN_PROCESS,    // 三级：二值图像的形态学处理
         MORPH_GRAY_BASIC,     // 三级：灰度形态学基本运算
         MORPH_GRAY_PROCESS,   // 三级：灰度图像的形态学处理
+        SEGMENTATION,         // 二级：图像分割（阈值/边缘/区域/主动轮廓菜单）
+        SEG_THRESHOLD,        // 三级：基于灰度阈值化的图像分割
+        SEG_EDGE,             // 三级：基于边缘检测的图像分割
+        SEG_REGION,           // 三级：基于区域的图像分割
+        SEG_CONTOUR,          // 三级：基于主动轮廓模型的图像分割
     }
 
     val switchFragment: MutableLiveData<FRAGMENT_STATUS> = MutableLiveData()

@@ -19,6 +19,8 @@ import com.wangyao.opencvprocessing.fragment.ImageSmoothDenoiseFragment
 import com.wangyao.opencvprocessing.fragment.MainFragment
 import com.wangyao.opencvprocessing.fragment.MorphOpFragment
 import com.wangyao.opencvprocessing.fragment.MorphologyFragment
+import com.wangyao.opencvprocessing.fragment.SegOpFragment
+import com.wangyao.opencvprocessing.fragment.SegmentationFragment
 
 /**
  * 应用唯一的 Activity，负责：
@@ -62,6 +64,7 @@ class MainActivity : AppCompatActivity() {
                 // 三级返回链：
                 // 图像增强族三级页 → 二级「图像增强」 → 主界面 → 退出
                 // 形态学三级页 → 二级「形态学图像处理」 → 主界面 → 退出
+                // 图像分割三级页 → 二级「图像分割」 → 主界面 → 退出
                 when (currentFragment) {
                     is MainFragment -> finish()
                     is ImageEnhanceFragment ->
@@ -70,6 +73,10 @@ class MainActivity : AppCompatActivity() {
                         selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
                     is MorphOpFragment ->
                         selectFragment(FFViewModel.FRAGMENT_STATUS.MORPHOLOGY)
+                    is SegmentationFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
+                    is SegOpFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.SEGMENTATION)
                     else -> selectFragment(FFViewModel.FRAGMENT_STATUS.IMAGE_ENHANCE)
                 }
             }
@@ -101,6 +108,15 @@ class MainActivity : AppCompatActivity() {
                     MorphOpFragment.instantiate(FFViewModel.FRAGMENT_STATUS.MORPH_GRAY_BASIC)
                 FFViewModel.FRAGMENT_STATUS.MORPH_GRAY_PROCESS ->
                     MorphOpFragment.instantiate(FFViewModel.FRAGMENT_STATUS.MORPH_GRAY_PROCESS)
+                FFViewModel.FRAGMENT_STATUS.SEGMENTATION -> SegmentationFragment()
+                FFViewModel.FRAGMENT_STATUS.SEG_THRESHOLD ->
+                    SegOpFragment.instantiate(FFViewModel.FRAGMENT_STATUS.SEG_THRESHOLD)
+                FFViewModel.FRAGMENT_STATUS.SEG_EDGE ->
+                    SegOpFragment.instantiate(FFViewModel.FRAGMENT_STATUS.SEG_EDGE)
+                FFViewModel.FRAGMENT_STATUS.SEG_REGION ->
+                    SegOpFragment.instantiate(FFViewModel.FRAGMENT_STATUS.SEG_REGION)
+                FFViewModel.FRAGMENT_STATUS.SEG_CONTOUR ->
+                    SegOpFragment.instantiate(FFViewModel.FRAGMENT_STATUS.SEG_CONTOUR)
             }
         }
 

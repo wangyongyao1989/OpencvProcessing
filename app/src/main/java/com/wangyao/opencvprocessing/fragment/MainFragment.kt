@@ -44,5 +44,11 @@ class MainFragment : BaseFragment() {
             ffViewModel.switchFragment
                 .postValue(FFViewModel.FRAGMENT_STATUS.MORPHOLOGY)
         }
+
+        // 点击「图像分割」卡片进入二级菜单（阈值/边缘/区域/主动轮廓）
+        binding.btnSegmentation.setOnClickListener {
+            ffViewModel.switchFragment
+                .postValue(FFViewModel.FRAGMENT_STATUS.SEGMENTATION)
+        }
     }
 }

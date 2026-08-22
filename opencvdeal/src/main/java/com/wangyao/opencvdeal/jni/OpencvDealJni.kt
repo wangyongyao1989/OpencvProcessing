@@ -319,4 +319,109 @@ object OpencvDealJni {
     /** Top-Hat 增强：f + TopHat − BottomHat */
     @JvmStatic
     external fun morphGrayTopHatEnhance(bitmap: Bitmap, ksize: Int, shape: Int): Bitmap?
+
+
+    // =========================================================================
+    // 图像分割方法（基于《数字图像与视频处理》第 4 章）
+    // =========================================================================
+
+    // --- 4.2 基于灰度阈值化的图像分割 ---
+
+    /** 固定阈值分割 (式 4-1)：手动指定 T，二值化为前景/背景 */
+    @JvmStatic
+    external fun segFixedThreshold(bitmap: Bitmap, thresh: Double): Bitmap?
+
+    /** 迭代阈值分割 (式 4-3)：均值迭代收敛至最优阈值 */
+    @JvmStatic
+    external fun segIterativeThreshold(bitmap: Bitmap): Bitmap?
+
+    /** Otsu 最大类间方差分割 (式 4-4~4-10)：自动最优全局阈值 */
+    @JvmStatic
+    external fun segOtsu(bitmap: Bitmap): Bitmap?
+
+    /** 自适应阈值分割 (式 4-2)：局部邻域均值动态阈值，适应不均匀光照 */
+    @JvmStatic
+    external fun segAdaptiveThreshold(bitmap: Bitmap, blockSize: Int, c: Double): Bitmap?
+
+    /** 多级阈值分割：多阈值划分多灰度区间 */
+    @JvmStatic
+    external fun segMultiLevelThreshold(bitmap: Bitmap): Bitmap?
+
+    /** 阈值化叠加可视化：分割掩膜红色高亮叠加原图 */
+    @JvmStatic
+    external fun segThresholdOverlay(bitmap: Bitmap): Bitmap?
+
+    // --- 4.3 基于边缘检测的图像分割 ---
+
+    /** Roberts 交叉差分边缘检测：2×2 对角差分，定位精度高 */
+    @JvmStatic
+    external fun segRoberts(bitmap: Bitmap): Bitmap?
+
+    /** Sobel 边缘检测：带平均因素的一阶梯度，ksize 为核尺寸 */
+    @JvmStatic
+    external fun segSobel(bitmap: Bitmap, ksize: Int): Bitmap?
+
+    /** Prewitt 边缘检测：均值差分模板 */
+    @JvmStatic
+    external fun segPrewitt(bitmap: Bitmap): Bitmap?
+
+    /** Laplacian 二阶边缘检测：各向同性，对噪声敏感 */
+    @JvmStatic
+    external fun segLaplacianEdge(bitmap: Bitmap): Bitmap?
+
+    /** LoG (Laplacian of Gaussian) 边缘检测：先高斯平滑再拉普拉斯 */
+    @JvmStatic
+    external fun segLoG(bitmap: Bitmap, ksize: Int, sigma: Double): Bitmap?
+
+    /** Canny 最优边缘检测：非极大值抑制 + 双阈值滞后连接 */
+    @JvmStatic
+    external fun segCanny(bitmap: Bitmap, t1: Double, t2: Double): Bitmap?
+
+    /** 边缘跟踪分割：边缘闭合 + 轮廓提取，完成区域分割 */
+    @JvmStatic
+    external fun segContourTrace(bitmap: Bitmap): Bitmap?
+
+    // --- 4.4 基于区域的图像分割 ---
+
+    /** 区域生长（中心种子）：图像中心为种子，th 为灰度相似性阈值 */
+    @JvmStatic
+    external fun segRegionGrowCenter(bitmap: Bitmap, th: Int): Bitmap?
+
+    /** 区域生长（自动选种）：梯度极小值点自动选种 */
+    @JvmStatic
+    external fun segRegionGrowAutoSeed(bitmap: Bitmap, th: Int): Bitmap?
+
+    /** 区域分裂-合并：四叉树分裂 + 区域邻接合并 */
+    @JvmStatic
+    external fun segSplitMerge(bitmap: Bitmap): Bitmap?
+
+    /** 连通分量标记分割：区域标记伪彩色可视化 */
+    @JvmStatic
+    external fun segConnectedComponents(bitmap: Bitmap): Bitmap?
+
+    /** 分水岭变换分割：标记驱动的浸水模拟 */
+    @JvmStatic
+    external fun segWatershed(bitmap: Bitmap): Bitmap?
+
+    // --- 4.5 基于主动轮廓模型的图像分割 ---
+
+    /** 基本贪心 Snake (式 4-40, 4-42~4-45)：能量最小化活动轮廓 */
+    @JvmStatic
+    external fun segSnake(bitmap: Bitmap, iterations: Int): Bitmap?
+
+    /** Snake 内部能量对比 (式 4-41)：不同 α/β 平滑效果对比 */
+    @JvmStatic
+    external fun segSnakeSmoothCompare(bitmap: Bitmap): Bitmap?
+
+    /** 气球力 Snake：加入膨胀/收缩力推进轮廓跨越平坦区 */
+    @JvmStatic
+    external fun segBalloonSnake(bitmap: Bitmap, iterations: Int): Bitmap?
+
+    /** 测地线主动轮廓 (式 4-46)：g 停止函数调制外力 */
+    @JvmStatic
+    external fun segGeodesicContour(bitmap: Bitmap, iterations: Int): Bitmap?
+
+    /** Chan-Vese 区域型主动轮廓 (式 4-47)：不依赖边缘的曲线演化 */
+    @JvmStatic
+    external fun segChanVese(bitmap: Bitmap, iterations: Int): Bitmap?
 }

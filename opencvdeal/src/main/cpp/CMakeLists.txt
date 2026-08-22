@@ -27,6 +27,7 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
         ImageRetinex.cpp
         ImageColorEnhance.cpp
         ImageMorphology.cpp
+        ImageSegmentation.cpp
         JniHelper.cpp
 )
 

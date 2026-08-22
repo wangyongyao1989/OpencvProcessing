@@ -43,6 +43,7 @@
 
         <!-- 9 个 checkbar：3x3 网格，一次仅选一个（标签由代码注入） -->
         <TextView
+            android:id="@+id/tv_checkbar_hint"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"

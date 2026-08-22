@@ -14,6 +14,7 @@
 #include "include/ImageRetinex.h"
 #include "include/ImageColorEnhance.h"
 #include "include/ImageMorphology.h"
+#include "include/ImageSegmentation.h"
 
 #define TAG "OpencvDealJni"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  TAG, __VA_ARGS__)
@@ -877,6 +878,292 @@ Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayTopHatEnhance(JNIEnv *env
     return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
 }
 
+// =============================================================================
+// 图像分割（第 4 章）
+// =============================================================================
+
+// --- 4.2 固定阈值分割（式 4-1） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segFixedThreshold(JNIEnv *env, jclass,
+                                                                jobject bitmap,
+                                                                jdouble thresh) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segFixedThreshold(src, thresh);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.2 迭代式阈值分割（式 4-3） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segIterativeThreshold(JNIEnv *env, jclass,
+                                                                    jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segIterativeThreshold(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.2 Otsu 最大类间方差分割（式 4-4 ~ 4-10） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segOtsu(JNIEnv *env, jclass,
+                                                      jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segOtsu(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.2 局部自适应阈值分割（式 4-2 局部化） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segAdaptiveThreshold(JNIEnv *env, jclass,
+                                                                   jobject bitmap,
+                                                                   jint blockSize, jdouble C) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segAdaptiveThreshold(src, blockSize, C);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.2 多级阈值分割（式 4-1 推广） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segMultiLevelThreshold(JNIEnv *env, jclass,
+                                                                     jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segMultiLevelThreshold(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.2 Otsu 分割叠加可视化 ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segThresholdOverlay(JNIEnv *env, jclass,
+                                                                  jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segThresholdOverlay(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.3 Roberts 边缘检测（式 4-18, 4-19） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segRoberts(JNIEnv *env, jclass,
+                                                         jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segRoberts(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.3 Sobel 边缘检测（式 4-20） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segSobel(JNIEnv *env, jclass,
+                                                       jobject bitmap, jint ksize) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segSobel(src, ksize);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.3 Prewitt 边缘检测（式 4-21, 4-22） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segPrewitt(JNIEnv *env, jclass,
+                                                         jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segPrewitt(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.3 Laplacian 边缘检测（式 4-26 ~ 4-28） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segLaplacianEdge(JNIEnv *env, jclass,
+                                                               jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segLaplacianEdge(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.3 LoG 边缘检测（式 4-29 ~ 4-33） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segLoG(JNIEnv *env, jclass,
+                                                     jobject bitmap,
+                                                     jint ksize, jdouble sigma) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segLoG(src, ksize, sigma);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.3 Canny 边缘检测（式 4-34 ~ 4-39） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segCanny(JNIEnv *env, jclass,
+                                                       jobject bitmap,
+                                                       jdouble t1, jdouble t2) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segCanny(src, t1, t2);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.3 轮廓跟踪（图 4-9, 4-10） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segContourTrace(JNIEnv *env, jclass,
+                                                              jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segContourTrace(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.4 区域生长：中心种子 ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segRegionGrowCenter(JNIEnv *env, jclass,
+                                                                  jobject bitmap, jint th) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segRegionGrowCenter(src, th);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.4 区域生长：直方图峰值自动选种 ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segRegionGrowAutoSeed(JNIEnv *env, jclass,
+                                                                    jobject bitmap, jint th) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segRegionGrowAutoSeed(src, th);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.4 区域分裂与合并（四叉树） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segSplitMerge(JNIEnv *env, jclass,
+                                                            jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segSplitMerge(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.4 连通区域标记伪彩色 ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segConnectedComponents(JNIEnv *env, jclass,
+                                                                     jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segConnectedComponents(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.4 标记控制的分水岭 ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segWatershed(JNIEnv *env, jclass,
+                                                           jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segWatershed(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.5 基本贪心 Snake（式 4-40, 4-42 ~ 4-45） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segSnake(JNIEnv *env, jclass,
+                                                       jobject bitmap, jint iterations) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segSnake(src, iterations);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.5 内部能量 α/β 对比（式 4-41） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segSnakeSmoothCompare(JNIEnv *env, jclass,
+                                                                    jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segSnakeSmoothCompare(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.5 气球力 Snake ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segBalloonSnake(JNIEnv *env, jclass,
+                                                              jobject bitmap,
+                                                              jint iterations) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segBalloonSnake(src, iterations);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.5 测地线主动轮廓离散近似（式 4-46） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segGeodesicContour(JNIEnv *env, jclass,
+                                                                 jobject bitmap,
+                                                                 jint iterations) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segGeodesicContour(src, iterations);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 4.5 区域型主动轮廓 Chan-Vese 简化（式 4-47） ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segChanVese(JNIEnv *env, jclass,
+                                                          jobject bitmap, jint iterations) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSegmentation::segChanVese(src, iterations);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
 
 // =============================================================================
 // JNI 注册
@@ -1020,6 +1307,53 @@ static const JNINativeMethod kMethods[] = {
                 (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayBottomHat},
         {"morphGrayTopHatEnhance",  "(Landroid/graphics/Bitmap;II)Landroid/graphics/Bitmap;",
                 (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_morphGrayTopHatEnhance},
+        // 图像分割方法（第 4 章）
+        {"segFixedThreshold",       "(Landroid/graphics/Bitmap;D)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segFixedThreshold},
+        {"segIterativeThreshold",   "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segIterativeThreshold},
+        {"segOtsu",                 "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segOtsu},
+        {"segAdaptiveThreshold",    "(Landroid/graphics/Bitmap;ID)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segAdaptiveThreshold},
+        {"segMultiLevelThreshold",  "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segMultiLevelThreshold},
+        {"segThresholdOverlay",     "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segThresholdOverlay},
+        {"segRoberts",              "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segRoberts},
+        {"segSobel",                "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segSobel},
+        {"segPrewitt",              "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segPrewitt},
+        {"segLaplacianEdge",        "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segLaplacianEdge},
+        {"segLoG",                  "(Landroid/graphics/Bitmap;ID)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segLoG},
+        {"segCanny",                "(Landroid/graphics/Bitmap;DD)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segCanny},
+        {"segContourTrace",         "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segContourTrace},
+        {"segRegionGrowCenter",     "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segRegionGrowCenter},
+        {"segRegionGrowAutoSeed",   "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segRegionGrowAutoSeed},
+        {"segSplitMerge",           "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segSplitMerge},
+        {"segConnectedComponents",  "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segConnectedComponents},
+        {"segWatershed",            "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segWatershed},
+        {"segSnake",                "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segSnake},
+        {"segSnakeSmoothCompare",   "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segSnakeSmoothCompare},
+        {"segBalloonSnake",         "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segBalloonSnake},
+        {"segGeodesicContour",      "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segGeodesicContour},
+        {"segChanVese",             "(Landroid/graphics/Bitmap;I)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_segChanVese},
 };
 
 extern "C" jint JNICALL JNI_OnLoad(JavaVM *vm, void *) {
