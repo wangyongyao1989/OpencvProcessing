@@ -10,9 +10,10 @@ import com.wangyao.opencvprocessing.databinding.FragmentImageEnhanceLayoutBindin
 
 /**
  * 二级菜单：图像增强（《数字图像与视频处理》第 2 章）。
- * 提供两个子功能入口：
+ * 提供三个子功能入口：
  * - 图像灰度变换（2.2 节）→ ImageGrayTransformFragment
  * - 图像平滑与去噪（2.3 节）→ ImageSmoothDenoiseFragment
+ * - 图像锐化（2.4 节）→ ImageSharpenFragment
  */
 class ImageEnhanceFragment : BaseFragment() {
 
@@ -48,6 +49,12 @@ class ImageEnhanceFragment : BaseFragment() {
         binding.btnSmoothDenoise.setOnClickListener {
             ffViewModel.switchFragment
                 .postValue(FFViewModel.FRAGMENT_STATUS.IMAGE_SMOOTH_DENOISE)
+        }
+
+        // 三级页：图像锐化
+        binding.btnSharpen.setOnClickListener {
+            ffViewModel.switchFragment
+                .postValue(FFViewModel.FRAGMENT_STATUS.IMAGE_SHARPEN)
         }
     }
 }

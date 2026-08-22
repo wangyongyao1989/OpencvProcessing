@@ -100,4 +100,41 @@ object OpencvDealJni {
     /** 非局部均值 NLM 去噪 (式 2-31, 2-32)：相似块加权平均，去噪同时保细节 */
     @JvmStatic
     external fun smoothNlmDenoise(bitmap: Bitmap, h: Double): Bitmap?
+
+
+    // =========================================================================
+    // 图像锐化方法（基于《数字图像与视频处理》2.4 节）
+    // =========================================================================
+
+    /** 水平垂直差分法 (式 2-56, 输出式 2-58)：一阶梯度，仅留边缘点 */
+    @JvmStatic
+    external fun sharpGradientHV(bitmap: Bitmap): Bitmap?
+
+    /** Roberts 梯度/交叉差分 (式 2-57)：2×2 窗口对角差分，边缘定位精度高 */
+    @JvmStatic
+    external fun sharpRoberts(bitmap: Bitmap): Bitmap?
+
+    /** Sobel 算子 (式 2-63~2-66)：带平均因素的梯度，抗噪且边缘粗亮 */
+    @JvmStatic
+    external fun sharpSobel(bitmap: Bitmap): Bitmap?
+
+    /** 拉普拉斯直接锐化 H1 (式 2-70, 2-71)：二阶各向同性，仅显示边缘 */
+    @JvmStatic
+    external fun sharpLaplacianH1(bitmap: Bitmap): Bitmap?
+
+    /** 合成拉普拉斯锐化 H6 (式 2-72~2-74)：g=f−∇²f，锐化同时保背景 */
+    @JvmStatic
+    external fun sharpLaplacianH6(bitmap: Bitmap): Bitmap?
+
+    /** 合成拉普拉斯锐化 H7 (8 邻域模板)：边缘增强比 H6 更强 */
+    @JvmStatic
+    external fun sharpLaplacianH7(bitmap: Bitmap): Bitmap?
+
+    /** 理想高通滤波锐化 (式 2-75, 2-76)：高频边缘附加原图，有振铃 */
+    @JvmStatic
+    external fun sharpIdealHighPass(bitmap: Bitmap, d0: Double): Bitmap?
+
+    /** 高斯高通滤波锐化 (式 2-79)：平滑过渡无振铃 */
+    @JvmStatic
+    external fun sharpGaussianHighPass(bitmap: Bitmap, d0: Double): Bitmap?
 }

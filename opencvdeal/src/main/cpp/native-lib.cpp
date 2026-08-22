@@ -9,6 +9,7 @@
 #include "include/JniHelper.h"
 #include "include/GrayTransform.h"
 #include "include/ImageSmoothDenoise.h"
+#include "include/ImageSharpen.h"
 
 #define TAG "OpencvDealJni"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  TAG, __VA_ARGS__)
@@ -235,6 +236,109 @@ Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothNlmDenoise(JNIEnv *env, jcla
 
 
 // =============================================================================
+// 图像锐化 JNI 方法（基于《数字图像与视频处理》2.4 节）
+// =============================================================================
+
+// --- 水平垂直差分法 (式 2-56, 输出式 2-58) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpGradientHV(JNIEnv *env, jclass,
+                                                              jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSharpen::gradientHorizVert(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- Roberts 梯度（交叉差分）(式 2-57) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpRoberts(JNIEnv *env, jclass,
+                                                           jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSharpen::robertsGradient(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- Sobel 算子 (式 2-63 ~ 式 2-66) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpSobel(JNIEnv *env, jclass,
+                                                         jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSharpen::sobelOperator(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 拉普拉斯直接锐化（模板 H1）(式 2-70, 式 2-71) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpLaplacianH1(JNIEnv *env, jclass,
+                                                               jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSharpen::laplacianDirect(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 合成拉普拉斯锐化（模板 H6）(式 2-72 ~ 式 2-74) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpLaplacianH6(JNIEnv *env, jclass,
+                                                               jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSharpen::laplacianCompositeH6(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 合成拉普拉斯锐化（模板 H7，8 邻域）---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpLaplacianH7(JNIEnv *env, jclass,
+                                                               jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSharpen::laplacianCompositeH7(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 理想高通滤波锐化 (式 2-75, 式 2-76) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpIdealHighPass(JNIEnv *env, jclass,
+                                                                 jobject bitmap,
+                                                                 jdouble d0) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSharpen::idealHighPassSharpen(src, d0);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 高斯高通滤波锐化 (式 2-79) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpGaussianHighPass(JNIEnv *env, jclass,
+                                                                    jobject bitmap,
+                                                                    jdouble d0) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSharpen::gaussianHighPassSharpen(src, d0);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+
+// =============================================================================
 // JNI 注册
 // =============================================================================
 static const char *const kClassName = "com/wangyao/opencvdeal/jni/OpencvDealJni";
@@ -275,6 +379,23 @@ static const JNINativeMethod kMethods[] = {
                 (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothGaussianLowPass},
         {"smoothNlmDenoise",       "(Landroid/graphics/Bitmap;D)Landroid/graphics/Bitmap;",
                 (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothNlmDenoise},
+        // 图像锐化方法
+        {"sharpGradientHV",        "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpGradientHV},
+        {"sharpRoberts",           "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpRoberts},
+        {"sharpSobel",             "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpSobel},
+        {"sharpLaplacianH1",       "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpLaplacianH1},
+        {"sharpLaplacianH6",       "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpLaplacianH6},
+        {"sharpLaplacianH7",       "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpLaplacianH7},
+        {"sharpIdealHighPass",     "(Landroid/graphics/Bitmap;D)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpIdealHighPass},
+        {"sharpGaussianHighPass",  "(Landroid/graphics/Bitmap;D)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_sharpGaussianHighPass},
 };
 
 extern "C" jint JNICALL JNI_OnLoad(JavaVM *vm, void *) {

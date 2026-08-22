@@ -11,6 +11,7 @@ import androidx.fragment.app.FragmentTransaction
 import androidx.lifecycle.ViewModelProvider
 import com.wangyao.opencvprocessing.fragment.ImageEnhanceFragment
 import com.wangyao.opencvprocessing.fragment.ImageGrayTransformFragment
+import com.wangyao.opencvprocessing.fragment.ImageSharpenFragment
 import com.wangyao.opencvprocessing.fragment.ImageSmoothDenoiseFragment
 import com.wangyao.opencvprocessing.fragment.MainFragment
 
@@ -76,6 +77,7 @@ class MainActivity : AppCompatActivity() {
                 FFViewModel.FRAGMENT_STATUS.IMAGE_ENHANCE -> ImageEnhanceFragment()
                 FFViewModel.FRAGMENT_STATUS.IMAGE_GRAY_TRANSFORM -> ImageGrayTransformFragment()
                 FFViewModel.FRAGMENT_STATUS.IMAGE_SMOOTH_DENOISE -> ImageSmoothDenoiseFragment()
+                FFViewModel.FRAGMENT_STATUS.IMAGE_SHARPEN -> ImageSharpenFragment()
             }
         }
 

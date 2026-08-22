@@ -12,9 +12,10 @@ class FFViewModel : ViewModel() {
 
     enum class FRAGMENT_STATUS {
         MAIN,                 // 一级：主入口
-        IMAGE_ENHANCE,        // 二级：图像增强（灰度变换 / 平滑去噪 菜单）
+        IMAGE_ENHANCE,        // 二级：图像增强（灰度变换 / 平滑去噪 / 锐化 菜单）
         IMAGE_GRAY_TRANSFORM, // 三级：图像的灰度变换
         IMAGE_SMOOTH_DENOISE, // 三级：图像平滑与去噪
+        IMAGE_SHARPEN,        // 三级：图像锐化
     }
 
     val switchFragment: MutableLiveData<FRAGMENT_STATUS> = MutableLiveData()
