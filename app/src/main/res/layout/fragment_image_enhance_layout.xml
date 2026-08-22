@@ -70,7 +70,8 @@
                     android:focusable="true"
                     android:background="?attr/selectableItemBackground">
 
-                    <ImageView
+                    <com.wangyao.opencvprocessing.view.ZoomImageView
+                        app:zoomEnabled="false"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_gallery"
@@ -119,7 +120,8 @@
                     android:focusable="true"
                     android:background="?attr/selectableItemBackground">
 
-                    <ImageView
+                    <com.wangyao.opencvprocessing.view.ZoomImageView
+                        app:zoomEnabled="false"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_manage"
@@ -168,7 +170,8 @@
                     android:focusable="true"
                     android:background="?attr/selectableItemBackground">
 
-                    <ImageView
+                    <com.wangyao.opencvprocessing.view.ZoomImageView
+                        app:zoomEnabled="false"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_edit"
@@ -217,7 +220,8 @@
                     android:focusable="true"
                     android:background="?attr/selectableItemBackground">
 
-                    <ImageView
+                    <com.wangyao.opencvprocessing.view.ZoomImageView
+                        app:zoomEnabled="false"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_view"
@@ -266,7 +270,8 @@
                     android:focusable="true"
                     android:background="?attr/selectableItemBackground">
 
-                    <ImageView
+                    <com.wangyao.opencvprocessing.view.ZoomImageView
+                        app:zoomEnabled="false"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_camera"
@@ -315,7 +320,8 @@
                     android:focusable="true"
                     android:background="?attr/selectableItemBackground">
 
-                    <ImageView
+                    <com.wangyao.opencvprocessing.view.ZoomImageView
+                        app:zoomEnabled="false"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_sort_by_size"

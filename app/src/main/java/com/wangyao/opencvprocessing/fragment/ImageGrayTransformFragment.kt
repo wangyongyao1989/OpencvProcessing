@@ -15,10 +15,13 @@ import com.wangyao.opencvprocessing.databinding.FragmentImageGrayTransformLayout
 import kotlin.concurrent.thread
 
 /**
- * 图像的灰度变换界面：
- * - 顶部：9 个 checkbar（单选互斥），①~⑨ 对应 PDF 第二章 2.2 节中九种灰度变换。
- * - 中部：左右并排显示「原图」与「当前选择的处理结果」。
- * - 底部：当前所选方法的「原理及公式」文本说明，包含对应公式编号与表达。
+ * Fragment responsible for demonstrating various image grayscale transformation techniques.
+ *
+ * This fragment provides a UI to interactively explore nine different grayscale transformations
+ * described in the context of digital image processing. It features:
+ * - A top selection area with 9 mutually exclusive checkboxes.
+ * - A side-by-side comparison view of the original and processed images.
+ * - A detailed explanation section showing the mathematical formulas and principles.
  */
 class ImageGrayTransformFragment : BaseFragment() {
 
@@ -128,9 +131,12 @@ class ImageGrayTransformFragment : BaseFragment() {
     /** 按顺序排列的九项，方便用索引绑定到九组控件。 */
     private val transforms: Array<Transform> = Transform.values()
 
-    /** 9 个 CheckBox（按 index 0..8 顺序）。 */
+    /** List of checkboxes for the 9 transformations, managed as a list for easier index-based access. */
     private lateinit var checkBoxes: List<MaterialCheckBox>
 
+    /**
+     * Inflates the ViewBinding for this fragment.
+     */
     override fun getLayoutBinding(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -140,6 +146,9 @@ class ImageGrayTransformFragment : BaseFragment() {
         return binding.root
     }
 
+    /**
+     * Initializes the view components by grouping the checkboxes into a list.
+     */
     override fun initView() {
         checkBoxes = listOf(
             binding.cb01Original,
@@ -154,6 +163,9 @@ class ImageGrayTransformFragment : BaseFragment() {
         )
     }
 
+    /**
+     * Loads the base image from assets and displays it.
+     */
     override fun initData() {
         originalBitmap = loadBitmapFromAssets(IMG_ASSET_NAME)
         originalBitmap?.let { binding.ivOriginal.setImageBitmap(it) }
@@ -161,10 +173,16 @@ class ImageGrayTransformFragment : BaseFragment() {
         applyTransform(Transform.ORIGINAL)
     }
 
+    /**
+     * Sets up the ViewModel for communication with the activity.
+     */
     override fun initObserver() {
         ffViewModel = ViewModelProvider(requireActivity())[FFViewModel::class.java]
     }
 
+    /**
+     * Sets up UI listeners, including the logic for mutually exclusive checkboxes.
+     */
     override fun initListener() {
         // 返回按钮：回到二级菜单「图像增强」
         binding.btnBack.setOnClickListener {
@@ -200,7 +218,15 @@ class ImageGrayTransformFragment : BaseFragment() {
     // 变换执行与 UI 渲染
     // -------------------------------------------------------------------------
 
-    /** 根据所选变换调用 JNI 并更新「结果图 + 原理公式」。 */
+    /**
+     * Applies the selected [Transform] to the original image and updates the UI.
+     *
+     * The process updates the descriptive text immediately and handles image processing
+     * on a background thread to prevent UI blocking. The resulting bitmap is rendered
+     * back on the main thread.
+     *
+     * @param transform The grayscale transformation to apply.
+     */
     private fun applyTransform(transform: Transform) {
         // 先显示原理公式（UI 立即刷新，图片异步处理好后再更新）
         binding.tvFormula.text = transform.formula
@@ -236,6 +262,15 @@ class ImageGrayTransformFragment : BaseFragment() {
     // 工具
     // -------------------------------------------------------------------------
 
+    /**
+     * Loads a bitmap from the assets folder.
+     *
+     * This method ensures the bitmap is in [Bitmap.Config.ARGB_8888] format, which is
+     * generally required for stable processing within the OpenCV JNI layer.
+     *
+     * @param fileName The path to the image file in the assets directory.
+     * @return The loaded and potentially converted [Bitmap], or null if loading failed.
+     */
     private fun loadBitmapFromAssets(fileName: String): Bitmap? {
         return try {
             val input = requireContext().assets.open(fileName)
