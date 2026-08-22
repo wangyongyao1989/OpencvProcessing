@@ -33,10 +33,10 @@ class MainFragment : BaseFragment() {
     }
 
     override fun initListener() {
-        // 点击「图像灰度变换」卡片跳转到 ImageGrayTransformFragment
-        binding.btnGrayTransform.setOnClickListener {
+        // 点击「图像增强」卡片进入二级菜单（灰度变换 / 平滑去噪）
+        binding.btnImageEnhance.setOnClickListener {
             ffViewModel.switchFragment
-                .postValue(FFViewModel.FRAGMENT_STATUS.IMAGE_GRAY_TRANSFORM)
+                .postValue(FFViewModel.FRAGMENT_STATUS.IMAGE_ENHANCE)
         }
     }
 }

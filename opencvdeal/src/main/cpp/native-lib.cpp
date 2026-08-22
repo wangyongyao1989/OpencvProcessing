@@ -8,6 +8,7 @@
 
 #include "include/JniHelper.h"
 #include "include/GrayTransform.h"
+#include "include/ImageSmoothDenoise.h"
 
 #define TAG "OpencvDealJni"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  TAG, __VA_ARGS__)
@@ -129,6 +130,111 @@ Java_com_wangyao_opencvdeal_jni_OpencvDealJni_grayHistogramEqualize(JNIEnv *env,
 
 
 // =============================================================================
+// 图像平滑与去噪 JNI 方法（基于《数字图像与视频处理》2.3 节）
+// =============================================================================
+
+// --- 4-邻域平均法 (式 2-23 ~ 式 2-25) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothNeighborhoodAverage4(JNIEnv *env, jclass,
+                                                                          jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSmoothDenoise::neighborhoodAverage4(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 8-邻域平均法 (式 2-26, 式 2-27) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothNeighborhoodAverage8(JNIEnv *env, jclass,
+                                                                          jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSmoothDenoise::neighborhoodAverage8(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 阈值邻域平均法 (式 2-28) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothThresholdAverage(JNIEnv *env, jclass,
+                                                                      jobject bitmap,
+                                                                      jdouble t) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSmoothDenoise::thresholdAverage(src, t);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 3×3 中值滤波 (式 2-29, 式 2-30) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothMedian3x3(JNIEnv *env, jclass,
+                                                               jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSmoothDenoise::medianFilter3x3(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 5×5 十字形中值滤波 (式 2-29, 式 2-30；图 2-23f) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothMedianCross5x5(JNIEnv *env, jclass,
+                                                                    jobject bitmap) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSmoothDenoise::medianFilterCross5x5(src);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 理想低通滤波 (式 2-40 ~ 式 2-42) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothIdealLowPass(JNIEnv *env, jclass,
+                                                                  jobject bitmap,
+                                                                  jdouble d0) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSmoothDenoise::idealLowPass(src, d0);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 高斯低通滤波 (式 2-45, 式 2-46) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothGaussianLowPass(JNIEnv *env, jclass,
+                                                                      jobject bitmap,
+                                                                      jdouble d0) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSmoothDenoise::gaussianLowPass(src, d0);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+// --- 非局部均值 NLM 去噪 (式 2-31, 式 2-32) ---
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothNlmDenoise(JNIEnv *env, jclass,
+                                                                 jobject bitmap,
+                                                                 jdouble h) {
+    cv::Mat src = JniHelper::bitmapToMat(env, bitmap);
+    if (src.empty()) return nullptr;
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    cv::Mat result = ImageSmoothDenoise::nlmDenoise(src, h);
+    return JniHelper::grayMatToBitmap(env, result, info.width, info.height);
+}
+
+
+// =============================================================================
 // JNI 注册
 // =============================================================================
 static const char *const kClassName = "com/wangyao/opencvdeal/jni/OpencvDealJni";
@@ -152,6 +258,23 @@ static const JNINativeMethod kMethods[] = {
                 (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_grayGammaTransform},
         {"grayHistogramEqualize",  "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
                 (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_grayHistogramEqualize},
+        // 图像平滑与去噪方法
+        {"smoothNeighborhoodAverage4", "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothNeighborhoodAverage4},
+        {"smoothNeighborhoodAverage8", "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothNeighborhoodAverage8},
+        {"smoothThresholdAverage", "(Landroid/graphics/Bitmap;D)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothThresholdAverage},
+        {"smoothMedian3x3",        "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothMedian3x3},
+        {"smoothMedianCross5x5",   "(Landroid/graphics/Bitmap;)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothMedianCross5x5},
+        {"smoothIdealLowPass",     "(Landroid/graphics/Bitmap;D)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothIdealLowPass},
+        {"smoothGaussianLowPass",  "(Landroid/graphics/Bitmap;D)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothGaussianLowPass},
+        {"smoothNlmDenoise",       "(Landroid/graphics/Bitmap;D)Landroid/graphics/Bitmap;",
+                (void *) Java_com_wangyao_opencvdeal_jni_OpencvDealJni_smoothNlmDenoise},
 };
 
 extern "C" jint JNICALL JNI_OnLoad(JavaVM *vm, void *) {

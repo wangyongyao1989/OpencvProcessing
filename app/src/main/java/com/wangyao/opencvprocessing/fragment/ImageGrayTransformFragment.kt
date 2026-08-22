@@ -166,9 +166,9 @@ class ImageGrayTransformFragment : BaseFragment() {
     }
 
     override fun initListener() {
-        // 返回按钮
+        // 返回按钮：回到二级菜单「图像增强」
         binding.btnBack.setOnClickListener {
-            ffViewModel.switchFragment.postValue(FFViewModel.FRAGMENT_STATUS.MAIN)
+            ffViewModel.switchFragment.postValue(FFViewModel.FRAGMENT_STATUS.IMAGE_ENHANCE)
         }
 
         // 9 个 CheckBox 互斥单选

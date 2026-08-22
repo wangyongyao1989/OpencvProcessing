@@ -63,4 +63,41 @@ object OpencvDealJni {
     /** 直方图均衡化 (式 2-14)：使灰度分布均匀，增大对比度 */
     @JvmStatic
     external fun grayHistogramEqualize(bitmap: Bitmap): Bitmap?
+
+
+    // =========================================================================
+    // 图像平滑与去噪方法（基于《数字图像与视频处理》2.3 节）
+    // =========================================================================
+
+    /** 4-邻域平均法 (式 2-24, 模板 H1 式 2-25)：十字均值模板，抑制噪声但边缘变模糊 */
+    @JvmStatic
+    external fun smoothNeighborhoodAverage4(bitmap: Bitmap): Bitmap?
+
+    /** 8-邻域平均法 (式 2-26, 模板 H2 式 2-27)：环形均值模板，平滑更强 */
+    @JvmStatic
+    external fun smoothNeighborhoodAverage8(bitmap: Bitmap): Bitmap?
+
+    /** 阈值邻域平均法 (式 2-28)：灰度差超过阈值 T 才用邻域均值代替，减轻模糊 */
+    @JvmStatic
+    external fun smoothThresholdAverage(bitmap: Bitmap, t: Double): Bitmap?
+
+    /** 3×3 中值滤波 (式 2-29, 2-30)：非线性滤波，对椒盐噪声最有效且保护边缘 */
+    @JvmStatic
+    external fun smoothMedian3x3(bitmap: Bitmap): Bitmap?
+
+    /** 5×5 十字形中值滤波 (式 2-30, 图 2-23f)：十字窗口取中值 */
+    @JvmStatic
+    external fun smoothMedianCross5x5(bitmap: Bitmap): Bitmap?
+
+    /** 理想低通滤波 (式 2-40 ~ 2-42)：频域 D0 截止，去噪彻底但有振铃 */
+    @JvmStatic
+    external fun smoothIdealLowPass(bitmap: Bitmap, d0: Double): Bitmap?
+
+    /** 高斯低通滤波 (式 2-45, 2-46)：频域高斯传递函数，无振铃 */
+    @JvmStatic
+    external fun smoothGaussianLowPass(bitmap: Bitmap, d0: Double): Bitmap?
+
+    /** 非局部均值 NLM 去噪 (式 2-31, 2-32)：相似块加权平均，去噪同时保细节 */
+    @JvmStatic
+    external fun smoothNlmDenoise(bitmap: Bitmap, h: Double): Bitmap?
 }

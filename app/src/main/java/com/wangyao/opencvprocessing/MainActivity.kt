@@ -1,13 +1,17 @@
 package com.wangyao.opencvprocessing
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
+import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
 import androidx.lifecycle.ViewModelProvider
+import com.wangyao.opencvprocessing.fragment.ImageEnhanceFragment
 import com.wangyao.opencvprocessing.fragment.ImageGrayTransformFragment
+import com.wangyao.opencvprocessing.fragment.ImageSmoothDenoiseFragment
 import com.wangyao.opencvprocessing.fragment.MainFragment
 
 /**
@@ -25,6 +29,15 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        val supportActionBar = getSupportActionBar()
+        if (supportActionBar != null) {
+            supportActionBar.hide()
+        }
+        if (getRequestedOrientation() != ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
+        }
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN)
+
         ffViewModel = ViewModelProvider(this)[FFViewModel::class.java]
         ffViewModel.switchFragment.observe(this) { status ->
             if (status != null) selectFragment(status)
@@ -40,9 +53,12 @@ class MainActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
+                // 三级返回链：三级功能页 → 二级菜单「图像增强」 → 主界面 → 退出
                 when (currentFragment) {
                     is MainFragment -> finish()
-                    else -> selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
+                    is ImageEnhanceFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
+                    else -> selectFragment(FFViewModel.FRAGMENT_STATUS.IMAGE_ENHANCE)
                 }
             }
         })
@@ -57,7 +73,9 @@ class MainActivity : AppCompatActivity() {
         if (target == null) {
             target = when (status) {
                 FFViewModel.FRAGMENT_STATUS.MAIN -> MainFragment()
+                FFViewModel.FRAGMENT_STATUS.IMAGE_ENHANCE -> ImageEnhanceFragment()
                 FFViewModel.FRAGMENT_STATUS.IMAGE_GRAY_TRANSFORM -> ImageGrayTransformFragment()
+                FFViewModel.FRAGMENT_STATUS.IMAGE_SMOOTH_DENOISE -> ImageSmoothDenoiseFragment()
             }
         }
 
