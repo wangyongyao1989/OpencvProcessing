@@ -50,5 +50,11 @@ class MainFragment : BaseFragment() {
             ffViewModel.switchFragment
                 .postValue(FFViewModel.FRAGMENT_STATUS.SEGMENTATION)
         }
+
+        // 点击「数字水印技术」卡片进入二级菜单（嵌入提取/攻击对策）
+        binding.btnWatermark.setOnClickListener {
+            ffViewModel.switchFragment
+                .postValue(FFViewModel.FRAGMENT_STATUS.WATERMARK)
+        }
     }
 }

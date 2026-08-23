@@ -25,4 +25,5 @@ dependencyResolutionManagement {
 rootProject.name = "OpencvProcessing"
 include(":app")
 include(":imageCVdeal")
+include(":digitalwatermark")
  

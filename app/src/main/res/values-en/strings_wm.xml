@@ -1,0 +1,84 @@
+<resources>
+    <!-- Digital watermark module strings (English) -->
+
+    <!-- Main menu card -->
+    <string name="main_card_watermark">Digital Watermarking</string>
+    <string name="main_card_watermark_desc">Digital watermarking</string>
+
+    <!-- Second-level menu -->
+    <string name="wm_menu_title">Digital Watermarking</string>
+    <string name="wm_card_embed">Embed / Extract</string>
+    <string name="wm_card_embed_desc">Watermark embedding and extraction</string>
+    <string name="wm_card_embed_sub">LSB / DCT blind watermark</string>
+    <string name="wm_card_attack">Attacks &amp; Countermeasures</string>
+    <string name="wm_card_attack_desc">Watermark attacks and countermeasures</string>
+    <string name="wm_card_attack_sub">9 attacks · Robustness evaluation</string>
+
+    <!-- Embed / extract page -->
+    <string name="wm_embed_title">Watermark Embedding / Extraction</string>
+    <string name="wm_embed_algo_hint">Select a watermark algorithm (only one at a time):</string>
+    <string name="wm_algo_lsb">LSB spatial domain</string>
+    <string name="wm_algo_dct">DCT transform domain</string>
+    <string name="wm_watermark_preview_desc">Watermark pattern preview</string>
+    <string name="wm_video_info">Source video: %1$d×%2$d, %3$d fps, %4$d frames, %5$.2f MB</string>
+    <string name="wm_btn_embed">Embed Watermark into Video</string>
+    <string name="wm_btn_extract">Extract Watermark from Video</string>
+    <string name="wm_embed_result_title">Embedding result (middle frame comparison)</string>
+    <string name="wm_watermarked_frame">Watermarked frame</string>
+    <string name="wm_watermarked_frame_desc">Watermarked video frame</string>
+    <string name="wm_extract_result_title">Extraction result</string>
+    <string name="wm_watermark_extracted_desc">Extracted watermark</string>
+    <string name="wm_need_embed_first">Please embed a watermark first on the Embed / Extract page</string>
+
+    <string name="wm_status_idle">Ready. Select an algorithm and tap "Embed Watermark into Video".</string>
+    <string name="wm_status_preparing">Preparing…</string>
+    <string name="wm_status_embedding">Embedding… (frame %1$d/%2$d)</string>
+    <string name="wm_status_embed_done">Embedding finished: %1$d frames processed, watermarked video generated</string>
+    <string name="wm_status_extracting">Extracting… (frame %1$d/%2$d)</string>
+    <string name="wm_status_extract_done">Extraction finished: %1$d frames decoded for voting</string>
+    <string name="wm_status_error">Error: %1$s</string>
+
+    <string name="wm_embed_metrics">"Algorithm: %5$s\nFrames processed: %1$d\nElapsed: %2$.1f s\nPSNR: %3$.2f dB (imperceptibility)\nOutput file: %4$.2f MB"</string>
+    <string name="wm_extract_metrics">"Frames decoded: %1$d\nElapsed: %2$.1f s\nNC: %3$.4f (similarity)\nBER: %4$.2f%% (bit error rate)"</string>
+
+    <string name="wm_embed_formula">"【Principle】Digital watermarking hides identification data in the video luminance component and must satisfy imperceptibility, robustness and security (Ch. 8, 8.1). The MP4/H.264 file is demuxed and decoded into YUV frames (Ch. 7 file formats, Ch. 6 coding standards), the watermark is embedded frame by frame in the luminance plane Y, then the stream is re-encoded with H.264 and remuxed into MP4.\n【Pipeline】Generate a 64×64 binary watermark G → embed per frame (LSB or DCT) → blind extraction with inter-frame majority voting.\n【Evaluation】Higher PSNR means better imperceptibility; NC closer to 1 and lower BER mean better robustness."</string>
+    <string name="wm_embed_formula_lsb">"【Principle】Spatial-domain LSB: replace the least significant bit of each cover pixel with a watermark bit (Ch. 8, 8.2); the change is at most ±1 and visually imperceptible.\n【Eq. 8-1】cw = 2·⌊c/2⌋ + w, i.e. clear the LSB and write the watermark bit w∈{0,1}.\n【Implementation】The 64×64 bit pattern is tiled over the whole luminance plane by modulo addressing (intra-frame redundancy); extraction counts occurrences per bit and takes a majority vote.\n【Characteristics】Large capacity and low complexity; fragile to noise/compression, so robustness relies on intra-frame + inter-frame voting."</string>
+    <string name="wm_embed_formula_dct">"【Principle】Transform-domain DCT: embed the watermark into mid-frequency coefficients of 8×8 DCT blocks (DCT is the core transform of JPEG/H.264, see Ch. 5; low-frequency changes are visible and high-frequency coefficients are discarded by quantization, so mid-frequency balances invisibility and robustness).\n【Eq. 8-3】F′(u,v) = F(u,v) + α·pn(u,v)·(2w−1)\n   where α is the embedding strength (30 here) and pn is a key-driven pseudo-random spread-spectrum sequence, w∈{0,1}.\n【Extraction】Correlation despreading: w′=1 if Σ F′·pn > 0, otherwise w′=0.\n【Characteristics】Strong resistance to JPEG compression; inter-frame voting further improves robustness."</string>
+
+    <!-- Attack page -->
+    <string name="wm_attack_title">Watermark Attacks and Countermeasures</string>
+    <string name="wm_attack_select_hint">Select an attack type (only one at a time):</string>
+    <string name="wm_atk_jpeg">JPEG compression</string>
+    <string name="wm_atk_gaussian">Gaussian noise</string>
+    <string name="wm_atk_salt">Salt-and-pepper noise</string>
+    <string name="wm_atk_mean">Mean filtering</string>
+    <string name="wm_atk_median">Median filtering</string>
+    <string name="wm_atk_scale">Scaling attack</string>
+    <string name="wm_atk_rotate">Rotation attack</string>
+    <string name="wm_atk_crop">Cropping attack</string>
+    <string name="wm_atk_drop">Frame dropping</string>
+    <string name="wm_btn_attack">Apply Attack and Extract Watermark</string>
+    <string name="wm_attack_result_title">Attack result (middle frame comparison)</string>
+    <string name="wm_attacked_frame">Attacked frame</string>
+    <string name="wm_attacked_frame_desc">Attacked video frame</string>
+    <string name="wm_countermeasure_title">Countermeasures</string>
+
+    <string name="wm_attack_status_idle">Ready. Extraction algorithm: %1$s (same as embedding page)</string>
+    <string name="wm_status_attacking">Attacking… (frame %1$d/%2$d)</string>
+    <string name="wm_attack_status_done">Finished: %1$d attacked frames written and watermark extracted</string>
+
+    <string name="wm_attack_metrics">"NC: %1$.4f (similarity)\nBER: %2$.2f%% (bit error rate)\nPSNR: %3$.2f dB (attack strength)\nElapsed: %4$.1f s\nOutput/decoded frames: %5$d / %6$d"</string>
+
+    <string name="wm_attack_formula">"【Principle】Watermark attacks weaken or destroy the watermark via signal processing or geometric transforms (Ch. 8, 8.5):\n① Simple attacks: JPEG compression (Ch. 5 quantization), noise, filtering — only attenuate watermark energy;\n② Synchronization attacks: scaling/rotation/cropping — break the spatial synchronization between watermark and cover;\n③ Frame dropping: specific to video, breaks temporal synchronization.\n【Eq. 8-6】NC = Σ(w·w′) / (√Σw² · √Σw′²), correlation between extracted and original watermark;\n【Eq. 8-7】BER = erroneous bits / total bits × 100%;\nPSNR reflects attack strength (lower means more severe).\n【General countermeasures】Redundant embedding + majority voting, error-correcting codes, larger embedding strength, synchronization templates, inter-frame redundancy."</string>
+
+    <!-- Countermeasures per attack type -->
+    <string name="wm_cm_jpeg">"【Attack】Lossy JPEG compression (quality Q=10): coarse DCT quantization discards high-frequency detail (Ch. 5).\n【Effect】Watermark energy is attenuated by quantization; NC drops and BER rises.\n【Countermeasures】① Embed in DCT low/mid-frequency coefficients consistent with compression; ② increase embedding strength α; ③ spread-spectrum modulation; ④ inter-frame redundancy + majority voting (implemented here)."</string>
+    <string name="wm_cm_gaussian">"【Attack】Additive white Gaussian noise (σ=15): random perturbation on all pixels.\n【Effect】Many LSB bits flip; SNR of DCT coefficients drops.\n【Countermeasures】① Intra-frame tiling + inter-frame majority voting (implemented here); ② higher embedding strength; ③ transform-domain embedding exploiting DCT energy compaction; ④ low-pass pre-filtering before extraction."</string>
+    <string name="wm_cm_salt">"【Attack】Salt-and-pepper noise (density 5%): pixels forced to 0 or 255 with probability p.\n【Effect】LSBs of contaminated pixels are fully random.\n【Countermeasures】① 3×3 median filtering before extraction to remove impulse noise; ② majority voting; ③ skip pixels near extreme values when embedding."</string>
+    <string name="wm_cm_mean">"【Attack】3×3 mean filtering (low-pass): attenuates high-frequency content and LSB perturbations.\n【Effect】LSB watermark is badly damaged; DCT watermark is relatively stable.\n【Countermeasures】① Embed in low/mid-frequency bands; ② increase embedding strength α; ③ inter-frame majority voting; ④ prefer transform-domain embedding."</string>
+    <string name="wm_cm_median">"【Attack】3×3 median filtering: ranks neighborhood values, removing impulse outliers but reordering LSBs.\n【Countermeasures】① Transform-domain watermark (coefficient ordering is more stable); ② redundant voting; ③ apply identical pre-processing at embedding and extraction (synchronized filtering)."</string>
+    <string name="wm_cm_scale">"【Attack】0.5× downscaling: destroys spatial synchronization (embedded positions shift).\n【Effect】Blind-extraction correlation drops sharply for both LSB and DCT.\n【Countermeasures】① Embed a synchronization template/reference to estimate the scale factor before inverse mapping; ② embed in a scale-invariant feature domain; ③ tiled redundancy reduces position sensitivity."</string>
+    <string name="wm_cm_rotate">"【Attack】2° small-angle rotation with resampling: global pixel coordinate shift.\n【Effect】Geometric synchronization is broken; NC drops significantly.\n【Countermeasures】① Embed rotation-invariant quantities (Fourier–Mellin domain); ② estimate the rotation angle via a synchronization template and invert it; ③ embed in annular/polar regions."</string>
+    <string name="wm_cm_crop">"【Attack】10% border cropping: watermark information near the border is directly removed.\n【Effect】Some watermark bits are permanently lost; the center region survives.\n【Countermeasures】① Tiled redundant embedding — the watermark covers every full frame, so local cropping only loses local bits (implemented here); ② inter-frame majority voting compensates from uncropped frames; ③ concentrate embedding near the center."</string>
+    <string name="wm_cm_drop">"【Attack】Drop all odd frames (50% loss): a temporal-axis attack specific to video.\n【Effect】Temporal synchronization is broken; extraction still works when every frame carries the watermark.\n【Countermeasures】① Inter-frame redundancy — the watermark is embedded independently in each frame (implemented here); ② temporal synchronization codes to locate dropped frames; ③ adapt embedding strength to the frame-loss rate."</string>
+</resources>

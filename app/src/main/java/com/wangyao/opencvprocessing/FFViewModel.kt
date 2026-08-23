@@ -29,6 +29,9 @@ class FFViewModel : ViewModel() {
         SEG_EDGE,             // 三级：基于边缘检测的图像分割
         SEG_REGION,           // 三级：基于区域的图像分割
         SEG_CONTOUR,          // 三级：基于主动轮廓模型的图像分割
+        WATERMARK,            // 二级：数字水印技术（嵌入提取/攻击对策菜单）
+        WM_EMBED_EXTRACT,     // 三级：数字水印的嵌入/提取
+        WM_ATTACK,            // 三级：水印的攻击方法和对策
     }
 
     val switchFragment: MutableLiveData<FRAGMENT_STATUS> = MutableLiveData()

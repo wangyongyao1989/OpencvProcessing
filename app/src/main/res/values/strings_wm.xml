@@ -1,0 +1,85 @@
+<resources>
+    <!-- 数字水印模块字符串（中文默认） -->
+    <!-- Digital watermark module strings (Chinese default) -->
+
+    <!-- 主界面卡片 -->
+    <string name="main_card_watermark">数字水印技术</string>
+    <string name="main_card_watermark_desc">数字水印技术</string>
+
+    <!-- 二级菜单 -->
+    <string name="wm_menu_title">数字水印技术</string>
+    <string name="wm_card_embed">水印的嵌入/提取</string>
+    <string name="wm_card_embed_desc">水印的嵌入/提取</string>
+    <string name="wm_card_embed_sub">LSB / DCT 盲水印</string>
+    <string name="wm_card_attack">水印攻击与对策</string>
+    <string name="wm_card_attack_desc">水印攻击与对策</string>
+    <string name="wm_card_attack_sub">9 种攻击 · 鲁棒性评价</string>
+
+    <!-- 嵌入/提取页 -->
+    <string name="wm_embed_title">数字水印的嵌入/提取</string>
+    <string name="wm_embed_algo_hint">请选择水印算法（一次仅选中一项）：</string>
+    <string name="wm_algo_lsb">LSB 空间域水印</string>
+    <string name="wm_algo_dct">DCT 变换域水印</string>
+    <string name="wm_watermark_preview_desc">水印图案预览</string>
+    <string name="wm_video_info">源视频：%1$d×%2$d，%3$d fps，共 %4$d 帧，%5$.2f MB</string>
+    <string name="wm_btn_embed">嵌入水印到视频</string>
+    <string name="wm_btn_extract">从视频提取水印</string>
+    <string name="wm_embed_result_title">嵌入结果（中间帧对比）</string>
+    <string name="wm_watermarked_frame">含水印帧</string>
+    <string name="wm_watermarked_frame_desc">含水印视频帧</string>
+    <string name="wm_extract_result_title">提取结果</string>
+    <string name="wm_watermark_extracted_desc">提取出的水印</string>
+    <string name="wm_need_embed_first">请先在「水印的嵌入/提取」页嵌入水印</string>
+
+    <string name="wm_status_idle">就绪。请选择水印算法，点击「嵌入水印到视频」。</string>
+    <string name="wm_status_preparing">准备中…</string>
+    <string name="wm_status_embedding">嵌入中…（%1$d/%2$d 帧）</string>
+    <string name="wm_status_embed_done">嵌入完成：共处理 %1$d 帧，含水印视频已生成</string>
+    <string name="wm_status_extracting">提取中…（%1$d/%2$d 帧）</string>
+    <string name="wm_status_extract_done">提取完成：共解码 %1$d 帧完成投票</string>
+    <string name="wm_status_error">出错：%1$s</string>
+
+    <string name="wm_embed_metrics">"嵌入算法：%5$s\n处理帧数：%1$d\n耗时：%2$.1f s\nPSNR：%3$.2f dB（不可感知性）\n输出文件：%4$.2f MB"</string>
+    <string name="wm_extract_metrics">"解码帧数：%1$d\n耗时：%2$.1f s\nNC：%3$.4f（相似度）\nBER：%4$.2f%%（误码率）"</string>
+
+    <string name="wm_embed_formula">"【原理】数字水印把标识信息隐藏进视频亮度分量，须满足不可感知性、鲁棒性与安全性（第 8 章 8.1 节）。视频按 MP4/H.264 解封装解码得到 YUV 帧（第 7 章文件格式、第 6 章编码标准），在亮度平面 Y 上逐帧嵌入水印，再按 H.264 标准重编码封装回 MP4。\n【流程】生成 64×64 二值水印 G → 逐帧嵌入（LSB 或 DCT）→ 帧间多数投票盲提取。\n【评价】PSNR 越高越隐蔽（不可感知性）；NC 越接近 1、BER 越低越鲁棒。"</string>
+    <string name="wm_embed_formula_lsb">"【原理】空间域 LSB 法：用水印位替换载体像素的最低有效位（第 8 章 8.2 节），改动幅度 ≤1，视觉不可察觉。\n【式 8-1】cw = 2·⌊c/2⌋ + w，即清零最低位后写入水印位 w∈{0,1}。\n【实现】64×64 水印位阵按取模平铺整幅亮度平面（帧内冗余）；提取时统计各位出现次数做多数投票。\n【特点】容量大、复杂度低；对噪声/压缩等简单攻击脆弱，依靠帧内+帧间双重冗余投票换取鲁棒性。"</string>
+    <string name="wm_embed_formula_dct">"【原理】变换域 DCT 法：水印嵌入 8×8 DCT 块的中频系数（DCT 是 JPEG/H.264 的核心变换，见第 5 章；低频改动易察觉、高频易被量化丢弃，中频兼顾隐蔽与鲁棒）。\n【式 8-3】F′(u,v) = F(u,v) + α·pn(u,v)·(2w−1)\n   α 为嵌入强度（本例 30），pn 为密钥伪随机扩频序列，w∈{0,1}。\n【提取】相关解扩：Σ F′·pn > 0 则 w′=1，否则 w′=0。\n【特点】抗 JPEG 压缩能力强；配合帧间投票进一步提升鲁棒性。"</string>
+
+    <!-- 攻击页 -->
+    <string name="wm_attack_title">水印的攻击方法和对策</string>
+    <string name="wm_attack_select_hint">请选择攻击方式（一次仅选中一项）：</string>
+    <string name="wm_atk_jpeg">JPEG 压缩</string>
+    <string name="wm_atk_gaussian">高斯噪声</string>
+    <string name="wm_atk_salt">椒盐噪声</string>
+    <string name="wm_atk_mean">均值滤波</string>
+    <string name="wm_atk_median">中值滤波</string>
+    <string name="wm_atk_scale">缩放攻击</string>
+    <string name="wm_atk_rotate">旋转攻击</string>
+    <string name="wm_atk_crop">裁剪攻击</string>
+    <string name="wm_atk_drop">帧丢失</string>
+    <string name="wm_btn_attack">施加攻击并提取水印</string>
+    <string name="wm_attack_result_title">攻击结果（中间帧对比）</string>
+    <string name="wm_attacked_frame">受攻击帧</string>
+    <string name="wm_attacked_frame_desc">受攻击视频帧</string>
+    <string name="wm_countermeasure_title">对策说明</string>
+
+    <string name="wm_attack_status_idle">就绪。当前提取算法：%1$s（与嵌入页一致）</string>
+    <string name="wm_status_attacking">攻击中…（%1$d/%2$d 帧）</string>
+    <string name="wm_attack_status_done">完成：输出 %1$d 帧受攻击视频并完成水印提取</string>
+
+    <string name="wm_attack_metrics">"NC：%1$.4f（相似度）\nBER：%2$.2f%%（误码率）\nPSNR：%3$.2f dB（攻击强度）\n耗时：%4$.1f s\n输出/解码帧数：%5$d / %6$d"</string>
+
+    <string name="wm_attack_formula">"【原理】水印攻击通过信号处理或几何变换削弱/破坏水印（第 8 章 8.5 节）：\n① 简单攻击：JPEG 压缩（第 5 章量化原理）、噪声、滤波——只削弱水印能量；\n② 同步攻击：缩放/旋转/裁剪——破坏水印与载体的空间同步；\n③ 帧丢失攻击：视频特有，破坏时间同步。\n【式 8-6】NC = Σ(w·w′) / (√Σw² · √Σw′²)，衡量提取水印与原水印的相关性；\n【式 8-7】BER = 错误位数 / 总位数 × 100%；\nPSNR 反映攻击强度（越低受损越重）。\n【通用对策】冗余嵌入+多数投票、纠错编码、增大嵌入强度、同步模板、帧间冗余。"</string>
+
+    <!-- 各攻击方式的对策说明 -->
+    <string name="wm_cm_jpeg">"【攻击】JPEG 有损压缩（质量因子 Q=10）：DCT 后按量化表粗量化，丢弃高频细节（第 5 章）。\n【现象】水印能量随量化被削弱，NC 下降、BER 上升。\n【对策】① 水印嵌入与压缩一致的 DCT 域中低频系数；② 增大嵌入强度 α；③ 扩频调制分散能量；④ 帧间冗余+多数投票（本页已实现）。"</string>
+    <string name="wm_cm_gaussian">"【攻击】加性高斯白噪声（σ=15）：所有像素叠加随机扰动。\n【现象】LSB 位大量翻转；DCT 系数信噪比下降。\n【对策】① 帧内平铺+帧间多数投票容错（本例实现）；② 提高嵌入强度；③ 变换域嵌入利用 DCT 能量压缩特性；④ 提取前低通预滤波。"</string>
+    <string name="wm_cm_salt">"【攻击】椒盐噪声（密度 5%）：像素以概率 p 被强行置 0 或 255。\n【现象】被污染像素的 LSB 完全随机。\n【对策】① 提取前 3×3 中值滤波去除脉冲噪声；② 多数投票容错；③ 嵌入时避开极值邻域像素。"</string>
+    <string name="wm_cm_mean">"【攻击】3×3 均值滤波（低通平滑）：削弱高频成分与最低位扰动。\n【现象】LSB 水印受损严重，DCT 水印相对稳健。\n【对策】① 水印嵌入中低频段；② 增大嵌入强度 α；③ 帧间多数投票；④ 优先采用变换域嵌入。"</string>
+    <string name="wm_cm_median">"【攻击】3×3 中值滤波：排序取中值，去除脉冲异常值，同时重排 LSB。\n【对策】① 变换域水印（系数大小关系相对稳定）；② 冗余投票；③ 提取与嵌入采用相同预处理（同步滤波）。"</string>
+    <string name="wm_cm_scale">"【攻击】0.5 倍下采样缩放：破坏水印的空间同步（嵌入位置错位）。\n【现象】盲提取相关性骤降，LSB/DCT 均受影响。\n【对策】① 嵌入同步模板/参照物，先估计缩放因子再逆变换；② 特征域（尺度不变域）嵌入；③ 平铺冗余降低对位置的敏感性。"</string>
+    <string name="wm_cm_rotate">"【攻击】2° 小角度旋转+重采样：像素坐标整体偏移。\n【现象】几何同步被破坏，NC 显著下降。\n【对策】① 嵌入旋转不变量（傅里叶-梅林域）；② 同步模板估计旋转角后逆向恢复；③ 环形/极坐标区域嵌入。"</string>
+    <string name="wm_cm_crop">"【攻击】四周裁剪 10%：边缘区域水印信息被直接删除。\n【现象】部分水印位永久丢失，中心区域保留。\n【对策】① 平铺式冗余嵌入——水印铺满每帧全图，局部裁剪仅损失局部（本例实现）；② 帧间多数投票由未裁剪帧补偿；③ 优先在中心区域加密嵌入。"</string>
+    <string name="wm_cm_drop">"【攻击】丢弃全部奇数帧（50% 帧丢失）：视频特有时间轴攻击。\n【现象】时间同步被破坏；每帧独立含水印时仍可提取。\n【对策】① 帧间冗余——水印在每一帧独立嵌入（本例实现）；② 时间同步码定位丢帧；③ 嵌入强度随丢帧率自适应。"</string>
+</resources>

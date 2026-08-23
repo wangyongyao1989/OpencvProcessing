@@ -21,6 +21,9 @@ import com.wangyao.opencvprocessing.fragment.MorphOpFragment
 import com.wangyao.opencvprocessing.fragment.MorphologyFragment
 import com.wangyao.opencvprocessing.fragment.SegOpFragment
 import com.wangyao.opencvprocessing.fragment.SegmentationFragment
+import com.wangyao.opencvprocessing.fragment.WatermarkFragment
+import com.wangyao.opencvprocessing.fragment.WatermarkEmbedFragment
+import com.wangyao.opencvprocessing.fragment.WatermarkAttackFragment
 
 /**
  * 应用唯一的 Activity，负责：
@@ -65,6 +68,7 @@ class MainActivity : AppCompatActivity() {
                 // 图像增强族三级页 → 二级「图像增强」 → 主界面 → 退出
                 // 形态学三级页 → 二级「形态学图像处理」 → 主界面 → 退出
                 // 图像分割三级页 → 二级「图像分割」 → 主界面 → 退出
+                // 数字水印三级页 → 二级「数字水印技术」 → 主界面 → 退出
                 when (currentFragment) {
                     is MainFragment -> finish()
                     is ImageEnhanceFragment ->
@@ -77,6 +81,12 @@ class MainActivity : AppCompatActivity() {
                         selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
                     is SegOpFragment ->
                         selectFragment(FFViewModel.FRAGMENT_STATUS.SEGMENTATION)
+                    is WatermarkFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
+                    is WatermarkEmbedFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.WATERMARK)
+                    is WatermarkAttackFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.WATERMARK)
                     else -> selectFragment(FFViewModel.FRAGMENT_STATUS.IMAGE_ENHANCE)
                 }
             }
@@ -117,6 +127,9 @@ class MainActivity : AppCompatActivity() {
                     SegOpFragment.instantiate(FFViewModel.FRAGMENT_STATUS.SEG_REGION)
                 FFViewModel.FRAGMENT_STATUS.SEG_CONTOUR ->
                     SegOpFragment.instantiate(FFViewModel.FRAGMENT_STATUS.SEG_CONTOUR)
+                FFViewModel.FRAGMENT_STATUS.WATERMARK -> WatermarkFragment()
+                FFViewModel.FRAGMENT_STATUS.WM_EMBED_EXTRACT -> WatermarkEmbedFragment()
+                FFViewModel.FRAGMENT_STATUS.WM_ATTACK -> WatermarkAttackFragment()
             }
         }
 
