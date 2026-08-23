@@ -8,10 +8,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CompoundButton
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.wangyao.opencvdeal.jni.OpencvDealJni
 import com.wangyao.opencvprocessing.FFViewModel
+import com.wangyao.opencvprocessing.R
 import com.wangyao.opencvprocessing.databinding.FragmentImageHomomorphicLayoutBinding
 import kotlin.concurrent.thread
 
@@ -33,98 +35,18 @@ class ImageHomomorphicFragment : BaseFragment() {
 
     /** 九种同态滤波选项的元数据（对应 PDF 2.5 节）。 */
     private enum class Transform(
-        val displayTitle: String,
-        val formula: String,
+        @StringRes val titleRes: Int,
+        @StringRes val formulaRes: Int,
     ) {
-        ORIGINAL(
-            "① 显示原始图像",
-            buildString {
-                append("【原理】不做任何处理，直接显示原始图像，用作对照基准。\n")
-                append("【模型】图像的同态滤波基于「照度-反射」成像模型：")
-                append("图像 f 由照度分量 i（取决于光源，随空间缓慢变化、集中于低频）")
-                append("与反射分量 r（取决于物体表面性质、变化剧烈、集中于高频）相乘而成。")
-                append("两者卷绕在一起，直接用线性滤波无法分开，需在对数域处理（式 2-81 ~ 2-87 流程）。")
-            }),
-        ILLUM(
-            "② 照度分量 i(x,y) 估计",
-            buildString {
-                append("【原理】照度分量取决于光源，空间变化缓慢（低频），")
-                append("可用大 σ 高斯低通（σ=60）估计光照场。\n")
-                append("【式 2-81】f(x,y) = i(x,y)·r(x,y)（图像 = 照度 × 反射）\n")
-                append("【效果】显示光照的明暗分布（阴影、渐晕等缓慢变化结构），")
-                append("动态范围过大正是因为照度分量起伏过大。")
-            }),
-        REFLECT(
-            "③ 反射分量 r(x,y) 估计",
-            buildString {
-                append("【原理】反射分量取决于物体表面性质，变化剧烈（边缘/细节，高频）。")
-                append("工程近似 r = f / (i + 1)，即原图除以照度估计。\n")
-                append("【式 2-81】f(x,y) = i(x,y)·r(x,y)\n")
-                append("【效果】归一化后显示物体的细节与边缘结构——")
-                append("同态滤波要增强的正是这部分高频反射分量。")
-            }),
-        LOG(
-            "④ 对数域 ln f (式 2-82)",
-            buildString {
-                append("【原理】对成像模型取对数，把乘性关系变为加性关系，")
-                append("使照度与反射分量可在（对数域）频谱上线性分离。\n")
-                append("【式 2-82】z(x,y) = ln f(x,y) = ln i(x,y) + ln r(x,y)\n")
-                append("【式 2-83】Z(u,v) = F{z(x,y)}（DFT）\n")
-                append("【式 2-84】Z(u,v) = I(u,v) + R(u,v)（照度谱与反射谱分离）\n")
-                append("【效果】显示 ln f 的归一化图像，是进入频域滤波前的中间结果。")
-            }),
-        HOMO_STD(
-            "⑤ 同态滤波 标准参数 (式 2-87)",
-            buildString {
-                append("【原理】对数域 DFT 后用传递函数 H 滤波（压缩低频照度、增强高频反射），")
-                append("再 IDFT、取指数还原。\n")
-                append("【式 2-85】S(u,v) = H(u,v)·Z(u,v)\n")
-                append("【式 2-86】s(x,y) = F⁻¹[S(u,v)]\n")
-                append("【式 2-87】g(x,y) = e^s(x,y)\n")
-                append("【传递函数】H(u,v) = (HH − HL)·(1 − e^(−c·D²/D0²)) + HL（图 2-42 剖面，例 2-7）\n")
-                append("【参数】本次演示 D0=80, c=1.5, HL=0.5, HH=2.0（例 2-7 经典参数，图 2-44）\n")
-                append("【效果】消除光照不均、压缩动态范围的同时增强边缘细节。")
-            }),
-        HOMO_STRONG(
-            "⑥ 同态滤波 强压缩照度",
-            buildString {
-                append("【原理】减小低频增益 HL（更强地压缩照度分量），")
-                append("并提高高频增益 HH（更强地增强反射细节）。\n")
-                append("【式 2-85】S(u,v) = H(u,v)·Z(u,v)；【式 2-87】g = e^s\n")
-                append("【传递函数】H(u,v) = (HH − HL)·(1 − e^(−c·D²/D0²)) + HL\n")
-                append("【参数】本次演示 D0=80, c=1.5, HL=0.2, HH=2.5\n")
-                append("【效果】动态范围压缩更明显，整体更均匀；HL 过小会导致暗部细节丢失。")
-            }),
-        HOMO_D30(
-            "⑦ 同态滤波 截止频率 D0=30",
-            buildString {
-                append("【原理】截止频率 D0 决定高低频分界：D0 越小，被增强的「高频」")
-                append("范围越宽，更多中频成分被当作反射细节提升。\n")
-                append("【式 2-85】S(u,v) = H(u,v)·Z(u,v)；【式 2-87】g = e^s\n")
-                append("【传递函数】H(u,v) = (HH − HL)·(1 − e^(−c·D²/D0²)) + HL\n")
-                append("【参数】本次演示 D0=30, c=1.5, HL=0.5, HH=2.0\n")
-                append("【效果】细节增强作用范围大，纹理更突出，但可能出现过增强。")
-            }),
-        HOMO_D150(
-            "⑧ 同态滤波 截止频率 D0=150",
-            buildString {
-                append("【原理】D0 越大，滤波器剖面过渡越靠外，只有非常高的频率才被增强，")
-                append("处理以整体动态范围压缩为主。\n")
-                append("【式 2-85】S(u,v) = H(u,v)·Z(u,v)；【式 2-87】g = e^s\n")
-                append("【传递函数】H(u,v) = (HH − HL)·(1 − e^(−c·D²/D0²)) + HL\n")
-                append("【参数】本次演示 D0=150, c=1.5, HL=0.5, HH=2.0\n")
-                append("【效果】光照更均匀、画面更平，细节增强相对温和。")
-            }),
-        HOMO_MILD(
-            "⑨ 同态滤波 温和增强",
-            buildString {
-                append("【原理】HL 接近 1、HH 适度（如 1.5），滤波器接近平缓的高频提升，")
-                append("对原图改动较小。\n")
-                append("【式 2-85】S(u,v) = H(u,v)·Z(u,v)；【式 2-87】g = e^s\n")
-                append("【传递函数】H(u,v) = (HH − HL)·(1 − e^(−c·D²/D0²)) + HL\n")
-                append("【参数】本次演示 D0=80, c=1.5, HL=0.8, HH=1.5\n")
-                append("【效果】轻微压缩照度并提升细节，适合作为保守的同态增强方案。")
-            }),
+        ORIGINAL(R.string.homo_op_original_title, R.string.homo_op_original_formula),
+        ILLUM(R.string.homo_op_illum_title, R.string.homo_op_illum_formula),
+        REFLECT(R.string.homo_op_reflect_title, R.string.homo_op_reflect_formula),
+        LOG(R.string.homo_op_log_title, R.string.homo_op_log_formula),
+        HOMO_STD(R.string.homo_op_std_title, R.string.homo_op_std_formula),
+        HOMO_STRONG(R.string.homo_op_strong_title, R.string.homo_op_strong_formula),
+        HOMO_D30(R.string.homo_op_d30_title, R.string.homo_op_d30_formula),
+        HOMO_D150(R.string.homo_op_d150_title, R.string.homo_op_d150_formula),
+        HOMO_MILD(R.string.homo_op_mild_title, R.string.homo_op_mild_formula),
     }
 
     private val transforms: Array<Transform> = Transform.values()
@@ -193,11 +115,11 @@ class ImageHomomorphicFragment : BaseFragment() {
 
     /** 根据所选选项调用 JNI 并更新「结果图 + 原理公式」。 */
     private fun applyTransform(transform: Transform) {
-        binding.tvFormula.text = transform.formula
+        binding.tvFormula.text = getString(transform.formulaRes)
             .replace("【".toRegex(), "<b>【")
             .replace("】".toRegex(), "】</b>")
             .let { Html.fromHtml(it, Html.FROM_HTML_MODE_LEGACY) }
-        binding.tvResultTitle.text = transform.displayTitle
+        binding.tvResultTitle.text = getString(transform.titleRes)
         val src = originalBitmap ?: return
 
         thread(start = true) {

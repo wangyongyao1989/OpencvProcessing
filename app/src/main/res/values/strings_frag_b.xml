@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 三级页 Fragment 内部字符串（中文默认）：算法项标题与原理公式说明 -->
+    <!-- Third-level page fragment strings (Chinese default): op titles and principle/formula descriptions -->
+
+    <!-- 同态滤波三级页 / Homomorphic filtering page -->
+    <string name="homo_op_original_title">① 显示原始图像</string>
+    <string name="homo_op_original_formula">【原理】不做任何处理，直接显示原始图像，用作对照基准。\n【模型】图像的同态滤波基于「照度-反射」成像模型：图像 f 由照度分量 i（取决于光源，随空间缓慢变化、集中于低频）与反射分量 r（取决于物体表面性质、变化剧烈、集中于高频）相乘而成。两者卷绕在一起，直接用线性滤波无法分开，需在对数域处理（式 2-81 ~ 2-87 流程）。</string>
+    <string name="homo_op_illum_title">② 照度分量 i(x,y) 估计</string>
+    <string name="homo_op_illum_formula">【原理】照度分量取决于光源，空间变化缓慢（低频），可用大 σ 高斯低通（σ=60）估计光照场。\n【式 2-81】f(x,y) = i(x,y)·r(x,y)（图像 = 照度 × 反射）\n【效果】显示光照的明暗分布（阴影、渐晕等缓慢变化结构），动态范围过大正是因为照度分量起伏过大。</string>
+    <string name="homo_op_reflect_title">③ 反射分量 r(x,y) 估计</string>
+    <string name="homo_op_reflect_formula">【原理】反射分量取决于物体表面性质，变化剧烈（边缘/细节，高频）。工程近似 r = f / (i + 1)，即原图除以照度估计。\n【式 2-81】f(x,y) = i(x,y)·r(x,y)\n【效果】归一化后显示物体的细节与边缘结构——同态滤波要增强的正是这部分高频反射分量。</string>
+    <string name="homo_op_log_title">④ 对数域 ln f (式 2-82)</string>
+    <string name="homo_op_log_formula">【原理】对成像模型取对数，把乘性关系变为加性关系，使照度与反射分量可在（对数域）频谱上线性分离。\n【式 2-82】z(x,y) = ln f(x,y) = ln i(x,y) + ln r(x,y)\n【式 2-83】Z(u,v) = F{z(x,y)}（DFT）\n【式 2-84】Z(u,v) = I(u,v) + R(u,v)（照度谱与反射谱分离）\n【效果】显示 ln f 的归一化图像，是进入频域滤波前的中间结果。</string>
+    <string name="homo_op_std_title">⑤ 同态滤波 标准参数 (式 2-87)</string>
+    <string name="homo_op_std_formula">【原理】对数域 DFT 后用传递函数 H 滤波（压缩低频照度、增强高频反射），再 IDFT、取指数还原。\n【式 2-85】S(u,v) = H(u,v)·Z(u,v)\n【式 2-86】s(x,y) = F⁻¹[S(u,v)]\n【式 2-87】g(x,y) = e^s(x,y)\n【传递函数】H(u,v) = (HH − HL)·(1 − e^(−c·D²/D0²)) + HL（图 2-42 剖面，例 2-7）\n【参数】本次演示 D0=80, c=1.5, HL=0.5, HH=2.0（例 2-7 经典参数，图 2-44）\n【效果】消除光照不均、压缩动态范围的同时增强边缘细节。</string>
+    <string name="homo_op_strong_title">⑥ 同态滤波 强压缩照度</string>
+    <string name="homo_op_strong_formula">【原理】减小低频增益 HL（更强地压缩照度分量），并提高高频增益 HH（更强地增强反射细节）。\n【式 2-85】S(u,v) = H(u,v)·Z(u,v)；【式 2-87】g = e^s\n【传递函数】H(u,v) = (HH − HL)·(1 − e^(−c·D²/D0²)) + HL\n【参数】本次演示 D0=80, c=1.5, HL=0.2, HH=2.5\n【效果】动态范围压缩更明显，整体更均匀；HL 过小会导致暗部细节丢失。</string>
+    <string name="homo_op_d30_title">⑦ 同态滤波 截止频率 D0=30</string>
+    <string name="homo_op_d30_formula">【原理】截止频率 D0 决定高低频分界：D0 越小，被增强的「高频」范围越宽，更多中频成分被当作反射细节提升。\n【式 2-85】S(u,v) = H(u,v)·Z(u,v)；【式 2-87】g = e^s\n【传递函数】H(u,v) = (HH − HL)·(1 − e^(−c·D²/D0²)) + HL\n【参数】本次演示 D0=30, c=1.5, HL=0.5, HH=2.0\n【效果】细节增强作用范围大，纹理更突出，但可能出现过增强。</string>
+    <string name="homo_op_d150_title">⑧ 同态滤波 截止频率 D0=150</string>
+    <string name="homo_op_d150_formula">【原理】D0 越大，滤波器剖面过渡越靠外，只有非常高的频率才被增强，处理以整体动态范围压缩为主。\n【式 2-85】S(u,v) = H(u,v)·Z(u,v)；【式 2-87】g = e^s\n【传递函数】H(u,v) = (HH − HL)·(1 − e^(−c·D²/D0²)) + HL\n【参数】本次演示 D0=150, c=1.5, HL=0.5, HH=2.0\n【效果】光照更均匀、画面更平，细节增强相对温和。</string>
+    <string name="homo_op_mild_title">⑨ 同态滤波 温和增强</string>
+    <string name="homo_op_mild_formula">【原理】HL 接近 1、HH 适度（如 1.5），滤波器接近平缓的高频提升，对原图改动较小。\n【式 2-85】S(u,v) = H(u,v)·Z(u,v)；【式 2-87】g = e^s\n【传递函数】H(u,v) = (HH − HL)·(1 − e^(−c·D²/D0²)) + HL\n【参数】本次演示 D0=80, c=1.5, HL=0.8, HH=1.5\n【效果】轻微压缩照度并提升细节，适合作为保守的同态增强方案。</string>
+
+    <!-- Retinex 三级页 / Retinex page -->
+    <string name="retinex_op_original_title">① 显示原始图像</string>
+    <string name="retinex_op_original_formula">【原理】不做任何处理，直接显示原始图像，用作对照基准。\n【模型】Retinex（视网膜+大脑皮层）理论认为：人眼感知的图像 = 光照分量 × 反射分量（式 2-88），物体表面的颜色取决于其反射特性而与光照无关。据此通过对数域相减估计反射分量，可消除光照不均、同时实现动态范围压缩与颜色恒常（颜色保真）两类增强。</string>
+    <string name="retinex_op_illum_title">② 光照分量 L 估计 (式 2-92)</string>
+    <string name="retinex_op_illum_formula">【原理】光照分量用高斯环绕函数与原图卷积估计（中心/环绕比），得到缓慢变化的光滑光照场。\n【式 2-88】f(x,y) = i(x,y)·r(x,y)（Retinex 成像模型）\n【式 2-92】L(x,y) = I(x,y) * G(x,y)（高斯环绕卷积）\n【参数】本次演示 σ=80（图 2-46 经典尺度）\n【效果】显示阴影、亮度渐变等光照分布，光照不均正是图像偏暗区域质量差的根源。</string>
+    <string name="retinex_op_reflect_title">③ 反射分量 r 可视化 (式 2-90)</string>
+    <string name="retinex_op_reflect_formula">【原理】对数域中 ln f = ln i + ln r，光照取对数记为 l，反射分量即 ln f − l，反映物体表面反射特性。\n【式 2-89】ln f(x,y) = ln i(x,y) + ln r(x,y)\n【式 2-90】l(x,y) = ln i(x,y)，r(x,y) = ln f − l(x,y)\n【参数】本次演示 σ=80，灰度显示\n【效果】亮处代表反射强（细节/边缘丰富区域）。</string>
+    <string name="retinex_op_ssr15_title">④ SSR σ=15 (式 2-91)</string>
+    <string name="retinex_op_ssr15_formula">【原理】SSR（单尺度 Retinex）对 RGB 三通道分别做中心/环绕比的对数运算。\n【式 2-91】ri(x,y) = ln Ii(x,y) − ln[Ii(x,y)*G(x,y)]，i = R,G,B\n【式 2-92】G 为高斯环绕函数\n【参数】本次演示 σ=15（小尺度）\n【效果】小 σ：动态范围压缩能力强、细节突出，但颜色失真较明显（图 2-46）。</string>
+    <string name="retinex_op_ssr80_title">⑤ SSR σ=80 (图 2-46)</string>
+    <string name="retinex_op_ssr80_formula">【原理】SSR 单尺度 Retinex，σ 的取值在两类增强效果间折中。\n【式 2-91】ri(x,y) = ln Ii(x,y) − ln[Ii(x,y)*G(x,y)]\n【式 2-92】L(x,y) = I(x,y) * G(x,y)\n【参数】本次演示 σ=80（经典折中尺度，图 2-46）\n【效果】兼顾一定的动态范围压缩与颜色保真，是最常用的单尺度参数。</string>
+    <string name="retinex_op_ssr250_title">⑥ SSR σ=250</string>
+    <string name="retinex_op_ssr250_formula">【原理】大尺度高斯环绕接近全局平均，光照估计非常平滑。\n【式 2-91】ri(x,y) = ln Ii(x,y) − ln[Ii(x,y)*G(x,y)]\n【参数】本次演示 σ=250（大尺度）\n【效果】大 σ：颜色保真度高、整体自然，但动态范围压缩不足（图 2-46），暗区提亮效果有限。</string>
+    <string name="retinex_op_msr3_title">⑦ MSR 三尺度 (式 2-93)</string>
+    <string name="retinex_op_msr3_formula">【原理】MSR（多尺度 Retinex）把多个 σ 尺度的 SSR 结果加权平均，同时兼顾小尺度（细节）与大尺度（颜色保真）的优点。\n【式 2-93】R_MSR_i = Σk ωk·{ln Ii − ln[Ii * Gk]}，k 为尺度序号\n【式 2-94】ωk = 1/N（各尺度等权）\n【参数】本次演示 σ = {15, 80, 250}，N=3\n【效果】细节增强与颜色保真相对均衡，是工程上最常用的 Retinex 方案。</string>
+    <string name="retinex_op_msr5_title">⑧ MSR 五尺度 (式 2-94)</string>
+    <string name="retinex_op_msr5_formula">【原理】增加更多尺度可以更充分地覆盖从局部细节到全局光照的频率范围。\n【式 2-93】R_MSR_i = Σk ωk·{ln Ii − ln[Ii * Gk]}\n【式 2-94】ωk = 1/N（本例 N=5，各尺度等权 1/5）\n【参数】本次演示 σ = {15, 40, 80, 150, 250}\n【效果】比三尺度更平滑稳健，计算量也相应增大。</string>
+    <string name="retinex_op_msrcr_title">⑨ MSRCR 颜色恢复 (式 2-96)</string>
+    <string name="retinex_op_msrcr_formula">【原理】MSR 各通道独立增强容易导致整体颜色偏离原色（偏灰/偏色），MSRCR 引入颜色恢复因子 Ci 调节各通道的增强强度。\n【式 2-95】Ci(x,y) = f[ Ii(x,y) / Σj Ij(x,y) ]，f 为变换函数（通常取线性或对数函数，本实现取线性）\n【式 2-96】R_MSRCR_i = Σk Ci·ωk·{ln Ii − ln[Ii * Gk]}\n【参数】本次演示 σ = {15, 80, 250}\n【效果】在 MSR 增强基础上改善色彩保真度，减轻颜色失真。</string>
+
+    <!-- 彩色增强三级页 / Color enhancement page -->
+    <string name="color_op_original_title">① 显示原始图像</string>
+    <string name="color_op_original_formula">【原理】不做任何处理，直接显示原始图像，用作对照基准。\n【概念】彩色增强分为两类：\n· 伪彩色增强（2.7.1）：把灰度图像按某种准则映射成彩色图像，人眼能分辨的颜色数远多于灰度级，可提高细节可辨性；\n· 假彩色增强（2.7.2）：彩色到彩色的映射，将自然彩色或多光谱图像逐点映射到新的彩色空间。</string>
+    <string name="color_op_slice2_title">② 灰度分层法 两层切割 (图 2-47)</string>
+    <string name="color_op_slice2_formula">【原理】在灰度级 l1 处设平行于 xy 平面的切割平面，把图像切成两个区域：低于 l1 的像素赋一种颜色（蓝），高于 l1 的赋另一种颜色（红），得到两色伪彩色图像。\n【图 2-47】灰度分层的切割示意图\n【参数】本次演示 l1=128（灰度中值）\n【效果】简单直观地分割亮暗区域。</string>
+    <string name="color_op_slice_multi_title">③ 灰度分层法 多平面切割 (图 2-48)</string>
+    <string name="color_op_slice_multi_formula">【原理】用 M 个切割平面把灰度范围切成 M+1 个区域 S1..S(M+1)，人为给每个区域分配一种颜色，得到 M+1 色伪彩色图像。\n【图 2-48】多灰度分层的切割示意图\n【参数】本次演示 M=7（色相均布的 8 种光谱色）\n【效果】优点：简单易行，便于软硬件实现，还可统计某灰度级面积；缺点：伪彩色生硬不调和、颜色数目不多。</string>
+    <string name="color_op_level_color_title">④ 灰度级彩色变换 (图 2-49)</string>
+    <string name="color_op_level_color_formula">【原理】根据三基色原理，把灰度 f 送入红/绿/蓝三个具有不同变换特性的变换器，输出 IR/IG/IB 三个基色分量后合成彩色。受调制的是像素灰度值而非位置，得到多种颜色渐变的连续彩色图像。\n【图 2-49】灰度级彩色变换原理（红/绿/蓝变换器典型特性）\n【本实现】相位错开 1/3 周期的三角波变换器：\nIR = tri(f/255)，IG = tri(f/255 + 1/3)，IB = tri(f/255 + 2/3)，tri(x) = 1 − |2·frac(x) − 1|\n【效果】灰度被映射为平滑的彩虹渐变，细节层次以色相区分。</string>
+    <string name="color_op_freq_color_title">⑤ 频率域滤波法伪彩色 (图 2-50)</string>
+    <string name="color_op_freq_color_formula">【原理】伪彩色与灰度级无关而与空间频率成分有关：灰度图 DFT 后用低通/带通/高通三个滤波器分离频谱，各自 IDFT 并做附加处理（直方图均衡化），作为三基色显示。\n【图 2-50】频率域滤波法实现伪彩色增强的原理框图\n【本实现】R=高通（边缘→红）、G=带通、B=低通（背景→蓝）；滤波器取高斯型（低通 D0=30、高通 D0=60）。\n【效果】边缘呈现红色、缓变区域偏蓝，有利于边界的视觉检测。</string>
+    <string name="color_op_false_linear_title">⑥ 假彩色 线性映射 (式 2-97)</string>
+    <string name="color_op_false_linear_formula">【原理】假彩色增强是彩色到彩色的映射，将自然彩色图像逐点映射到三基色确定的色度空间，重新显示时目标颜色不同于自然本色。\n【式 2-97】[gR, gG, gB]ᵀ = M·[fR, fG, fB]ᵀ（M 为 3×3 映射矩阵）\n【本实现】通道轮换矩阵：gR = fB，gG = fR，gB = fG\n【目的】经过假彩色变换比原来的自然色彩更引人注目（目的 1）。</string>
+    <string name="color_op_false_green_title">⑦ 假彩色 细节赋绿 (式 2-97)</string>
+    <string name="color_op_false_green_formula">【原理】根据人眼生理特点，把感兴趣而又不易分辨的细节赋予人眼较敏感的颜色——人眼对绿色特别灵敏。\n【式 2-97】[gR, gG, gB]ᵀ = M·[fR, fG, fB]ᵀ\n【本实现】gG = f（灰度细节作为绿色通道），gR = gB = 低通模糊背景\n【效果】细节丰富的目标呈现绿色调，更易分辨（目的 2）。</string>
+    <string name="color_op_false_blue_title">⑧ 假彩色 细节赋蓝 (式 2-97)</string>
+    <string name="color_op_false_blue_formula">【原理】人眼对蓝色变化的对比灵敏度较高，把细节较丰富的目标赋予深浅不一的蓝色可改善细节的可检测性。\n【式 2-97】[gR, gG, gB]ᵀ = M·[fR, fG, fB]ᵀ\n【本实现】gB = f（灰度细节作为蓝色通道），gR = gG = 低通模糊背景\n【效果】细节以蓝色深浅呈现，对比灵敏度演示（目的 2/3）。</string>
+    <string name="color_op_false_multi_title">⑨ 多光谱合成假彩色 (式 2-98)</string>
+    <string name="color_op_false_multi_formula">【原理】多光谱图像的假彩色增强用 n 个波段图像经变换函数TR/TG/TB 合成 RGB 三基色，多波段综合可获得更多信息、便于区分某些特征（目的 3）。\n【式 2-98】gR = TR[f1..fn]，gG = TG[f1..fn]，gB = TB[f1..fn]\n【本实现】把 RGB 三通道当作三个波段 f1/f2/f3，变换函数取波段差分：\ngR = |f1 − f2|，gG = |f2 − f3|，gB = |f3 − f1|\n【效果】光谱差异大的区域颜色鲜明，可突出特定材质/目标的边界。</string>
+</resources>

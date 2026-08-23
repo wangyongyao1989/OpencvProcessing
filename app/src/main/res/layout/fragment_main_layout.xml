@@ -15,13 +15,12 @@
             android:id="@+id/tv_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="openCV处理 功能集"
+            android:text="@string/main_title"
             android:textColor="#333333"
             android:textSize="24sp"
             android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:ignore="HardcodedText" />
+            app:layout_constraintTop_toTopOf="parent" />
 
         <GridLayout
             android:layout_width="match_parent"
@@ -33,6 +32,7 @@
             app:layout_constraintTop_toBottomOf="@id/tv_title">
 
         <!-- 图像增强 -->
+        <!-- Image Enhancement -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -56,23 +56,22 @@
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_gallery"
-                        android:contentDescription="图像增强"
-                        app:tint="@color/purple_500"
-                        tools:ignore="HardcodedText" />
+                        android:contentDescription="@string/main_card_enhance_desc"
+                        app:tint="@color/purple_500" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="图像增强"
+                        android:text="@string/main_card_enhance"
                         android:textColor="#000000"
                         android:textSize="15sp"
-                        android:textStyle="bold"
-                        tools:ignore="HardcodedText" />
+                        android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
         <!-- 形态学图像处理 -->
+        <!-- Morphological Image Processing -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -96,23 +95,22 @@
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_edit"
-                        android:contentDescription="形态学图像处理"
-                        app:tint="@color/teal_700"
-                        tools:ignore="HardcodedText" />
+                        android:contentDescription="@string/main_card_morph_desc"
+                        app:tint="@color/teal_700" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="形态学图像处理"
+                        android:text="@string/main_card_morph"
                         android:textColor="#000000"
                         android:textSize="15sp"
-                        android:textStyle="bold"
-                        tools:ignore="HardcodedText" />
+                        android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
         <!-- 图像分割 -->
+        <!-- Image Segmentation -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -136,19 +134,17 @@
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_crop"
-                        android:contentDescription="图像分割"
-                        app:tint="@android:color/holo_red_dark"
-                        tools:ignore="HardcodedText" />
+                        android:contentDescription="@string/main_card_segmentation_desc"
+                        app:tint="@android:color/holo_red_dark" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="图像分割"
+                        android:text="@string/main_card_segmentation"
                         android:textColor="#000000"
                         android:textSize="15sp"
-                        android:textStyle="bold"
-                        tools:ignore="HardcodedText" />
+                        android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

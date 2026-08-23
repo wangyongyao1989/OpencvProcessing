@@ -1,0 +1,140 @@
+<resources>
+    <!-- Page-specific strings (English) -->
+
+    <!-- Main page -->
+    <string name="main_card_enhance">Image Enhancement</string>
+    <string name="main_card_enhance_desc">Image Enhancement</string>
+    <string name="main_card_morph">Morphological Image Processing</string>
+    <string name="main_card_morph_desc">Morphological Image Processing</string>
+    <string name="main_card_segmentation">Image Segmentation</string>
+    <string name="main_card_segmentation_desc">Image Segmentation</string>
+
+    <!-- Image enhancement menu -->
+    <string name="enhance_menu_title">Image Enhancement (Digital Image &amp; Video Processing, Ch.2)</string>
+    <string name="enhance_card_gray">Image Gray-level Transformation</string>
+    <string name="enhance_card_gray_desc">Image Gray-level Transformation</string>
+    <string name="enhance_card_gray_sub">Sec. 2.2: Linear/nonlinear transforms, histogram equalization</string>
+    <string name="enhance_card_smooth">Image Smoothing &amp; Denoising</string>
+    <string name="enhance_card_smooth_desc">Image Smoothing &amp; Denoising</string>
+    <string name="enhance_card_smooth_sub">Sec. 2.3: Neighborhood averaging, median filtering, low-pass filtering, NLM</string>
+    <string name="enhance_card_sharpen">Image Sharpening</string>
+    <string name="enhance_card_sharpen_desc">Image Sharpening</string>
+    <string name="enhance_card_sharpen_sub">Sec. 2.4: Gradient/Laplacian operators, high-pass filtering</string>
+    <string name="enhance_card_homo">Homomorphic Filtering of Images</string>
+    <string name="enhance_card_homo_desc">Homomorphic Filtering of Images</string>
+    <string name="enhance_card_homo_sub">Sec. 2.5: Illuminance/reflection component separation and enhancement</string>
+    <string name="enhance_card_retinex">Retinex Image Enhancement</string>
+    <string name="enhance_card_retinex_desc">Retinex-based Image Enhancement</string>
+    <string name="enhance_card_retinex_sub">Sec. 2.6: SSR / MSR / MSRCR</string>
+    <string name="enhance_card_color">Color Enhancement</string>
+    <string name="enhance_card_color_desc">Color Enhancement</string>
+    <string name="enhance_card_color_sub">Sec. 2.7: Pseudo-color / false-color enhancement</string>
+
+    <!-- Morphology menu -->
+    <string name="morph_menu_title">Morphological Image Processing (Digital Image &amp; Video Processing, Ch.3)</string>
+    <string name="morph_card_bin_basic">Basic Binary Morphological Operations</string>
+    <string name="morph_card_bin_basic_desc">Basic Binary Morphological Operations</string>
+    <string name="morph_card_bin_basic_sub">Sec. 3.2: Erosion / dilation / opening / closing / duality</string>
+    <string name="morph_card_bin_process">Morphological Processing of Binary Images</string>
+    <string name="morph_card_bin_process_desc">Morphological Processing of Binary Images</string>
+    <string name="morph_card_bin_process_sub">Sec. 3.3: Edges / filling / skeleton / thinning / filtering</string>
+    <string name="morph_card_gray_basic">Basic Grayscale Morphological Operations</string>
+    <string name="morph_card_gray_basic_desc">Basic Grayscale Morphological Operations</string>
+    <string name="morph_card_gray_basic_sub">Sec. 3.4: Grayscale erosion / dilation / opening / closing</string>
+    <string name="morph_card_gray_process">Morphological Processing of Grayscale Images</string>
+    <string name="morph_card_gray_process_desc">Morphological Processing of Grayscale Images</string>
+    <string name="morph_card_gray_process_sub">Sec. 3.5: Gradient / smoothing / top-hat / bottom-hat</string>
+
+    <!-- Segmentation menu -->
+    <string name="seg_menu_title">Image Segmentation (Digital Image &amp; Video Processing, Ch.4)</string>
+    <string name="seg_card_threshold">Gray-threshold-based Image Segmentation</string>
+    <string name="seg_card_threshold_desc">Gray-threshold-based Image Segmentation</string>
+    <string name="seg_card_threshold_sub">Sec. 4.2: Fixed / iterative / Otsu / adaptive / multi-level</string>
+    <string name="seg_card_edge">Edge-detection-based Image Segmentation</string>
+    <string name="seg_card_edge_desc">Edge-detection-based Image Segmentation</string>
+    <string name="seg_card_edge_sub">Sec. 4.3: Roberts / Sobel / LoG / Canny / contours</string>
+    <string name="seg_card_region">Region-based Image Segmentation</string>
+    <string name="seg_card_region_desc">Region-based Image Segmentation</string>
+    <string name="seg_card_region_sub">Sec. 4.4: Region growing / split-and-merge / connectivity / watershed</string>
+    <string name="seg_card_contour">Active-contour-based Image Segmentation</string>
+    <string name="seg_card_contour_desc">Active-contour-based Image Segmentation</string>
+    <string name="seg_card_contour_sub">Sec. 4.5: Snake / balloon force / geodesic / Chan-Vese</string>
+
+    <!-- Gray transform page -->
+    <string name="gray_title">Gray-level Transformation of Images (Digital Image &amp; Video Processing, Sec. 2.2)</string>
+    <string name="gray_hint">Select one gray-level transformation method (single selection):</string>
+    <string name="gray_cb_original">① Show original image</string>
+    <string name="gray_cb_linear">② Gray linear transform (Eq. 2-1)</string>
+    <string name="gray_cb_invert">③ Inversion transform (Fig. 2-3)</string>
+    <string name="gray_cb_piecewise">④ Piecewise linear (Eq. 2-2/2-3)</string>
+    <string name="gray_cb_clip">⑤ Clipping (Fig. 2-6, Eq. 2-3)</string>
+    <string name="gray_cb_threshold">⑥ Thresholding (Fig. 2-7, Eq. 2-3)</string>
+    <string name="gray_cb_log">⑦ Logarithmic transform (Eq. 2-4)</string>
+    <string name="gray_cb_gamma">⑧ Gamma transform (Eq. 2-5)</string>
+    <string name="gray_cb_histeq">⑨ Histogram equalization (Eq. 2-14)</string>
+
+    <!-- Smoothing & denoising page -->
+    <string name="smooth_title">Image Smoothing &amp; Denoising (Digital Image &amp; Video Processing, Sec. 2.3)</string>
+    <string name="smooth_hint">Select one smoothing/denoising method (single selection):</string>
+    <string name="smooth_cb_original">① Show original image</string>
+    <string name="smooth_cb_avg4">② 4-neighborhood averaging (Eq. 2-24)</string>
+    <string name="smooth_cb_avg8">③ 8-neighborhood averaging (Eq. 2-26)</string>
+    <string name="smooth_cb_threshold_avg">④ Threshold averaging (Eq. 2-28)</string>
+    <string name="smooth_cb_median3">⑤ Median filter 3×3 (Eq. 2-29)</string>
+    <string name="smooth_cb_median_cross">⑥ Cross-shaped median 5×5 (Eq. 2-30)</string>
+    <string name="smooth_cb_ilpf">⑦ Ideal low-pass (Eq. 2-41)</string>
+    <string name="smooth_cb_glpf">⑧ Gaussian low-pass (Eq. 2-46)</string>
+    <string name="smooth_cb_nlm">⑨ NLM denoising (Eq. 2-32)</string>
+
+    <!-- Sharpening page -->
+    <string name="sharpen_title">Image Sharpening (Digital Image &amp; Video Processing, Sec. 2.4)</string>
+    <string name="sharpen_hint">Select one sharpening method (single selection):</string>
+    <string name="sharpen_cb_original">① Show original image</string>
+    <string name="sharpen_cb_hv_grad">② Horizontal-vertical difference (Eq. 2-56)</string>
+    <string name="sharpen_cb_roberts">③ Roberts gradient (Eq. 2-57)</string>
+    <string name="sharpen_cb_sobel">④ Sobel operator (Eq. 2-63)</string>
+    <string name="sharpen_cb_lap_h1">⑤ Laplacian H1 (Eq. 2-70)</string>
+    <string name="sharpen_cb_lap_h6">⑥ Composite Laplacian H6 (Eq. 2-73)</string>
+    <string name="sharpen_cb_lap_h7">⑦ Composite Laplacian H7</string>
+    <string name="sharpen_cb_ilpf">⑧ Ideal high-pass filtering (Eq. 2-75)</string>
+    <string name="sharpen_cb_glpf">⑨ Gaussian high-pass filtering (Eq. 2-79)</string>
+
+    <!-- Homomorphic filtering page -->
+    <string name="homo_title">Homomorphic Filtering of Images (Digital Image &amp; Video Processing, Sec. 2.5)</string>
+    <string name="homo_hint">Select one homomorphic filtering option (single selection):</string>
+    <string name="homo_cb_original">① Show original image</string>
+    <string name="homo_cb_illum">② Illuminance component i (Eq. 2-81)</string>
+    <string name="homo_cb_reflect">③ Reflectance component r (Eq. 2-81)</string>
+    <string name="homo_cb_log">④ Log domain ln f (Eq. 2-82)</string>
+    <string name="homo_cb_std">⑤ Homomorphic filtering, standard parameters</string>
+    <string name="homo_cb_strong">⑥ Strong illuminance compression</string>
+    <string name="homo_cb_d30">⑦ Cutoff D0=30</string>
+    <string name="homo_cb_d150">⑧ Cutoff D0=150</string>
+    <string name="homo_cb_mild">⑨ Mild enhancement</string>
+
+    <!-- Retinex page -->
+    <string name="retinex_title">Retinex-based Image Enhancement (Digital Image &amp; Video Processing, Sec. 2.6)</string>
+    <string name="retinex_hint">Select one Retinex enhancement method (single selection):</string>
+    <string name="retinex_cb_original">① Show original image</string>
+    <string name="retinex_cb_illum">② Illumination component L (Eq. 2-88)</string>
+    <string name="retinex_cb_reflect">③ Reflectance component r (Eq. 2-90)</string>
+    <string name="retinex_cb_ssr15">④ SSR σ=15 (Eq. 2-91)</string>
+    <string name="retinex_cb_ssr80">⑤ SSR σ=80 (Fig. 2-46)</string>
+    <string name="retinex_cb_ssr250">⑥ SSR σ=250</string>
+    <string name="retinex_cb_msr3">⑦ MSR three-scale (Eq. 2-93)</string>
+    <string name="retinex_cb_msr5">⑧ MSR five-scale (Eq. 2-94)</string>
+    <string name="retinex_cb_msrcr">⑨ MSRCR color restoration (Eq. 2-96)</string>
+
+    <!-- Color enhancement page -->
+    <string name="color_title">Color Enhancement (Digital Image &amp; Video Processing, Sec. 2.7)</string>
+    <string name="color_hint">Select one color enhancement method (single selection):</string>
+    <string name="color_cb_original">① Show original image</string>
+    <string name="color_cb_slice2">② Gray-level slicing, two levels (Fig. 2-47)</string>
+    <string name="color_cb_slice_multi">③ Gray-level slicing, multiple levels (Fig. 2-48)</string>
+    <string name="color_cb_level_color">④ Gray-level to color transform (Fig. 2-49)</string>
+    <string name="color_cb_freq_color">⑤ Frequency-domain pseudo-color (Fig. 2-50)</string>
+    <string name="color_cb_false_linear">⑥ False color, linear mapping (Eq. 2-97)</string>
+    <string name="color_cb_false_green">⑦ False color, details to green (Eq. 2-97)</string>
+    <string name="color_cb_false_blue">⑧ False color, details to blue (Eq. 2-97)</string>
+    <string name="color_cb_false_multi">⑨ Multispectral composition (Eq. 2-98)</string>
+</resources>

@@ -13,6 +13,7 @@
         android:padding="12dp">
 
         <!-- 顶部：返回 + 标题 -->
+        <!-- Top bar: back + title -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -24,9 +25,8 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="← 返回"
-                android:textAllCaps="false"
-                tools:ignore="HardcodedText" />
+                android:text="@string/common_back"
+                android:textAllCaps="false" />
 
             <TextView
                 android:id="@+id/tv_page_title"
@@ -42,16 +42,16 @@
         </LinearLayout>
 
         <!-- 9 个 checkbar：3x3 网格，一次仅选一个（标签由代码注入） -->
+        <!-- 9 check bars: 3x3 grid, only one selected at a time (labels injected by code) -->
         <TextView
             android:id="@+id/tv_checkbar_hint"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="请选择一种形态学运算（一次仅选中一项）："
+            android:text="@string/morph_checkbar_hint"
             android:textColor="#111111"
             android:textSize="16sp"
-            android:textStyle="bold"
-            tools:ignore="HardcodedText" />
+            android:textStyle="bold" />
 
         <GridLayout
             android:layout_width="match_parent"
@@ -162,6 +162,7 @@
         </GridLayout>
 
         <!-- 并排图像：原图 vs 处理后（支持双指缩放/拖动） -->
+        <!-- Side-by-side images: original vs processed (supports two-finger zoom/drag) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -180,11 +181,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"
-                    android:text="原 图"
+                    android:text="@string/common_original"
                     android:textColor="#111111"
                     android:textSize="17sp"
-                    android:textStyle="bold"
-                    tools:ignore="HardcodedText" />
+                    android:textStyle="bold" />
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
@@ -199,7 +199,7 @@
                         android:layout_height="match_parent"
                         android:adjustViewBounds="true"
                         android:scaleType="fitCenter"
-                        android:contentDescription="原图"
+                        android:contentDescription="@string/common_original_desc"
                         android:background="#FFFFFF" />
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
@@ -217,11 +217,10 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:maxLines="2"
-                    android:text="处理后"
+                    android:text="@string/common_processed"
                     android:textColor="#111111"
                     android:textSize="17sp"
-                    android:textStyle="bold"
-                    tools:ignore="HardcodedText" />
+                    android:textStyle="bold" />
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
@@ -236,13 +235,14 @@
                         android:layout_height="match_parent"
                         android:adjustViewBounds="true"
                         android:scaleType="fitCenter"
-                        android:contentDescription="处理后图像"
+                        android:contentDescription="@string/common_processed_desc"
                         android:background="#FFFFFF" />
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
         </LinearLayout>
 
         <!-- 原理及公式卡片 -->
+        <!-- Principle & Formula card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -262,11 +262,10 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="原理及公式"
+                    android:text="@string/common_principle_formula"
                     android:textColor="#018786"
                     android:textStyle="bold"
-                    android:textSize="18sp"
-                    tools:ignore="HardcodedText" />
+                    android:textSize="18sp" />
 
                 <ScrollView
                     android:layout_width="match_parent"

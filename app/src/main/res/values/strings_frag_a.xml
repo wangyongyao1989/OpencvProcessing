@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 灰度变换/平滑去噪/锐化三级页算法项字符串（中文默认，来自 3 个 Fragment 的 enum） -->
+    <!-- Gray transform / smoothing-denoising / sharpening algorithm strings (Chinese default) -->
+
+    <!-- 灰度变换算法项 / Gray transform algorithm items -->
+    <string name="gray_op_original_title">① 显示原始图像</string>
+    <string name="gray_op_original_formula">"【原理】不做任何处理，直接显示原始图像，用作对照基准。\n【公式】g(x,y) = f(x,y)\n【说明】用于与其他八种灰度变换结果作并排对比，观察各变换对灰度分布的调整作用。"</string>
+    <string name="gray_op_linear_title">② 灰度的线性变换 (式 2-1)</string>
+    <string name="gray_op_linear_formula">"【原理】对有限范围的像素灰度做线性拉伸/压缩，扩展动态范围、统一映射。适用于曝光不足/过度导致灰度集中在小区间的图像。\n【式 2-1】g(x,y) = [(d-c)/(b-a)] · [f(x,y) − a] + c\n【参数】本次演示：a=50, b=200, c=0, d=255，即将 [50,200] 拉满到 [0,255]。\n【效果】中间层次灰度被拉开，整体对比度增强。"</string>
+    <string name="gray_op_invert_title">③ 图像的反转变换 (图 2-3)</string>
+    <string name="gray_op_invert_formula">"【原理】线性变换的特例：黑变白、白变黑，与底片效果一致。常用于医学图像（如 X 光）、掩膜图像的可视化。\n【公式】g(x,y) = 255 − f(x,y)\n【对应】图 2-3 所示的反转曲线。"</string>
+    <string name="gray_op_piecewise_title">④ 三段分段线性变换 / 对比度扩展 (式 2-2, 式 2-3)</string>
+    <string name="gray_op_piecewise_formula">"【原理】三段分段线性可以对某一灰度区间进行拉伸，同时抑制其他区间，突出感兴趣的灰度范围。\n【式 2-2（压缩式）】将 [0,a) 压缩为 c、[b,Mf) 压缩为 d，中间线性映射：\n   g(x,y) = c,                                 0 ≤ f &lt; a\n          = [(d-c)/(b-a)]·(f(x,y)−a) + c,       a ≤ f &lt; b\n          = d,                                 b ≤ f &lt; Mf\n【式 2-3（斜率式，本函数实现）】保留两端斜率仅调整大小：\n   g(x,y) = (c/a)·f(x,y),                                    0 ≤ f &lt; a\n          = [(d-c)/(b-a)]·(f(x,y)−a) + c,                     a ≤ f &lt; b\n          = [(Mg−d)/(Mf−b)]·(f(x,y)−b) + d,                   b ≤ f &lt; Mf\n【参数】本次演示 a=60, b=200, c=20, d=230，压缩两端低值与高值、扩展中间主体。"</string>
+    <string name="gray_op_clip_title">⑤ 削波处理 (图 2-6, 式 2-3 特例)</string>
+    <string name="gray_op_clip_formula">"【原理】分段线性的特例。令式 2-3 中 c=0、d=Mg=255，把 [0,a] 抑制为黑、[b,Mf] 抑制为白，仅保留并拉伸 [a,b] 区间内容。常用于把物体主体从背景中切分出来。\n【公式】代入 c=0, d=255：\n   g = 0,                          0 ≤ f &lt; a\n   g = [255/(b-a)]·(f(x,y) − a),   a ≤ f &lt; b\n   g = 255,                        b ≤ f &lt; Mf\n【参数】本次演示 a=100, b=180，对应图 2-6 的效果。"</string>
+    <string name="gray_op_threshold_title">⑥ 阈值化 (图 2-7, 式 2-3 特例)</string>
+    <string name="gray_op_threshold_formula">"【原理】削波的进一步特例：令式 2-3 中 a=b=threshold、c=0、d=255，图像仅保留两个灰度级 0/255，输出二值图像。\n【公式】\n   g(x,y) = 0,    f(x,y) &lt;  threshold\n          = 255,  f(x,y) ≥ threshold\n【参数】本次演示 threshold=128，对应图 2-7。"</string>
+    <string name="gray_op_log_title">⑦ 对数变换 (式 2-4)</string>
+    <string name="gray_op_log_formula">"【原理】使用对数函数对像素灰度做映射，扩展低灰度范围、压缩高灰度范围，使整体灰度分布更符合人眼视觉特性。典型应用是傅里叶频谱显示：当频谱动态范围过大时，对数变换能将细节呈现出来。\n【式 2-4（PDF）】g(x,y) = a + ln[f(x,y) + 1] / (b · ln c)\n       其中 a,b,c 用于改变曲线的起点与形状，+1 避免对 0 求对数。\n【本实现（工程常用简化，令 a=0，b=1，并自动求解 c 使最大输出=255）】\n   g(x,y) = c · ln(1 + f(x,y))\n【参数】本次演示 c=0（0 表示由算法自动计算最佳缩放）。"</string>
+    <string name="gray_op_gamma_title">⑧ 伽马变换 / 幂次变换 (式 2-5 派生)</string>
+    <string name="gray_op_gamma_formula">"【原理】幂次 / 伽马变换用于不同的显示系统中校正输出设备的 γ 响应（即 CRT/LCD 的灰度曲线）。γ &lt; 1 扩展高灰度、暗部被压缩（提升偏暗图像亮度层次）；γ &gt; 1 相反。\n【式 2-5（PDF 指数变换）】g(x,y) = b^{ c · [f(x,y) − a] } − 1\n   扩展高灰度区间，压缩低灰度区间。\n【本实现：工程通用的伽马（幂次）变换】先把 f 归一化 f' = f/255 ∈ [0,1]：\n   g(x,y) = c · f(x,y)^γ    再映射回 [0,255]\n【参数】本次演示 c=1.0, γ=0.5（&lt;1），用于提亮偏暗区域、扩展高灰度。"</string>
+    <string name="gray_op_histeq_title">⑨ 直方图均衡化 (式 2-13, 式 2-14)</string>
+    <string name="gray_op_histeq_formula">"【原理】把原始图像的灰度直方图通过累积分布函数变换为近似均匀分布的直方图，使整体对比度增大、层次更清晰。对偏亮/偏暗/对比度较小的图像效果明显。\n【式 2-13】离散灰度概率：\n   pr(rk) = nk / n    (k = 0, 1, …, L−1)\n   其中 nk 表示第 k 个灰度级 rk 的像素数，n 为总像素数。\n【式 2-14】离散累积分布（均衡化变换函数）：\n   sk = T(rk) = Σ_{j=0}^{k} pr(rj) = Σ_{j=0}^{k} nj / n    (0 ≤ rj ≤ 1)\n   把原始灰度 rk 映射为均衡化后的灰度 sk。\n【实现】调用 OpenCV cv::equalizeHist。"</string>
+
+    <!-- 平滑与去噪算法项 / Smoothing and denoising algorithm items -->
+    <string name="smooth_op_original_title">① 显示原始图像</string>
+    <string name="smooth_op_original_formula">"【原理】不做任何处理，直接显示原始图像，用作对照基准。\n【公式】g(x,y) = f(x,y)\n【说明】用于与其他八种平滑/去噪结果作并排对比，观察各方法对噪声与细节的不同影响。"</string>
+    <string name="smooth_op_avg4_title">② 4-邻域平均法 (式 2-24)</string>
+    <string name="smooth_op_avg4_formula">"【原理】邻域平均法 (2.3.2)：随机噪声对单个像素的影响是孤立的，用邻域像素的灰度平均值代替中心像素即可抑制噪声。\n【式 2-23】g(x,y) = (1/M) Σ_{(i,j)∈N} f(i,j)\n【式 2-24】g(x,y) = (1/4)·[f(x-1,y) + f(x,y-1) + f(x,y+1) + f(x+1,y)]\n【式 2-25】模板 H1 = (1/4)·[[0,1,0],[1,0,1],[0,1,0]]（不含中心点）\n【效果】算法简单、速度快，能抑制噪声，但边缘与细节同时被平滑，图像变模糊。"</string>
+    <string name="smooth_op_avg8_title">③ 8-邻域平均法 (式 2-26)</string>
+    <string name="smooth_op_avg8_formula">"【原理】把 4-邻域扩大为 8-邻域（含 4 个对角方向），参与平均的像素更多。\n【式 2-26】g(x,y) = (1/8)·Σ_{(i,j)∈N8} f(i,j)\n        = (1/8)·[f(x-1,y-1)+f(x,y-1)+f(x+1,y-1)+f(x-1,y)\n                +f(x+1,y)+f(x-1,y+1)+f(x,y+1)+f(x+1,y+1)]\n【式 2-27】模板 H2 = (1/8)·[[1,1,1],[1,0,1],[1,1,1]]\n【效果】平滑作用比 4-邻域更强，图像也随之更模糊；邻域半径越大模糊越重。"</string>
+    <string name="smooth_op_threshold_avg_title">④ 阈值邻域平均法 (式 2-28)</string>
+    <string name="smooth_op_threshold_avg_formula">"【原理】为减轻邻域平均法的模糊效应：仅当像素灰度与其邻域均值之差超过阈值 T 时才判定为噪声并用邻域均值代替，否则保留原灰度。\n【式 2-28】\n   g(x,y) = (1/M)Σ f(i,j),   当 |f(x,y) − (1/M)Σf(i,j)| &gt; T\n   g(x,y) = f(x,y),          其他\n【参数】本次演示 T = 30。\n【说明】阈值太大减弱去噪效果，太小则模糊效应增强，需结合图像特点选取。"</string>
+    <string name="smooth_op_median3_title">⑤ 中值滤波 3×3 (式 2-29)</string>
+    <string name="smooth_op_median3_formula">"【原理】中值滤波 (2.3.3) 是非线性滤波：滑动窗口内像素按灰度排序，取中间值代替窗口中心像素。在一定条件下可克服线性滤波带来的细节模糊，对脉冲（椒盐）噪声最有效，且不需要图像统计特性。\n【式 2-29】yi = Med{ f(i-u), …, f(i), …, f(i+u) }，u = (m-1)/2\n【式 2-30】yij = Med_W{ Fij }（W 为滤波窗口，此处取 3×3 方形窗口）\n【特性】不影响阶跃/斜坡信号，对边缘有保护作用；对点、线、尖角细节多的图像不宜采用。"</string>
+    <string name="smooth_op_median_cross_title">⑥ 5×5 十字中值滤波 (式 2-30)</string>
+    <string name="smooth_op_median_cross_formula">"【原理】中值滤波的关键是窗口形状与大小（图 2-21）。十字形窗口对含尖顶角几何结构的图像较合适；窗口大小一般先取 3 再取 5 依次增大，且不要超过最小目标物尺寸。\n【式 2-30】yij = Med_W{ Fij }，W 取十字形窗口：\n   中心 + 水平(±1,±2) + 垂直(±1,±2) 共 9 个像素排序取中值\n【对应】图 2-23f 采用的即 5×5 十字中值滤波（对椒盐噪声效果优于邻域平均法）。\n【效果】对椒盐噪声抑制强，细节损失比 3×3 略大。"</string>
+    <string name="smooth_op_ilpf_title">⑦ 理想低通滤波 (式 2-41)</string>
+    <string name="smooth_op_ilpf_formula">"【原理】频率域低通滤波 (2.3.5)：图像边缘与噪声都处于频域高频部分，衰减高频分量即可去噪。流程（图 2-27）：DFT → 乘传递函数 → IDFT。\n【式 2-40】G(u,v) = H(u,v)·F(u,v)\n【式 2-41】H(u,v) = 1,  D(u,v) ≤ D0；   0,  D(u,v) &gt; D0\n【式 2-42】D(u,v) = √(u² + v²)（频率点到频率平面原点的距离）\n【参数】本次演示 D0 = 60。\n【效果】截止频率内无损通过、外完全滤除；D0 越小去噪越彻底但越模糊，且会产生明显的「振铃(Ring)」现象。"</string>
+    <string name="smooth_op_glpf_title">⑧ 高斯低通滤波 (式 2-46)</string>
+    <string name="smooth_op_glpf_formula">"【原理】高斯函数的傅里叶变换与反变换均为高斯函数，基于高斯函数的滤波在空间域与频率域之间有特殊联系。通带与阻带之间平滑过渡。\n【式 2-45】H(u,v) = e^{ −D²(u,v) / (2σ²) }\n【式 2-46】取 σ = D0：H(u,v) = e^{ −D²(u,v) / (2D0²) }\n        当 D(u,v) = D0 时 H 下降到最大值的 0.607。\n【参数】本次演示 D0 = 40。\n【效果】与理想低通相比无振铃现象，模糊程度较轻；同类还有巴特沃兹低通（式 2-43/2-44，过渡平滑亦无振铃）与梯形低通（式 2-47，性能介于两者之间）。"</string>
+    <string name="smooth_op_nlm_title">⑨ 非局部均值 NLM 去噪 (式 2-32)</string>
+    <string name="smooth_op_nlm_formula">"【原理】基于非局部相似性 (2.3.4)：自然图像中存在位置不同但结构相似的图像块，当前像素值由所有相似块加权平均得到，权重取决于块间相似度而与空间距离无关。\n【式 2-31】w(i,j) = exp( −d(i,j) / h² )，\n        d(i,j) = ‖N(i) − N(j)‖²_{2,α}（高斯加权欧氏距离，α 为高斯核标准差）\n【式 2-32】f'(i) = Σ_{j∈Φ} w(i,j)·f(j) / Σ_{j∈Φ} w(i,j)\n【参数】本次演示 h = 10（衰减控制，越大去噪越强）。\n【扩展】BM3D 在非局部相似基础上融合三维联合滤波；WNNM（式 2-33~2-39）将相似块聚合成低秩矩阵并按奇异值加权收缩；稀疏表示去噪（式 2-48~2-53，K-SVD）则利用过完备字典的稀疏分解。"</string>
+
+    <!-- 锐化算法项 / Sharpening algorithm items -->
+    <string name="sharpen_op_original_title">① 显示原始图像</string>
+    <string name="sharpen_op_original_formula">"【原理】不做任何处理，直接显示原始图像，用作对照基准。\n【说明】图像锐化是与平滑相反的一类处理：图像模糊的实质是受到平均或积分运算的影响，对其作逆运算（微分、差分、梯度运算）即可使边缘和轮廓变清晰；从频率域看，模糊的实质是高频分量被衰减，故也可用高频提升滤波实现锐化。"</string>
+    <string name="sharpen_op_hv_grad_title">② 水平垂直差分法 (式 2-56)</string>
+    <string name="sharpen_op_hv_grad_formula">"【原理】梯度运算（2.4.1）：梯度值与相邻像素灰度差值成正比——边缘区梯度大、平缓区较小、均匀区为零，故梯度运算后仅留下灰度急剧变化的边缘点。\n【式 2-54】G[f(x,y)] = [∂f/∂x, ∂f/∂y]ᵀ = [Gx, Gy]ᵀ（梯度向量定义）\n【式 2-55】G[f(x,y)] = √(Gx² + Gy²)（梯度幅度，各向同性算子，为降低运算量常用绝对值代替）\n【式 2-56】水平垂直差分：G[f(i,j)] = |f(i+1,j) − f(i,j)| + |f(i,j+1) − f(i,j)|\n【式 2-58】g(i,j) = G[f(i,j)]（输出灰度等于梯度幅度，本实现采用）\n【说明】最后一行/列无法直接求梯度，用前一行/列梯度值近似代替。若不想让平缓区变黑，还可采用阈值法输出（式 2-59~2-62）：如 g=G（G≥T）/ f（其他）、背景取固定灰度 LG 或二值化输出等。"</string>
+    <string name="sharpen_op_roberts_title">③ Roberts 梯度 (式 2-57)</string>
+    <string name="sharpen_op_roberts_formula">"【原理】罗伯茨梯度采用 2×2 窗口的交叉差分（对角方向）运算。\n【式 2-57】G[f(i,j)] = |f(i+1,j+1) − f(i,j)| + |f(i,j+1) − f(i+1,j)|\n【式 2-58】g(i,j) = G[f(i,j)]\n【效果】对 45° 方向的陡峭边缘响应强、边缘定位精度高；但没有平均因素，抗噪声能力差，噪声、条纹等也会被增强（图 2-32b）。"</string>
+    <string name="sharpen_op_sobel_title">④ Sobel 算子 (式 2-63)</string>
+    <string name="sharpen_op_sobel_formula">"【原理】Sobel 算子（2.4.2）在梯度差分基础上引入平均因素，一定程度上克服了梯度锐化同时增强噪声的问题。\n【式 2-63】Gx = [f(i+1,j−1)+2f(i+1,j)+f(i+1,j+1)] − [f(i−1,j−1)+2f(i−1,j)+f(i−1,j+1)]\n【式 2-64】Gy = [f(i−1,j+1)+2f(i,j+1)+f(i+1,j+1)] − [f(i−1,j−1)+2f(i,j−1)+f(i+1,j−1)]\n【式 2-65】Hx = [[−1,0,1],[−2,0,2],[−1,0,1]]，Hy = [[−1,−2,−1],[0,0,0],[1,2,1]]\n【式 2-66】g(i,j) = √(Gx² + Gy²)；为简化计算用 g = |Gx| + |Gy|（本实现采用）\n【效果】1) 引入平均因素，对随机噪声有一定平滑作用；2) 相隔两行/两列之差分使边缘两侧元素同时增强，边缘显得粗而亮（图 2-35）。"</string>
+    <string name="sharpen_op_lap_h1_title">⑤ Laplacian 直接锐化 H1 (式 2-70)</string>
+    <string name="sharpen_op_lap_h1_formula">"【原理】拉普拉斯算子（2.4.3）是二阶偏导数的线性组合，且是各向同性（旋转不变）的线性运算，对任意方向边缘响应一致。\n【式 2-67】∇²f = ∂²f/∂x² + ∂²f/∂y²\n【式 2-68】∂²f/∂x² ≈ f(i+1,j) + f(i−1,j) − 2f(i,j)\n【式 2-69】∂²f/∂y² ≈ f(i,j+1) + f(i,j−1) − 2f(i,j)\n【式 2-70】∇²f = f(i+1,j)+f(i−1,j)+f(i,j+1)+f(i,j−1) − 4f(i,j)\n【式 2-71】模板 H1 = [[0,1,0],[1,−4,1],[0,1,0]]（另有 H2~H5 等变体）\n【效果】直接锐化后边缘增强，但背景信息消失（图 2-36）。拉普拉斯算子同样会增强噪声，但作用比梯度法弱；用于边缘检测前宜先平滑。"</string>
+    <string name="sharpen_op_lap_h6_title">⑥ 合成拉普拉斯 H6 (式 2-73)</string>
+    <string name="sharpen_op_lap_h6_formula">"【原理】为既体现拉普拉斯锐化效果又保留背景信息，将原图像与拉普拉斯锐化结果叠加，得到合成拉普拉斯模板锐化。\n【式 2-72】g(i,j) = f(i,j) − k∇²f（k 与扩散效应有关：太大会使轮廓边缘过冲，太小锐化不明显）\n【式 2-73】k=1 时：g(i,j) = 5f(i,j) − f(i+1,j) − f(i−1,j) − f(i,j+1) − f(i,j−1)\n【式 2-74】模板 H6 = [[0,−1,0],[−1,5,−1],[0,−1,0]]\n【效果】边缘清晰的同时保留原图背景灰度（图 2-37），是最常用的拉普拉斯锐化模板。"</string>
+    <string name="sharpen_op_lap_h7_title">⑦ 合成拉普拉斯 H7 (8 邻域)</string>
+    <string name="sharpen_op_lap_h7_formula">"【原理】H6~H9 统称合成拉普拉斯模板（2.4.3）。H7 为其 8 邻域版本，中心系数 9 = 1 + 8（原图权重 1 加上 8 个邻域的锐化响应）。\n【模板】H7 = [[−1,−1,−1],[−1,9,−1],[−1,−1,−1]]\n【对比】H6 = [[0,−1,0],[−1,5,−1],[0,−1,0]] 只用 4 邻域；同模板还有 H8 = [[0,1,0],[1,−3,1],[0,1,0]]、H9 = [[1,1,1],[1,−7,1],[1,1,1]]。\n【效果】8 邻域参与锐化，对边缘与纹理的增强比 H6 更强（图 2-37）。"</string>
+    <string name="sharpen_op_ihpf_title">⑧ 理想高通滤波锐化 (式 2-75)</string>
+    <string name="sharpen_op_ihpf_formula">"【原理】频率域高通滤波（2.4.4）：边缘、线条等细节对应高频分量，高通滤波让高频顺利通过、抑制低频得到边缘信息，再将高频边缘附加到原图即实现锐化。\n【式 2-40】G(u,v) = H(u,v)·F(u,v)\n【式 2-75】H(u,v) = 1,  D(u,v) &gt; D0；   0,  D(u,v) ≤ D0\n【式 2-76】D(u,v) = √(u² + v²)（频率点到频率平面原点的距离）\n【参数】本次演示 D0 = 30；锐化图像 g = f + 高频边缘（饱和截断到 [0,255]）。\n【效果】H 从 0 到 1 陡峭突变，无法用实际元器件实现，滤波结果存在明显「振铃」现象。"</string>
+    <string name="sharpen_op_ghpf_title">⑨ 高斯高通滤波锐化 (式 2-79)</string>
+    <string name="sharpen_op_ghpf_formula">"【原理】高斯高通与高斯低通（式 2-46）相对应，高低频率之间平滑过渡。\n【式 2-79】H(u,v) = 1 − e^( −D²(u,v) / (2D0²) )\n【参数】本次演示 D0 = 30；同样将高通边缘附加到原图：g = f + 高频边缘。\n【效果】无振铃现象；D0 增大时增强效果更加明显，即使对微小物体和细线条也比较清晰（图 2-41）。\n【扩展】常用高通滤波器还有：巴特沃兹高通（式 2-77/2-78，H 下降至最大值 1/2 处定义 D0，高低频过渡平滑无振铃）与梯形高通（式 2-80，性能介于理想与平滑过渡滤波器之间，滤波后图像既有一定模糊也有一定振铃）。"</string>
+</resources>

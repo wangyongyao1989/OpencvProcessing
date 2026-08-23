@@ -1,0 +1,135 @@
+<resources>
+    <!-- 形态学/图像分割三级页字符串（中文默认） -->
+    <!-- Morphology / segmentation tertiary-page strings (Chinese default) -->
+
+    <!-- 三级页标题 / Page titles -->
+    <string name="morph_title_page_bin_basic">二值形态学基本运算（3.2 节）</string>
+    <string name="morph_title_page_bin_process">二值图像的形态学处理（3.3 节）</string>
+    <string name="morph_title_page_gray_basic">灰度形态学基本运算（3.4 节）</string>
+    <string name="morph_title_page_gray_process">灰度图像的形态学处理（3.5 节）</string>
+    <string name="seg_title_page_threshold">基于灰度阈值化的图像分割（4.2 节）</string>
+    <string name="seg_title_page_edge">基于边缘检测的图像分割（4.3 节）</string>
+    <string name="seg_title_page_region">基于区域的图像分割（4.4 节）</string>
+    <string name="seg_title_page_contour">基于主动轮廓模型的图像分割（4.5 节）</string>
+
+    <!-- 勾选栏提示 / Checkbar hint -->
+    <string name="seg_checkbar_hint">请选择一种分割算法（一次仅选中一项）：</string>
+
+    <!-- 3.2 二值形态学基本运算 -->
+    <string name="morph_op_bin_basic_baseline_title">① 二值化基准</string>
+    <string name="morph_op_bin_basic_baseline_formula">"【原理】二值形态学运算的对象是集合。先把灰度图按 Otsu（大津法）自动求全局阈值分割为二值图像 A（前景白 255 / 背景黑 0），作为后续所有二值形态学运算的输入基准。\n【实现】OpenCV cv::threshold(THRESH_BINARY | THRESH_OTSU)。\n【说明】后面 ② ~ ⑥ 项均在同一张二值图上进行，结构元统一取 5×5 矩形。"</string>
+    <string name="morph_op_bin_basic_erode_title">② 腐蚀 (式 3-9)</string>
+    <string name="morph_op_bin_basic_erode_formula">"【原理】腐蚀表示用结构元 B 平移 z 后完全包含于集合 A 的所有平移点集合，可使图像边界向内部收缩、消除小的突出物。\n【式 3-9】A ⊖ B = { z | (B)_z ⊆ A }\n   即结构元平移 z 后仍完全落在目标区域内时，z 属于腐蚀结果。\n【参数】结构元 5×5 矩形。\n【效果】白色前景收缩，细小连接被断开，小于结构元的孤立白点被消除。"</string>
+    <string name="morph_op_bin_basic_dilate_title">③ 膨胀 (式 3-10, 3-11)</string>
+    <string name="morph_op_bin_basic_dilate_formula">"【原理】膨胀是腐蚀的对偶运算：结构元 B 平移 z 后与集合 A 至少有一个公共点的所有 z，可使边界向外扩张、弥合小的孔洞与裂缝。\n【式 3-10】A ⊕ B = { z | [(B̂)_z ∩ A] ⊆ A }\n【式 3-11】A ⊕ B = { z | (B̂)_z ∩ A ≠ ∅ }\n   两式等价，B̂ 表示 B 的反射（对称核）。\n【参数】结构元 5×5 矩形。\n【效果】白色前景扩张，孔洞缩小，断开区域被连接。"</string>
+    <string name="morph_op_bin_basic_open_title">④ 开运算 (式 3-15, 3-16)</string>
+    <string name="morph_op_bin_basic_open_formula">"【原理】开运算 = 先腐蚀后膨胀，能平滑目标轮廓、断开细窄连接、消除小的尖刺与孤立点，且整体尺寸基本不变。\n【式 3-15】A ∘ B = (A ⊖ B) ⊕ B\n【式 3-16】A ∘ B = ∪ { (B)_z | (B)_z ⊆ A }\n   即 A 中所有能与结构元完全匹配的平移之并。\n【参数】结构元 5×5 矩形。\n【效果】细小白噪声被抹去，大目标形状保持。"</string>
+    <string name="morph_op_bin_basic_close_title">⑤ 闭运算 (式 3-17)</string>
+    <string name="morph_op_bin_basic_close_formula">"【原理】闭运算 = 先膨胀后腐蚀，能弥合细窄的断裂与孔洞、平滑轮廓，且整体尺寸基本不变。\n【式 3-17】A • B = (A ⊕ B) ⊖ B\n【参数】结构元 5×5 矩形。\n【效果】黑色小孔洞与细缝被填补，白色主体连通性增强。"</string>
+    <string name="morph_op_bin_basic_duality_title">⑥ 对偶性验证 (式 3-13, 3-14)</string>
+    <string name="morph_op_bin_basic_duality_formula">"【原理】腐蚀与膨胀互为对偶：目标集合的腐蚀等价于其补集（背景）的膨胀再取补，反之亦然。\n【式 3-13】(A ⊖ B)^c = A^c ⊕ B̂\n【式 3-14】(A ⊕ B)^c = A^c ⊖ B̂\n【验证】本项把输入反相（前景/背景互换）后做腐蚀，再与直接膨胀的补集对比，两者应一致。\n【说明】本演示输出为反相-腐蚀结果，可与 ③ 膨胀图对照观察对偶关系。"</string>
+
+    <!-- 3.3 二值图像的形态学处理 -->
+    <string name="morph_op_bin_process_baseline_title">① 二值化基准</string>
+    <string name="morph_op_bin_process_baseline_formula">"【原理】与 3.2 节相同的 Otsu 二值化结果，作为本页 ② ~ ⑧ 各项形态学处理的输入基准。\n【实现】OpenCV cv::threshold(THRESH_BINARY | THRESH_OTSU)。"</string>
+    <string name="morph_op_bin_process_inner_edge_title">② 内边缘提取 (式 3-20, 3-21)</string>
+    <string name="morph_op_bin_process_inner_edge_formula">"【原理】内边缘 = 原集合减去其腐蚀，得到目标内侧的一圈边界像素。\n【式 3-20】β(A) = A − (A ⊖ B)\n【式 3-21】β(A) = A − ∪ { (B)_z | (B)_z ⊆ A }\n【参数】结构元 3×3 矩形（边界宽度 1 像素）。\n【效果】白色目标内部边缘轮廓。"</string>
+    <string name="morph_op_bin_process_outer_edge_title">③ 外边缘提取 (式 3-22)</string>
+    <string name="morph_op_bin_process_outer_edge_formula">"【原理】外边缘 = 目标膨胀后减去原集合，得到目标外侧的一圈边界像素。\n【式 3-22】β_ext(A) = (A ⊕ B) − A\n【参数】结构元 3×3 矩形。\n【效果】白色目标外部边缘轮廓，与 ② 内边缘互补。"</string>
+    <string name="morph_op_bin_process_grad_edge_title">④ 形态学梯度边缘</string>
+    <string name="morph_op_bin_process_grad_edge_formula">"【原理】形态学梯度 = 膨胀结果减去腐蚀结果，同时覆盖目标的内外边界，边缘更粗、更完整，是灰度形态学梯度（式 3-46）的二值特例。\n【公式】Grad(A) = (A ⊕ B) − (A ⊖ B)\n【参数】结构元 3×3 矩形。\n【效果】完整的双边缘轮廓带。"</string>
+    <string name="morph_op_bin_process_fill_holes_title">⑤ 区域填充 (式 3-23)</string>
+    <string name="morph_op_bin_process_fill_holes_formula">"【原理】从孔洞内某点出发，用结构元反复膨胀并与 A 的补集求交，直至收敛，即可填满 A 内部的所有孔洞。\n【式 3-23】X_k = (X_{k−1} ⊕ B) ∩ A^c,  k = 1, 2, …\n   收敛时 X_k = X_{k−1}，填充结果 = A ∪ X_k。\n【实现】从图像四周边界种子（外部背景）洪泛求补集再反演，等价于式 3-23 迭代的工程实现。\n【效果】白色目标内部的黑色孔洞被完全填补。"</string>
+    <string name="morph_op_bin_process_skeleton_title">⑥ 骨架提取 (式 3-24 ~ 3-28)</string>
+    <string name="morph_op_bin_process_skeleton_formula">"【原理】骨架是目标的最小中心线表示。反复腐蚀并求每次腐蚀与其开运算之差，把各次差并起来即得骨架。\n【式 3-24】S(A) = ∪_{n=0}^{N} S_n(A)\n【式 3-25】S_n(A) = (A ⊖ nB) − [(A ⊖ nB) ∘ B]\n【式 3-26】重构：A = ∪_{n=0}^{N} (S_n(A) ⊕ nB)\n【式 3-27】(A ⊖ nB) 表示结构元 B 连续腐蚀 n 次。\n【式 3-28】N 为 A 被腐蚀成空集前的最大次数。\n【效果】白色目标被压缩为单像素中心骨架线。"</string>
+    <string name="morph_op_bin_process_thinning_title">⑦ 细化 (式 3-29 ~ 3-31)</string>
+    <string name="morph_op_bin_process_thinning_formula">"【原理】细化是求骨架的一种序贯算法：用结构元序列逐轮击中-击不中变换剥离边界像素，直到结果不再变化。\n【式 3-29】A ⊗ B = A − (A * B)\n   其中 * 为击中-击不中变换（Hit-or-Miss）。\n【式 3-30】A ⊗ {B} = ((…((A ⊗ B_1) ⊗ B_2)…) ⊗ B_n)\n   按顺序使用结构元序列 {B_1…B_n} 反复迭代。\n【式 3-31】细化结果满足：A ⊗ {B} 再细化一次不变（收敛）。\n【实现】手写 Zhang-Suen 序贯细化（两遍扫描删除边界点，对应式 3-30 旋转结构元序列 B1…B8）。\n【效果】目标收缩为细线但不断裂，保留拓扑连接。"</string>
+    <string name="morph_op_bin_process_open_close_filter_title">⑧ 开闭滤波去噪 (式 3-34, 3-35)</string>
+    <string name="morph_op_bin_process_open_close_filter_formula">"【原理】开运算滤除白色（椒）噪声、闭运算滤除黑色（盐）噪声，二者串联即形态学滤波器。\n【式 3-34】先开后闭：(A ∘ B) • B\n【式 3-35】先闭后开：(A • B) ∘ B\n   本实现按式 3-34 执行。\n【参数】结构元 5×5 矩形。\n【效果】二值图上的孤立噪点被滤除，主体形状保持不变。"</string>
+
+    <!-- 3.4 灰度形态学基本运算 -->
+    <string name="morph_op_gray_basic_baseline_title">① 原图基准</string>
+    <string name="morph_op_gray_basic_baseline_formula">"【原理】不做任何处理，直接显示原始灰度图像，作为 ② ~ ⑤ 灰度形态学基本运算的对照基准。\n【说明】灰度形态学不再把图像看作集合，而是看作二维灰度函数 f(x,y)，结构元 b(x,y) 是一个小的子图像函数，运算在像素邻域内取最大/最小值。"</string>
+    <string name="morph_op_gray_basic_erode_title">② 灰度腐蚀 (式 3-36, 3-37)</string>
+    <string name="morph_op_gray_basic_erode_formula">"【原理】灰度腐蚀 = 结构元定义的邻域内取最小值，输出图像变暗，尺寸小于结构元的亮细节（高灰度峰值）被消除。\n【式 3-36】(f ⊖ b)(x, y) = min { f(x + x′, y + y′) − b(x′, y′) }\n        (x′, y′) ∈ D_b（结构元定义域），平移后完全含于 f 的定义域。\n【式 3-37】平坦结构元（b = 0）时简化为：(f ⊖ b)(x, y) = min_{(x′,y′)∈D_b} f(x + x′, y + y′)\n【参数】结构元 5×5 椭圆（平坦）。\n【效果】整体变暗，亮点被抹平。"</string>
+    <string name="morph_op_gray_basic_dilate_title">③ 灰度膨胀 (式 3-38, 3-39)</string>
+    <string name="morph_op_gray_basic_dilate_formula">"【原理】灰度膨胀 = 邻域内取最大值，输出图像变亮，暗细节（低灰度谷底）被填平。\n【式 3-38】(f ⊕ b)(x, y) = max { f(x − x′, y − y′) + b(x′, y′) }\n        (x′, y′) ∈ D_b。\n【式 3-39】平坦结构元时简化为：(f ⊕ b)(x, y) = max_{(x′,y′)∈D_b} f(x − x′, y − y′)\n【参数】结构元 5×5 椭圆（平坦）。\n【效果】整体变亮，暗坑被填平，与 ② 腐蚀互为对偶。"</string>
+    <string name="morph_op_gray_basic_open_title">④ 灰度开运算 (式 3-42, 3-43)</string>
+    <string name="morph_op_gray_basic_open_formula">"【原理】灰度开 = 先腐蚀后膨胀，可去除小于结构元的亮细节（亮点、尖峰、亮噪声），保留整体灰度轮廓。\n【式 3-42】f ∘ b = (f ⊖ b) ⊕ b\n【式 3-43】几何解释：把结构元“从下方向上推”顶住 f 表面，其中心点轨迹的上包络即为开结果。\n【参数】结构元 5×5 椭圆（平坦）。\n【效果】亮的细小突起与噪声被滤除，暗的结构不受影响。"</string>
+    <string name="morph_op_gray_basic_close_title">⑤ 灰度闭运算 (式 3-44, 3-45)</string>
+    <string name="morph_op_gray_basic_close_formula">"【原理】灰度闭 = 先膨胀后腐蚀，可去除小于结构元的暗细节（暗点、沟谷、暗噪声），保留整体灰度轮廓。\n【式 3-44】f • b = (f ⊕ b) ⊖ b\n【式 3-45】几何解释：把结构元“从上方向下压”贴住 f 表面，其中心点轨迹的下包络即为闭结果。\n【参数】结构元 5×5 椭圆（平坦）。\n【效果】暗的细小沟壑与噪声被填平，亮的结构不受影响，与 ④ 开运算对偶。"</string>
+
+    <!-- 3.5 灰度图像的形态学处理 -->
+    <string name="morph_op_gray_process_baseline_title">① 原图基准</string>
+    <string name="morph_op_gray_process_baseline_formula">"【原理】不做任何处理，直接显示原始灰度图像，作为本页 ② ~ ⑦ 灰度形态学处理算法的对照基准。\n【说明】以下各算法均在灰度图上以开/闭/膨胀/腐蚀为基元组合而成。"</string>
+    <string name="morph_op_gray_process_gradient_title">② 形态学梯度 (式 3-46)</string>
+    <string name="morph_op_gray_process_gradient_formula">"【原理】膨胀减腐蚀得到形态学梯度，灰度突变处（边缘）响应最大，是对图像边缘检测的形态学方法。\n【式 3-46】Grad(f) = (f ⊕ b) − (f ⊖ b)\n【参数】结构元 3×3 椭圆（小核边缘更细）。\n【效果】图像边缘被突出显示，平坦区域输出为零。"</string>
+    <string name="morph_op_gray_process_open_close_smooth_title">③ 开-闭形态学平滑 (式 3-47, 3-48)</string>
+    <string name="morph_op_gray_process_open_close_smooth_formula">"【原理】开、闭运算交替串联可以同时滤除正、负脉冲噪声，实现形态学平滑滤波。\n【式 3-47】O C(f) = (f ∘ b) • b   （先开后闭）\n【式 3-48】C O(f) = (f • b) ∘ b   （先闭后开，见第 ④ 项）\n   本项按式 3-47 执行。\n【参数】结构元 5×5 椭圆。\n【效果】图像更平滑，孤立亮/暗噪点同时被抑制。"</string>
+    <string name="morph_op_gray_process_close_open_smooth_title">④ 闭-开形态学平滑 (式 3-48)</string>
+    <string name="morph_op_gray_process_close_open_smooth_formula">"【原理】先闭后开，与 ③ 互为镜像顺序；对暗噪声为主的图像效果更好，二者组合可进一步减少偏置。\n【式 3-48】C O(f) = (f • b) ∘ b\n【参数】结构元 5×5 椭圆。\n【效果】平滑效果与 ③ 相近，边缘保持略有差异，可对照观察。"</string>
+    <string name="morph_op_gray_process_top_hat_title">⑤ 顶帽变换 (式 3-49)</string>
+    <string name="morph_op_gray_process_top_hat_formula">"【原理】顶帽 = 原图减去其开运算，用于提取小于结构元、比周围亮的细节（亮点、小峰），也能校正不均匀光照。\n【式 3-49】TopHat(f) = f − (f ∘ b)\n【参数】结构元 15×15 椭圆（大核提取亮细节更充分）。\n【效果】明亮的小目标与细节被分离出来，背景趋于零。"</string>
+    <string name="morph_op_gray_process_bottom_hat_title">⑥ 底帽变换</string>
+    <string name="morph_op_gray_process_bottom_hat_formula">"【原理】底帽 = 闭运算减去原图，用于提取小于结构元、比周围暗的细节（暗点、小谷），是顶帽的对偶变换。\n【公式】BotHat(f) = (f • b) − f\n【参数】结构元 15×15 椭圆。\n【效果】暗的小目标与细节被分离出来，背景趋于零。"</string>
+    <string name="morph_op_gray_process_top_hat_enhance_title">⑦ 顶帽增强</string>
+    <string name="morph_op_gray_process_top_hat_enhance_formula">"【原理】顶帽提取亮细节、底帽提取暗细节，把二者从原图中加减可同时增强正负两种微弱细节，最后归一化到全灰度范围，是顶帽/底帽联合对比度增强的典型工程应用（如阴影/低对比度区域增强）。\n【公式】Enhance(f) = stretch[ f + TopHat(f) − BotHat(f) ]\n        其中 TopHat 见式 3-49，BotHat(f) = (f • b) − f，\n        stretch 为 [min, max] → [0, 255] 归一化拉伸。\n【参数】结构元 15×15 椭圆。\n【效果】亮暗细节同时被增强，整体对比度明显提升，可与 ⑤ 顶帽结果对照。"</string>
+
+    <!-- 4.2 基于灰度阈值化的图像分割 -->
+    <string name="seg_op_threshold_baseline_title">① 原图基准</string>
+    <string name="seg_op_threshold_baseline_formula">"【原理】不做任何处理，直接显示原始图像，作为本页 ② ~ ⑥ 各阈值分割算法的对照基准。\n【说明】灰度阈值化是最简单的图像分割方法：按灰度级把像素划分为前景/背景两类，关键在于选取合适的阈值 T。"</string>
+    <string name="seg_op_threshold_fixed_title">② 固定阈值 (式 4-1)</string>
+    <string name="seg_op_threshold_fixed_formula">"【原理】按人工指定的单一阈值 T 把图像分为两部分：灰度大于 T 的为一类，其余为另一类。\n【式 4-1】g(x,y) = 1, f(x,y) &gt; T；g(x,y) = 0, f(x,y) ≤ T\n【参数】T = 128（演示固定值）。\n【特点】简单快速，但依赖人工经验，光照变化时效果不稳定。"</string>
+    <string name="seg_op_threshold_iterative_title">③ 迭代阈值 (式 4-3)</string>
+    <string name="seg_op_threshold_iterative_formula">"【原理】从初始阈值出发，反复按两类均值更新阈值，直至收敛，得到近似最优的全局阈值。\n【式 4-3】T_{k+1} = (μ1 + μ2) / 2\n        μ1、μ2 分别为按 T_k 划分后的两类像素灰度均值；|T_{k+1} − T_k| 足够小时停止。\n【实现】初始 T₀ 取全局均值，迭代至阈值变化小于 0.5。\n【特点】自动求阈值，对双峰直方图图像效果接近最优。"</string>
+    <string name="seg_op_threshold_otsu_title">④ Otsu (式 4-4~4-10)</string>
+    <string name="seg_op_threshold_otsu_formula">"【原理】大津法：遍历所有可能阈值，使前景/背景两类之间的类间方差 σB² 最大的阈值即为最优分割阈值。\n【式 4-4】σB²(t) = ω1(t)·ω2(t)·[μ1(t) − μ2(t)]²\n【式 4-5/4-6】ω1、ω2：两类像素出现的概率（频率）。\n【式 4-7/4-8】μ1、μ2：两类的平均灰度。\n【式 4-9/4-10】T* = arg max σB²(t)，等价于类内方差最小准则。\n【实现】OpenCV cv::threshold(THRESH_OTSU) 全局自动寻优。\n【特点】最常用的自动阈值法，目标与背景灰度差异明显时分割稳定。"</string>
+    <string name="seg_op_threshold_adaptive_title">⑤ 自适应阈值 (式 4-2)</string>
+    <string name="seg_op_threshold_adaptive_formula">"【原理】当光照不均匀时，全局阈值无法兼顾亮区与暗区。把式 4-2 的阈值 T 局部化：每个像素的阈值由其邻域窗口内像素的均值（或加权和）动态确定。\n【式 4-2 局部化】T(x,y) = 邻域均值(x,y) − C\n【参数】邻域窗口 31×31，修正常数 C = 10。\n【实现】OpenCV cv::adaptiveThreshold(ADAPTIVE_THRESH_MEAN_C)。\n【特点】能适应光照渐变，适合阴影、不均匀照明场景的二值化。"</string>
+    <string name="seg_op_threshold_multi_level_title">⑥ 多级阈值</string>
+    <string name="seg_op_threshold_multi_level_formula">"【原理】式 4-1 的推广：用多个阈值 T1 &lt; T2 &lt; … 把灰度轴切成多个区间，每个区间作为一类区域，适合目标和背景灰度层次较多的图像。\n【公式】g(x,y) = k, 若 T_{k−1} &lt; f(x,y) ≤ T_k（k = 1…M）\n【实现】按直方图多峰自动选取多个阈值，各区间映射为不同灰度级。\n【特点】一次分割得到多个区域，是对单阈值二值分割的直接扩展。"</string>
+    <string name="seg_op_threshold_overlay_title">⑦ 叠加可视化</string>
+    <string name="seg_op_threshold_overlay_formula">"【原理】将 Otsu 分割掩膜与原图叠加：前景保持原灰度、背景压暗并叠加红色高亮，直观展示阈值分割提取的目标区域在原图中的位置。\n【说明】分割结果的工程可视化方式，便于检验阈值选取是否准确。\n【效果】被分割出的前景区域以红色标记叠加显示。"</string>
+
+    <!-- 4.3 基于边缘检测的图像分割 -->
+    <string name="seg_op_edge_baseline_title">① 原图基准</string>
+    <string name="seg_op_edge_baseline_formula">"【原理】不做任何处理，直接显示原始图像，作为本页 ② ~ ⑦ 各边缘检测分割算法的对照基准。\n【说明】边缘是灰度发生剧烈突变的位置，基于边缘的分割先检测边缘再将其连接成闭合边界，从而把图像划分为区域。"</string>
+    <string name="seg_op_edge_roberts_title">② Roberts (式 4-18, 4-19)</string>
+    <string name="seg_op_edge_roberts_formula">"【原理】Roberts 交叉差分算子：在 2×2 邻域沿对角方向差分，模板小、计算快，边缘定位精度高但对噪声敏感。\n【式 4-18】G[f(x,y)] ≈ |Gx| + |Gy|（式 4-14 梯度幅值近似）\n【式 4-19】Hx = [−1 0; 0 1]，Hy = [0 −1; 1 0]\n【效果】得到细而亮的对角方向边缘。"</string>
+    <string name="seg_op_edge_sobel_title">③ Sobel (式 4-20)</string>
+    <string name="seg_op_edge_sobel_formula">"【原理】Sobel 算子在差分模板中引入平均因素：先邻域加权平均再差分，在锐化边缘的同时抑制噪声。\n【式 4-20】Hx = [−1 0 1; −2 0 2; −1 0 1]，Hy 为其转置\n【幅值】G ≈ |Gx| + |Gy|\n【参数】核尺寸 3×3。\n【效果】边缘较粗较亮，抗噪性好于 Roberts。"</string>
+    <string name="seg_op_edge_prewitt_title">④ Prewitt (式 4-21, 4-22)</string>
+    <string name="seg_op_edge_prewitt_formula">"【原理】Prewitt 算子与 Sobel 思路相同，但平均权重均取 1，是纯粹的均值差分模板。\n【式 4-21】Hx = [−1 0 1; −1 0 1; −1 0 1]，Hy 为其转置\n【式 4-22】G ≈ |Gx| + |Gy|\n【效果】边缘平滑，对噪声有一定抑制，但边缘略粗于 Sobel。"</string>
+    <string name="seg_op_edge_laplacian_title">⑤ Laplacian (式 4-26~4-28)</string>
+    <string name="seg_op_edge_laplacian_formula">"【原理】拉普拉斯是二阶导数各向同性算子，在边缘处出现过零点，对灰度突变极敏感，同时对噪声也敏感。\n【式 4-26】∇²f = f(i+1,j) + f(i−1,j) + f(i,j+1) + f(i,j−1) − 4f(i,j)\n【式 4-27/4-28】4 邻域/8 邻域离散模板。\n【效果】双边缘响应，孤立噪点被强烈放大。"</string>
+    <string name="seg_op_edge_log_title">⑥ LoG (式 4-29~4-33)</string>
+    <string name="seg_op_edge_log_formula">"【原理】Marr-Hildreth 算子：先高斯平滑去噪再求拉普拉斯，克服拉普拉斯对噪声敏感的缺点，通过检测二阶导数过零点得到边缘。\n【式 4-29】∇²G(x,y)（LoG 核，墨西哥草帽形）\n【式 4-30】g = f * Gσ（高斯平滑）\n【式 4-31】∇²(f * G) = f * ∇²G（卷积与微分可交换次序）\n【式 4-32/4-33】LoG 离散模板与过零点判据。\n【参数】核尺寸 5×5，σ = 1.5。\n【效果】边缘闭合性好，抗噪能力强。"</string>
+    <string name="seg_op_edge_canny_title">⑦ Canny (式 4-34~4-39)</string>
+    <string name="seg_op_edge_canny_formula">"【原理】Canny 是最优边缘检测算子，完整流程包含四步：\n【式 4-34/4-35】① 高斯平滑去噪；② Sobel 计算梯度幅值与方向；\n【式 4-36/4-37】③ 非极大值抑制：沿梯度方向只保留局部幅值最大的点，把粗边缘细化为单像素；\n【式 4-38/4-39】④ 双阈值检测与滞后连接：高于高阈值 T2 为强边缘、介于 T1~T2 为弱边缘，仅当弱边缘与强边缘连通时才保留。\n【参数】T1 = 50，T2 = 150。\n【效果】边缘连续、细锐、噪声极少的最佳边缘图。"</string>
+    <string name="seg_op_edge_trace_title">⑧ 边缘跟踪分割</string>
+    <string name="seg_op_edge_trace_formula">"【原理】边缘检测得到的是离散边缘点，需经边缘闭合与轮廓跟踪才能形成区域边界完成分割：先对 Canny 边缘做形态学膨胀-腐蚀闭运算弥合断裂，再提取外轮廓并填充为区域。\n【流程】Canny 边缘 → 形态学闭合 → 轮廓提取(cv::findContours) → 轮廓填充区域化\n【效果】输出闭合边界围成的分割区域图，实现「由边缘到区域」的完整分割链路。"</string>
+
+    <!-- 4.4 基于区域的图像分割 -->
+    <string name="seg_op_region_grow_center_title">① 区域生长(中心种子)</string>
+    <string name="seg_op_region_grow_center_formula">"【原理】区域生长（4.4.1）：从种子点出发，将与种子性质（灰度）相似且空间相邻的像素不断并入区域，直至没有满足条件的像素，生成连通分割区域。\n【公式】R = ∪ R_k，R_k 满足：P(R_k) = TRUE 且相邻区域 P(R_i ∪ R_j) = FALSE\n        P 为灰度相似性准则：|f(p) − f(seed)| ≤ T。\n【参数】种子取图像中心点，相似性阈值 T = 16。\n【效果】从中心生长出的单一连通区域（白色），红点为种子位置。"</string>
+    <string name="seg_op_region_grow_auto_seed_title">② 区域生长(自动选种)</string>
+    <string name="seg_op_region_grow_auto_seed_formula">"【原理】种子选取原则（4.4.1）：种子应位于区域内部稳定处。本项按直方图峰值自动选种——灰度分布的各个峰代表不同区域的典型灰度，取峰值点为种子并行生长，实现多区域自动分割。\n【参数】相似性阈值 T = 16，种子数由直方图峰数自动确定。\n【效果】多个不同灰度的连通区域被同时生长并伪彩色标记。"</string>
+    <string name="seg_op_region_split_merge_title">③ 区域分裂-合并</string>
+    <string name="seg_op_region_split_merge_formula">"【原理】区域分裂-合并（4.4.2）：与生长相反的自顶向下策略。先把图像不断四分为子块（四叉树），不满足均匀性准则的块继续分裂；再对相邻且满足合并准则的子块合并，最终得到分割结果。\n【准则】分裂：块内灰度方差 &gt; 阈值则四分裂；合并：相邻块灰度均值差 &lt; 阈值则合并。\n【效果】输出四叉树分块区域图，块边界即分割边界，兼顾全局与局部特性。"</string>
+    <string name="seg_op_region_connected_title">④ 连通分量标记</string>
+    <string name="seg_op_region_connected_formula">"【原理】连通分量标记：对二值化后的图像，把 4/8 连通的白色像素归为同一区域并赋予统一标号，每个标号区域即一个独立分割目标。\n【公式】R_i ∩ R_j = ∅ (i≠j)，∪ R_i = 前景集合\n【实现】Otsu 二值化 → cv::connectedComponents 标记 → 按标号伪彩色着色。\n【效果】每个连通目标显示为不同颜色，可统计目标个数与面积。"</string>
+    <string name="seg_op_region_watershed_title">⑤ 分水岭变换</string>
+    <string name="seg_op_region_watershed_formula">"【原理】分水岭算法（4.4.3）：把灰度图看作地形表面，灰度为海拔。从标记点「注水」，水在低洼处汇聚并在汇合处筑坝，堤坝即为分割边界，解决目标粘连的区域分割问题。\n【流程】标记提取(距离变换+阈值) → cv::watershed 浸水演化 → 边界堤坝提取\n【效果】粘连目标被堤坝分开，输出区域着色 + 白色分割边界的分水岭结果图。"</string>
+
+    <!-- 4.5 基于主动轮廓模型的图像分割 -->
+    <string name="seg_op_contour_snake_title">① 基本 Snake (式 4-40~4-45)</string>
+    <string name="seg_op_contour_snake_formula">"【原理】主动轮廓模型（Snake，式 4-40）：在目标附近初始化一条参数曲线 v(s)，在内部能量（保持曲线平滑）与图像能量（吸引曲线趋向边缘）共同作用下变形，能量最小时曲线停在目标边界处，完成分割。\n【式 4-40】E = ∫ [ α|v′(s)|² + β|v″(s)|² ] ds + E_img(v(s))\n【式 4-41】第一、二项为内部能量：α 控制弹性（抗拉伸）、β 控制刚性（抗弯曲）。\n【式 4-42~4-43】离散化：曲线上 N 个点，能量求和形式。\n【式 4-44】E_img = −|∇I|：图像梯度大的点能量低，吸引轮廓。\n【式 4-45】∇I 经高斯平滑，扩大边缘吸引范围。\n【实现】Williams-Shah 贪心算法逐点在邻域窗口内寻能量最小候选点。\n【效果】初始圆形轮廓收敛吸附到目标边缘附近。"</string>
+    <string name="seg_op_contour_inner_energy_title">② 内部能量对比 (式 4-41)</string>
+    <string name="seg_op_contour_inner_energy_formula">"【原理】内部能量（式 4-41）中 α、β 权重决定轮廓的平滑程度：α 大抑制拉伸与间距不均，β 大抑制弯曲与尖角。本项并排演示不同 α/β 组合下轮廓的收敛形态差异。\n【式 4-41】E_int = α|v′(s)|² + β|v″(s)|²\n【效果】可观察低 β 轮廓出现尖角抖动、高 β 轮廓过度平滑的现象。"</string>
+    <string name="seg_op_contour_balloon_title">③ 气球力 Snake</string>
+    <string name="seg_op_contour_balloon_formula">"【原理】基本 Snake 的收敛半径有限，初始轮廓离目标太远时无法到达。Cohen 气球模型在能量中增加各向同性的气球力：沿轮廓法线方向持续膨胀（或收缩），推动曲线跨越灰度平坦区，到达目标边缘后由图像能量停住。\n【公式】E = E_int + E_img + k·(法向膨胀项)\n【效果】从远离目标的初始轮廓出发仍能膨胀并收敛到边缘。"</string>
+    <string name="seg_op_contour_geodesic_title">④ 测地线主动轮廓 (式 4-46)</string>
+    <string name="seg_op_contour_geodesic_formula">"【原理】测地线主动轮廓 GAC（式 4-46）：把气球力乘以边缘停止函数 g = 1/(1+|∇Gσ*f|)，平坦区 g≈1 气球力全速推进，强边缘处 g→0 轮廓自动停止，解决了普通气球力越过弱边缘的问题。\n【式 4-46】∂C/∂t = g·|C|·N − (∇g)·N\n        第一项为 g 调制的法向推进力，第二项为边缘吸引项。\n【实现】在贪心 Snake 框架中用 1/(1+20g) 调制气球力系数。\n【效果】轮廓在平坦区快速推进、在边缘前精确停止。"</string>
+    <string name="seg_op_contour_chan_vese_title">⑤ Chan-Vese (式 4-47)</string>
+    <string name="seg_op_contour_chan_vese_formula">"【原理】Chan-Vese 区域型主动轮廓（式 4-47）：不依赖图像梯度边缘，而是按「轮廓内外区域灰度应各自均匀」的准则演化曲线：把图像划分为轮廓内（均值 c1）与轮廓外（均值 c2）两个区域，能量最小时曲线即为分割边界。\n【式 4-47】E(c1,c2,C) = ∫_inside(f−c1)² + ∫_outside(f−c2)² + ν·Length(C)\n【实现】水平集简化为区域标记交替更新：c1/c2 取轮廓内外均值，按能量准则逐像素重新归类，迭代至收敛。\n【效果】对弱边缘、无清晰边缘的目标也能完成分割，与梯度型 Snake 形成互补。"</string>
+</resources>

@@ -13,6 +13,7 @@
         android:padding="12dp">
 
         <!-- 顶部：返回 + 标题 -->
+        <!-- Top bar: back + title -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -24,32 +25,30 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="← 返回"
-                android:textAllCaps="false"
-                tools:ignore="HardcodedText" />
+                android:text="@string/common_back"
+                android:textAllCaps="false" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:layout_weight="1"
-                android:text="彩色增强（《数字图像与视频处理》2.7 节）"
+                android:text="@string/color_title"
                 android:textColor="#111111"
                 android:textSize="18sp"
-                android:textStyle="bold"
-                tools:ignore="HardcodedText" />
+                android:textStyle="bold" />
         </LinearLayout>
 
         <!-- 9 个 checkbar：3x3 网格，一次仅选一个 -->
+        <!-- 9 check bars: 3x3 grid, only one selected at a time -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="请选择一种彩色增强方法（一次仅选中一项）："
+            android:text="@string/color_hint"
             android:textColor="#111111"
             android:textSize="16sp"
-            android:textStyle="bold"
-            tools:ignore="HardcodedText" />
+            android:textStyle="bold" />
 
         <GridLayout
             android:id="@+id/gl_options"
@@ -69,9 +68,8 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#111111"
-                android:text="① 显示原始图像"
-                android:checked="true"
-                tools:ignore="HardcodedText" />
+                android:text="@string/color_cb_original"
+                android:checked="true" />
 
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/cb_02_slice2"
@@ -83,8 +81,7 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#111111"
-                android:text="② 灰度分层 两层 (图 2-47)"
-                tools:ignore="HardcodedText" />
+                android:text="@string/color_cb_slice2" />
 
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/cb_03_slice_multi"
@@ -96,8 +93,7 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#111111"
-                android:text="③ 灰度分层 多层 (图 2-48)"
-                tools:ignore="HardcodedText" />
+                android:text="@string/color_cb_slice_multi" />
 
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/cb_04_level_color"
@@ -109,8 +105,7 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#111111"
-                android:text="④ 灰度级彩色变换 (图 2-49)"
-                tools:ignore="HardcodedText" />
+                android:text="@string/color_cb_level_color" />
 
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/cb_05_freq_color"
@@ -122,8 +117,7 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#111111"
-                android:text="⑤ 频域伪彩色 (图 2-50)"
-                tools:ignore="HardcodedText" />
+                android:text="@string/color_cb_freq_color" />
 
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/cb_06_false_linear"
@@ -135,8 +129,7 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#111111"
-                android:text="⑥ 假彩色 线性映射 (式 2-97)"
-                tools:ignore="HardcodedText" />
+                android:text="@string/color_cb_false_linear" />
 
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/cb_07_false_green"
@@ -148,8 +141,7 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#111111"
-                android:text="⑦ 假彩色 细节赋绿 (式 2-97)"
-                tools:ignore="HardcodedText" />
+                android:text="@string/color_cb_false_green" />
 
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/cb_08_false_blue"
@@ -161,8 +153,7 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#111111"
-                android:text="⑧ 假彩色 细节赋蓝 (式 2-97)"
-                tools:ignore="HardcodedText" />
+                android:text="@string/color_cb_false_blue" />
 
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/cb_09_false_multi"
@@ -174,11 +165,11 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#111111"
-                android:text="⑨ 多光谱合成 (式 2-98)"
-                tools:ignore="HardcodedText" />
+                android:text="@string/color_cb_false_multi" />
         </GridLayout>
 
         <!-- 并排图像：原图 vs 处理后 -->
+        <!-- Side-by-side images: original vs processed -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -197,11 +188,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"
-                    android:text="原 图"
+                    android:text="@string/common_original"
                     android:textColor="#111111"
                     android:textSize="17sp"
-                    android:textStyle="bold"
-                    tools:ignore="HardcodedText" />
+                    android:textStyle="bold" />
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
@@ -216,7 +206,7 @@
                         android:layout_height="match_parent"
                         android:adjustViewBounds="true"
                         android:scaleType="fitCenter"
-                        android:contentDescription="原图"
+                        android:contentDescription="@string/common_original_desc"
                         android:background="#FFFFFF" />
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
@@ -234,11 +224,10 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:maxLines="2"
-                    android:text="处理后"
+                    android:text="@string/common_processed"
                     android:textColor="#111111"
                     android:textSize="17sp"
-                    android:textStyle="bold"
-                    tools:ignore="HardcodedText" />
+                    android:textStyle="bold" />
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
@@ -253,13 +242,14 @@
                         android:layout_height="match_parent"
                         android:adjustViewBounds="true"
                         android:scaleType="fitCenter"
-                        android:contentDescription="处理后图像"
+                        android:contentDescription="@string/common_processed_desc"
                         android:background="#FFFFFF" />
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
         </LinearLayout>
 
         <!-- 原理及公式卡片 -->
+        <!-- Principle & Formula card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -279,11 +269,10 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="原理及公式"
+                    android:text="@string/common_principle_formula"
                     android:textColor="#018786"
                     android:textStyle="bold"
-                    android:textSize="18sp"
-                    tools:ignore="HardcodedText" />
+                    android:textSize="18sp" />
 
                 <ScrollView
                     android:layout_width="match_parent"

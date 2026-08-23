@@ -1,3 +1,14 @@
 <resources>
     <string name="app_name">OpencvProcessing</string>
+
+    <!-- 公共字符串（中文默认） -->
+    <!-- Common strings (Chinese default) -->
+    <string name="main_title">openCV处理 功能集</string>
+    <string name="common_back">← 返回</string>
+    <string name="common_original">原 图</string>
+    <string name="common_processed">处理后</string>
+    <string name="common_principle_formula">原理及公式</string>
+    <string name="common_original_desc">原图</string>
+    <string name="common_processed_desc">处理后图像</string>
+    <string name="morph_checkbar_hint">请选择一种形态学运算（一次仅选中一项）：</string>
 </resources>

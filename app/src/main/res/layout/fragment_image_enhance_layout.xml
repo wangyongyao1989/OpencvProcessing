@@ -12,6 +12,7 @@
         android:padding="8dp">
 
         <!-- 顶部：返回 + 标题 -->
+        <!-- Top bar: back + title -->
         <LinearLayout
             android:id="@+id/ll_title_bar"
             android:layout_width="match_parent"
@@ -25,20 +26,18 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="← 返回"
-                android:textAllCaps="false"
-                tools:ignore="HardcodedText" />
+                android:text="@string/common_back"
+                android:textAllCaps="false" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:layout_weight="1"
-                android:text="图像增强（《数字图像与视频处理》第 2 章）"
+                android:text="@string/enhance_menu_title"
                 android:textColor="#222222"
                 android:textSize="18sp"
-                android:textStyle="bold"
-                tools:ignore="HardcodedText" />
+                android:textStyle="bold" />
         </LinearLayout>
 
         <GridLayout
@@ -51,6 +50,7 @@
             app:layout_constraintTop_toBottomOf="@id/ll_title_bar">
 
             <!-- 图像灰度变换 -->
+            <!-- Image Gray-level Transformation -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -75,32 +75,30 @@
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_gallery"
-                        android:contentDescription="图像灰度变换"
-                        app:tint="@color/purple_500"
-                        tools:ignore="HardcodedText" />
+                        android:contentDescription="@string/enhance_card_gray_desc"
+                        app:tint="@color/purple_500" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="图像灰度变换"
+                        android:text="@string/enhance_card_gray"
                         android:textColor="#000000"
                         android:textSize="15sp"
-                        android:textStyle="bold"
-                        tools:ignore="HardcodedText" />
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="2.2 节：线性/非线性变换、直方图均衡化"
+                        android:text="@string/enhance_card_gray_sub"
                         android:textColor="#666666"
-                        android:textSize="11sp"
-                        tools:ignore="HardcodedText" />
+                        android:textSize="11sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- 图像平滑与去噪 -->
+            <!-- Image Smoothing & Denoising -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -125,32 +123,30 @@
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_manage"
-                        android:contentDescription="图像平滑与去噪"
-                        app:tint="@color/teal_700"
-                        tools:ignore="HardcodedText" />
+                        android:contentDescription="@string/enhance_card_smooth_desc"
+                        app:tint="@color/teal_700" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="图像平滑与去噪"
+                        android:text="@string/enhance_card_smooth"
                         android:textColor="#000000"
                         android:textSize="15sp"
-                        android:textStyle="bold"
-                        tools:ignore="HardcodedText" />
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="2.3 节：邻域平均、中值滤波、低通滤波、NLM"
+                        android:text="@string/enhance_card_smooth_sub"
                         android:textColor="#666666"
-                        android:textSize="11sp"
-                        tools:ignore="HardcodedText" />
+                        android:textSize="11sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- 图像锐化 -->
+            <!-- Image Sharpening -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -175,32 +171,30 @@
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_edit"
-                        android:contentDescription="图像锐化"
-                        app:tint="@android:color/holo_orange_dark"
-                        tools:ignore="HardcodedText" />
+                        android:contentDescription="@string/enhance_card_sharpen_desc"
+                        app:tint="@android:color/holo_orange_dark" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="图像锐化"
+                        android:text="@string/enhance_card_sharpen"
                         android:textColor="#000000"
                         android:textSize="15sp"
-                        android:textStyle="bold"
-                        tools:ignore="HardcodedText" />
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="2.4 节：梯度/拉普拉斯算子、高通滤波"
+                        android:text="@string/enhance_card_sharpen_sub"
                         android:textColor="#666666"
-                        android:textSize="11sp"
-                        tools:ignore="HardcodedText" />
+                        android:textSize="11sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- 图像的同态滤波 -->
+            <!-- Homomorphic Filtering of Images -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -225,32 +219,30 @@
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_view"
-                        android:contentDescription="图像的同态滤波"
-                        app:tint="@android:color/holo_blue_dark"
-                        tools:ignore="HardcodedText" />
+                        android:contentDescription="@string/enhance_card_homo_desc"
+                        app:tint="@android:color/holo_blue_dark" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="图像的同态滤波"
+                        android:text="@string/enhance_card_homo"
                         android:textColor="#000000"
                         android:textSize="15sp"
-                        android:textStyle="bold"
-                        tools:ignore="HardcodedText" />
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="2.5 节：照度/反射分量分离增强"
+                        android:text="@string/enhance_card_homo_sub"
                         android:textColor="#666666"
-                        android:textSize="11sp"
-                        tools:ignore="HardcodedText" />
+                        android:textSize="11sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- 基于 Retinex 理论的图像增强 -->
+            <!-- Retinex-based Image Enhancement -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -275,32 +267,30 @@
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_camera"
-                        android:contentDescription="基于 Retinex 理论的图像增强"
-                        app:tint="@android:color/holo_purple"
-                        tools:ignore="HardcodedText" />
+                        android:contentDescription="@string/enhance_card_retinex_desc"
+                        app:tint="@android:color/holo_purple" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Retinex 图像增强"
+                        android:text="@string/enhance_card_retinex"
                         android:textColor="#000000"
                         android:textSize="15sp"
-                        android:textStyle="bold"
-                        tools:ignore="HardcodedText" />
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="2.6 节：SSR / MSR / MSRCR"
+                        android:text="@string/enhance_card_retinex_sub"
                         android:textColor="#666666"
-                        android:textSize="11sp"
-                        tools:ignore="HardcodedText" />
+                        android:textSize="11sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- 彩色增强 -->
+            <!-- Color Enhancement -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -325,28 +315,25 @@
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_sort_by_size"
-                        android:contentDescription="彩色增强"
-                        app:tint="@android:color/holo_red_dark"
-                        tools:ignore="HardcodedText" />
+                        android:contentDescription="@string/enhance_card_color_desc"
+                        app:tint="@android:color/holo_red_dark" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="彩色增强"
+                        android:text="@string/enhance_card_color"
                         android:textColor="#000000"
                         android:textSize="15sp"
-                        android:textStyle="bold"
-                        tools:ignore="HardcodedText" />
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="2.7 节：伪彩色 / 假彩色增强"
+                        android:text="@string/enhance_card_color_sub"
                         android:textColor="#666666"
-                        android:textSize="11sp"
-                        tools:ignore="HardcodedText" />
+                        android:textSize="11sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
