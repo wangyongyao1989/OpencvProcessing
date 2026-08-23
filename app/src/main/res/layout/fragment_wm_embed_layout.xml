@@ -53,8 +53,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:columnCount="2"
-            android:alignmentMode="alignMargins">
+            android:alignmentMode="alignMargins"
+            android:columnCount="2">
 
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/cb_algo_lsb"
@@ -62,7 +62,9 @@
                 android:layout_height="wrap_content"
                 android:layout_columnWeight="1"
                 android:text="@string/wm_algo_lsb"
-                android:textSize="13sp" />
+                android:textColor="#111111"
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/cb_algo_dct"
@@ -70,7 +72,9 @@
                 android:layout_height="wrap_content"
                 android:layout_columnWeight="1"
                 android:text="@string/wm_algo_dct"
-                android:textSize="13sp" />
+                android:textColor="#111111"
+                android:textSize="16sp"
+                android:textStyle="bold" />
         </GridLayout>
 
         <!-- 水印预览 + 源视频信息 -->
@@ -99,11 +103,12 @@
                     android:id="@+id/tv_video_info"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
                     android:layout_gravity="center_vertical"
+                    android:layout_marginStart="12dp"
                     android:layout_weight="1"
-                    android:textColor="#444444"
-                    android:textSize="13sp" />
+                    android:textColor="#111111"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -150,8 +155,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textColor="#666666"
-            android:textSize="13sp" />
+            android:textColor="#111111"
+            android:textSize="16sp"
+            android:textStyle="bold" />
 
         <!-- 嵌入结果：帧对比 -->
         <!-- Embedding result: frame comparison -->
@@ -186,8 +192,8 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:text="@string/common_original"
-                    android:textColor="#333333"
-                    android:textSize="13sp"
+                    android:textColor="#111111"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
 
                 <ImageView
@@ -195,9 +201,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="120dp"
                     android:layout_marginTop="4dp"
+                    android:background="#DDDDDD"
                     android:contentDescription="@string/common_original_desc"
-                    android:scaleType="fitCenter"
-                    android:background="#DDDDDD" />
+                    android:scaleType="fitCenter" />
             </LinearLayout>
 
             <LinearLayout
@@ -212,8 +218,8 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:text="@string/wm_watermarked_frame"
-                    android:textColor="#333333"
-                    android:textSize="13sp"
+                    android:textColor="#111111"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
 
                 <ImageView
@@ -221,9 +227,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="120dp"
                     android:layout_marginTop="4dp"
+                    android:background="#DDDDDD"
                     android:contentDescription="@string/wm_watermarked_frame_desc"
-                    android:scaleType="fitCenter"
-                    android:background="#DDDDDD" />
+                    android:scaleType="fitCenter" />
             </LinearLayout>
         </LinearLayout>
 
@@ -232,8 +238,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:textColor="#1B5E20"
-            android:textSize="13sp"
+            android:textColor="#111111"
+            android:textSize="16sp"
+            android:textStyle="bold"
             android:visibility="gone" />
 
         <!-- 提取结果 -->
@@ -268,11 +275,12 @@
                 android:id="@+id/tv_extract_metrics"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
                 android:layout_gravity="center_vertical"
+                android:layout_marginStart="12dp"
                 android:layout_weight="1"
-                android:textColor="#1B5E20"
-                android:textSize="13sp" />
+                android:textColor="#111111"
+                android:textSize="16sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <!-- 原理及公式 -->
