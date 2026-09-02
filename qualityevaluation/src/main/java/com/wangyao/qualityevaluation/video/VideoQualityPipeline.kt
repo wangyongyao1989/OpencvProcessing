@@ -353,7 +353,7 @@ class VideoQualityPipeline {
     }
 
     /** 2× 下采样（2×2 邻域平均），返回 w/2 × h/2 的亮度数组。 */
-    private fun downscale2x(luma: ByteArray, w: Int, h: Int): ByteArray {
+    internal fun downscale2x(luma: ByteArray, w: Int, h: Int): ByteArray {
         val nw = w / 2
         val nh = h / 2
         val out = ByteArray(nw * nh)
