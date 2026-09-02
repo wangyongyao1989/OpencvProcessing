@@ -68,5 +68,11 @@ class MainFragment : BaseFragment() {
             ffViewModel.switchFragment
                 .postValue(FFViewModel.FRAGMENT_STATUS.CONTENT_SEARCH)
         }
+
+        // 点击「图像识别」卡片进入二级菜单（图像识别/视频识别）
+        binding.btnImageRecognition.setOnClickListener {
+            ffViewModel.switchFragment
+                .postValue(FFViewModel.FRAGMENT_STATUS.IMAGE_RECOGNITION)
+        }
     }
 }

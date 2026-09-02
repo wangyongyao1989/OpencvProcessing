@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Image recognition (Chapter 11) -->
+    <string name="main_card_ir">Image Recognition</string>
+    <string name="main_card_ir_desc">Image recognition entry</string>
+
+    <!-- Second-level menu -->
+    <string name="ir_menu_title">Image Recognition</string>
+    <string name="ir_card_image">Image Recognition</string>
+    <string name="ir_card_image_desc">Image recognition entry</string>
+    <string name="ir_card_image_sub">NCC template matching + Hu-moment shape classification</string>
+    <string name="ir_card_video">Video Image Recognition</string>
+    <string name="ir_card_video_desc">Video recognition entry</string>
+    <string name="ir_card_video_sub">Template tracking + frame-difference motion detection</string>
+
+    <!-- Image recognition page -->
+    <string name="ir_image_title">Image Recognition</string>
+
+    <string name="ir_tm_section">① Template Matching Recognition (NCC)</string>
+    <string name="ir_tm_hint">A 64×64 template is cropped from the image center (yellow box) and searched over the whole image by normalized cross correlation for the best match (red box), with a similarity heatmap output. NCC is invariant to illumination gain/bias changes.</string>
+    <string name="ir_btn_tm">Run Template Matching</string>
+    <string name="ir_tm_status_idle">Not matched yet. Tap \"Run Template Matching\" to start.</string>
+    <string name="ir_tm_status_running">Computing NCC (coarse-to-fine pyramid search)…</string>
+    <string name="ir_tm_status_done">Match done: NCC = %1$.4f\nBest match at (%2$d, %3$d) (red box), template origin at (%4$d, %5$d) (yellow box), template %6$d×%6$d.</string>
+    <string name="ir_tm_result">Match result (red=best, yellow=template)</string>
+    <string name="ir_tm_result_desc">Template matching result</string>
+    <string name="ir_tm_heatmap">NCC similarity heatmap</string>
+    <string name="ir_tm_heatmap_desc">Similarity heatmap</string>
+
+    <string name="ir_shape_section">② Hu-moment Shape Recognition</string>
+    <string name="ir_shape_hint">Complete pattern recognition pipeline \"feature extraction → classification\": the shape library (5 classes × 4 transformed copies) pre-extracts log-Hu features; pick a query shape with optional rotation/scale transform, and the nearest-neighbor classifier outputs the class and confidence — verifying the translation/rotation/scale invariance of Hu moments.</string>
+    <string name="ir_shape_query">Query shape (single choice):</string>
+    <string name="ir_shape_circle">Circle</string>
+    <string name="ir_shape_rect">Rectangle</string>
+    <string name="ir_shape_triangle">Triangle</string>
+    <string name="ir_shape_star">Star</string>
+    <string name="ir_shape_ellipse">Ellipse</string>
+    <string name="ir_shape_transform">Query transform (single choice):</string>
+    <string name="ir_tf_none">None</string>
+    <string name="ir_tf_rot">Rotate 37°</string>
+    <string name="ir_tf_scale">Scale 1.6×</string>
+    <string name="ir_tf_both">Rotate + Scale</string>
+    <string name="ir_btn_classify">Extract Features &amp; Classify</string>
+    <string name="ir_shape_query_preview">Query shape</string>
+    <string name="ir_shape_query_desc">Query shape binary mask</string>
+    <string name="ir_shape_result">Recognition result</string>
+    <string name="ir_shape_result_idle">Not classified yet. Pick a query shape and transform, then tap \"Extract Features &amp; Classify\".</string>
+    <string name="ir_shape_result_done">Class: %1$s\nConfidence: %2$.4f (nearest distance %3$.4f)\n\nTop-3 candidates:\n%4$s (%5$.4f)\n%6$s (%7$.4f)\n%8$s (%9$.4f)</string>
+    <string name="ir_shape_dist_row">%1$s: %2$.4f</string>
+    <string name="ir_shape_dist_title">Distance to each class prototype:</string>
+
+    <string name="ir_image_formula">Image recognition principle (Ch.11):\n① Template matching (Eq. 11-1): NCC(x,y)=Σ[(f-μf)(t-μt)]/sqrt(Σ(f-μf)²·Σ(t-μt)²), in [-1,1]. Mean removal in the numerator cancels illumination bias and normalization in the denominator cancels gain, so NCC is invariant to linear illumination changes; the search uses a coarse-to-fine pyramid (full search at 1/4 resolution + refinement at full resolution) to cut computation.\n② Hu moments: 7 invariants constructed from central moments of a binary image, invariant to translation/rotation/scale; log transform H\'=-sign(H)·lg|H| compresses dynamic range in practice.\n③ Classification: nearest neighbor (K=1 special case of KNN) decides by Euclidean distance in log-Hu space, confidence=1/(1+d).\n④ Video applications: see \"Video Image Recognition\" — template tracking (temporal template matching) and frame-difference motion detection.</string>
+
+    <!-- Video recognition page -->
+    <string name="ir_video_title">Video Image Recognition</string>
+    <string name="ir_video_hint">Per-frame recognition of the video: ① template tracking — the first frame\'s center region serves as the template, and each frame searches within a neighborhood of the previous position by NCC (temporal extension of template matching); ② frame-difference motion detection — adjacent frames are differenced and binarized to measure motion. Software decoding; may take seconds to tens of seconds.</string>
+    <string name="ir_btn_recognize">Start Video Recognition</string>
+    <string name="ir_video_status_idle">Not started. Tap \"Start Video Recognition\".</string>
+    <string name="ir_video_status_running">Decoding and recognizing frame by frame…</string>
+    <string name="ir_video_status_progress">Recognized %1$d / %2$d frames…</string>
+    <string name="ir_video_status_done">Recognition finished.</string>
+    <string name="ir_video_status_error">Error: %1$s</string>
+    <string name="ir_video_chart">Recognition curves (X=frame index)</string>
+    <string name="ir_video_chart_desc">Track score and motion intensity curves</string>
+    <string name="ir_video_summary">Recognition summary</string>
+    <string name="ir_video_summary_idle">Statistics will be shown here after recognition.</string>
+    <string name="ir_video_summary_done">Total frames: %1$d (duration %2$.1f s, elapsed %3$.1f s)\nAverage track score: %4$.4f\nTrack hit rate: %5$.1f%% (%6$d lost frames, threshold 0.5)\nActive frames (motion ratio over 5%%): %7$d\nAverage motion ratio: %8$.4f\n\nConclusion: the track hit rate reflects how trackable the template (first-frame center region) is across the video; the motion-ratio curve reflects scene activity — together they form a recognition description of the video content.</string>
+    <string name="ir_chart_track">— Track score [-1,1]</string>
+    <string name="ir_chart_motion">— Motion ratio [0,1]</string>
+    <string name="ir_chart_lost_line">-- Loss threshold 0.5</string>
+    <string name="ir_video_formula">Video image recognition principle (Ch.11):\n① Template tracking: frame t performs NCC search (Eq. 11-1) within a ±32-pixel neighborhood of frame t-1\'s position (x,y); the maximum position becomes the target\'s new position — extending template matching from a single image to the time axis, i.e. object tracking. If the target\'s appearance changes or it is occluded, the score drops below 0.5 and tracking is declared lost.\n② Frame-difference motion detection: D(x,y,t)=|f(x,y,t)-f(x,y,t-1)|, binarized (threshold 25) to measure the changed-pixel ratio and bounding box — the cheapest motion detection method (basis of motion analysis).\n③ The two recognitions are complementary: tracking answers \"where the target is\" and motion detection answers \"where motion is\" — the foundation of video content analysis and intelligent surveillance.</string>
+</resources>

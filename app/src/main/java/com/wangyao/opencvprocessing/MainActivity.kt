@@ -27,6 +27,9 @@ import com.wangyao.opencvprocessing.fragment.VideoQualityFragment
 import com.wangyao.opencvprocessing.fragment.ContentSearchFragment
 import com.wangyao.opencvprocessing.fragment.ImageSearchFragment
 import com.wangyao.opencvprocessing.fragment.VideoSearchFragment
+import com.wangyao.opencvprocessing.fragment.ImageRecognitionFragment
+import com.wangyao.opencvprocessing.fragment.VideoRecognitionFragment
+import com.wangyao.opencvprocessing.fragment.RecognitionMenuFragment
 import com.wangyao.opencvprocessing.fragment.WatermarkFragment
 import com.wangyao.opencvprocessing.fragment.WatermarkEmbedFragment
 import com.wangyao.opencvprocessing.fragment.WatermarkAttackFragment
@@ -154,6 +157,9 @@ class MainActivity : AppCompatActivity() {
                 FFViewModel.FRAGMENT_STATUS.CONTENT_SEARCH -> ContentSearchFragment()
                 FFViewModel.FRAGMENT_STATUS.CS_IMAGE -> ImageSearchFragment()
                 FFViewModel.FRAGMENT_STATUS.CS_VIDEO -> VideoSearchFragment()
+                FFViewModel.FRAGMENT_STATUS.IMAGE_RECOGNITION -> RecognitionMenuFragment()
+                FFViewModel.FRAGMENT_STATUS.IR_IMAGE -> ImageRecognitionFragment()
+                FFViewModel.FRAGMENT_STATUS.IR_VIDEO -> VideoRecognitionFragment()
             }
         }
 

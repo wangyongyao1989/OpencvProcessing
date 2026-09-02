@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 图像识别（第 11 章）-->
+    <string name="main_card_ir">图像识别</string>
+    <string name="main_card_ir_desc">图像识别入口</string>
+
+    <!-- 二级菜单 -->
+    <string name="ir_menu_title">图像识别</string>
+    <string name="ir_card_image">图像的识别处理</string>
+    <string name="ir_card_image_desc">图像识别入口</string>
+    <string name="ir_card_image_sub">NCC 模板匹配 + Hu 矩形状分类</string>
+    <string name="ir_card_video">视频的图像识别处理</string>
+    <string name="ir_card_video_desc">视频识别入口</string>
+    <string name="ir_card_video_sub">模板跟踪 + 帧差运动检测</string>
+
+    <!-- 图像识别页 -->
+    <string name="ir_image_title">图像的识别处理</string>
+
+    <string name="ir_tm_section">① 模板匹配识别（NCC）</string>
+    <string name="ir_tm_hint">从图像中央截取 64×64 模板（黄框），在整幅图中按归一化互相关搜索最佳匹配位置（红框），并输出相似度热力图。NCC 对光照增益/偏置变化不变。</string>
+    <string name="ir_btn_tm">执行模板匹配</string>
+    <string name="ir_tm_status_idle">尚未匹配。点击「执行模板匹配」开始。</string>
+    <string name="ir_tm_status_running">正在计算 NCC（粗到精金字塔搜索）…</string>
+    <string name="ir_tm_status_done">匹配完成：NCC = %1$.4f\n最佳匹配位置 (%2$d, %3$d)（红框），模板原位置 (%4$d, %5$d)（黄框），模板 %6$d×%6$d。</string>
+    <string name="ir_tm_result">匹配结果（红=最佳，黄=模板）</string>
+    <string name="ir_tm_result_desc">模板匹配结果</string>
+    <string name="ir_tm_heatmap">NCC 相似度热力图</string>
+    <string name="ir_tm_heatmap_desc">相似度热力图</string>
+
+    <string name="ir_shape_section">② Hu 不变矩形状识别</string>
+    <string name="ir_shape_hint">完整模式识别流程「特征提取 → 分类决策」：形状库（5 类 × 4 变换副本）预提取对数 Hu 矩特征；选择查询形状并叠加旋转/缩放变换，最近邻分类器输出类别与置信度——验证 Hu 矩的平移/旋转/尺度不变性。</string>
+    <string name="ir_shape_query">查询形状（单选）：</string>
+    <string name="ir_shape_circle">圆形</string>
+    <string name="ir_shape_rect">矩形</string>
+    <string name="ir_shape_triangle">三角形</string>
+    <string name="ir_shape_star">星形</string>
+    <string name="ir_shape_ellipse">椭圆</string>
+    <string name="ir_shape_transform">查询变换（单选）：</string>
+    <string name="ir_tf_none">无变换</string>
+    <string name="ir_tf_rot">旋转37°</string>
+    <string name="ir_tf_scale">缩放1.6×</string>
+    <string name="ir_tf_both">旋转+缩放</string>
+    <string name="ir_btn_classify">提取特征并分类</string>
+    <string name="ir_shape_query_preview">查询形状</string>
+    <string name="ir_shape_query_desc">查询形状二值图</string>
+    <string name="ir_shape_result">识别结果</string>
+    <string name="ir_shape_result_idle">尚未分类。选择查询形状与变换后点击「提取特征并分类」。</string>
+    <string name="ir_shape_result_done">识别类别：%1$s\n置信度：%2$.4f（最近邻距离 %3$.4f）\n\nTop-3 候选：\n%4$s（%5$.4f）\n%6$s（%7$.4f）\n%8$s（%9$.4f）</string>
+    <string name="ir_shape_dist_row">%1$s：%2$.4f</string>
+    <string name="ir_shape_dist_title">与各类别原始样本距离：</string>
+
+    <string name="ir_image_formula">图像识别原理（第 11 章）：\n① 模板匹配（式 11-1）：NCC(x,y)=Σ[(f-μf)(t-μt)]/sqrt(Σ(f-μf)²·Σ(t-μt)²)，∈[-1,1]。分子去均值消除了光照偏置，分母归一化消除了增益，因此 NCC 对线性光照变化不变；搜索采用粗到精金字塔（1/4 分辨率全搜 + 全分辨率精化）降低计算量。\n② Hu 不变矩：由二值图中心矩构造 7 个不变量，具有平移/旋转/尺度不变性；工程上取对数 H\'=-sign(H)·lg|H| 压缩动态范围。\n③ 分类决策：最近邻（KNN 的 K=1 特例）在对数 Hu 空间按欧氏距离判类，置信度=1/(1+d)。\n④ 视频应用见「视频的图像识别处理」：模板跟踪（时序模板匹配）与帧差运动检测。</string>
+
+    <!-- 视频识别页 -->
+    <string name="ir_video_title">视频的图像识别处理</string>
+    <string name="ir_video_hint">对视频逐帧执行两类识别：① 模板跟踪——首帧中央区域为模板，逐帧在上一位置邻域内 NCC 搜索（模板匹配的时序扩展）；② 帧差运动检测——相邻帧差分二值化统计运动区域。软件解码，全程需数秒至数十秒。</string>
+    <string name="ir_btn_recognize">开始视频识别</string>
+    <string name="ir_video_status_idle">尚未识别。点击「开始视频识别」。</string>
+    <string name="ir_video_status_running">正在解码并逐帧识别…</string>
+    <string name="ir_video_status_progress">已识别 %1$d / %2$d 帧…</string>
+    <string name="ir_video_status_done">识别完成。</string>
+    <string name="ir_video_status_error">出错：%1$s</string>
+    <string name="ir_video_chart">识别曲线（X=帧序号）</string>
+    <string name="ir_video_chart_desc">跟踪得分与运动强度曲线</string>
+    <string name="ir_video_summary">识别统计摘要</string>
+    <string name="ir_video_summary_idle">识别完成后在此显示统计。</string>
+    <string name="ir_video_summary_done">总帧数：%1$d（时长 %2$.1f s，耗时 %3$.1f s）\n平均跟踪得分：%4$.4f\n跟踪命中率：%5$.1f%%（丢失 %6$d 帧，阈值 0.5）\n运动剧烈帧（变化占比大于 5%%）：%7$d\n平均运动占比：%8$.4f\n\n结论：跟踪命中率反映模板（首帧中央区域）在视频中的可跟踪性；运动占比曲线反映场景活动强度，二者共同构成视频内容的识别描述。</string>
+    <string name="ir_chart_track">— 跟踪得分 [-1,1]</string>
+    <string name="ir_chart_motion">— 运动占比 [0,1]</string>
+    <string name="ir_chart_lost_line">-- 丢失阈值 0.5</string>
+    <string name="ir_video_formula">视频图像识别原理（第 11 章）：\n① 模板跟踪：t 帧在 t-1 帧位置 (x,y) 的 ±32 像素邻域内做 NCC 搜索（式 11-1），取最大值位置作为目标新位置——将模板匹配从单幅图扩展到时序，即目标跟踪。若目标外观变化或被遮挡，得分下降，低于 0.5 判为跟踪丢失。\n② 帧差运动检测：D(x,y,t)=|f(x,y,t)-f(x,y,t-1)|，二值化（阈值 25）后统计变化像素占比与外接框——计算量最小的运动目标检测方法（第 11 章运动分析基础）。\n③ 两路识别互补：跟踪回答「目标在哪里」，运动检测回答「哪里在动」，是视频内容分析与智能监控的基础。</string>
+</resources>

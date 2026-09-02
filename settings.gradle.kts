@@ -28,4 +28,5 @@ include(":imageCVdeal")
 include(":digitalwatermark")
 include(":qualityevaluation")
 include(":contentsearch")
+include(":imagerecognition")
  

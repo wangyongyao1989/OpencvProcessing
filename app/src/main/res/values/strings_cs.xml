@@ -47,7 +47,7 @@
     <string name="cs_dist_none">原始帧</string>
     <string name="cs_dist_bright">亮度+40</string>
     <string name="cs_dist_noise">噪声</string>
-    <string name="cs_dist_crop">裁剪85%</string>
+    <string name="cs_dist_crop">裁剪85%%</string>
     <string name="cs_btn_search_video">以查询帧检索视频</string>
     <string name="cs_video_result_title">检索结果（Top-K 命中关键帧）</string>
     <string name="cs_video_result_row">No.%1$d  %2$.1f s（第 %3$d 帧）\n综合相似度 %4$.4f（颜色 %5$.4f / 纹理 %6$.4f）</string>

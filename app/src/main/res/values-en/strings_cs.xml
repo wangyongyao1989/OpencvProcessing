@@ -47,7 +47,7 @@
     <string name="cs_dist_none">None</string>
     <string name="cs_dist_bright">Brightness+40</string>
     <string name="cs_dist_noise">Noise</string>
-    <string name="cs_dist_crop">Crop 85%</string>
+    <string name="cs_dist_crop">Crop 85%%</string>
     <string name="cs_btn_search_video">Search Video with Query Frame</string>
     <string name="cs_video_result_title">Results (Top-K matched keyframes)</string>
     <string name="cs_video_result_row">No.%1$d at %2$.1f s (frame %3$d)\nCombined similarity %4$.4f (color %5$.4f / texture %6$.4f)</string>

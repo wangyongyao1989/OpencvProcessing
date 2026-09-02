@@ -38,6 +38,9 @@ class FFViewModel : ViewModel() {
         CONTENT_SEARCH,       // 二级：基于内容的图像和视频检索（图像/视频检索菜单）
         CS_IMAGE,             // 三级：基于内容的图像检索
         CS_VIDEO,             // 三级：基于内容的视频检索
+        IMAGE_RECOGNITION,    // 二级：图像识别（图像识别/视频识别菜单）
+        IR_IMAGE,             // 三级：图像的识别处理
+        IR_VIDEO,             // 三级：视频的图像识别处理
     }
 
     val switchFragment: MutableLiveData<FRAGMENT_STATUS> = MutableLiveData()

@@ -55,6 +55,7 @@ dependencies {
     implementation(project(":digitalwatermark"))
     implementation(project(":qualityevaluation"))
     implementation(project(":contentsearch"))
+    implementation(project(":imagerecognition"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
