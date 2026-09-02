@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.androidx.fragment.ktx)
     implementation(project(":imageCVdeal"))
     implementation(project(":digitalwatermark"))
+    implementation(project(":qualityevaluation"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

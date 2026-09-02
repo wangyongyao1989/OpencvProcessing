@@ -21,6 +21,9 @@ import com.wangyao.opencvprocessing.fragment.MorphOpFragment
 import com.wangyao.opencvprocessing.fragment.MorphologyFragment
 import com.wangyao.opencvprocessing.fragment.SegOpFragment
 import com.wangyao.opencvprocessing.fragment.SegmentationFragment
+import com.wangyao.opencvprocessing.fragment.QualityEvalFragment
+import com.wangyao.opencvprocessing.fragment.ImageQualityFragment
+import com.wangyao.opencvprocessing.fragment.VideoQualityFragment
 import com.wangyao.opencvprocessing.fragment.WatermarkFragment
 import com.wangyao.opencvprocessing.fragment.WatermarkEmbedFragment
 import com.wangyao.opencvprocessing.fragment.WatermarkAttackFragment
@@ -87,6 +90,12 @@ class MainActivity : AppCompatActivity() {
                         selectFragment(FFViewModel.FRAGMENT_STATUS.WATERMARK)
                     is WatermarkAttackFragment ->
                         selectFragment(FFViewModel.FRAGMENT_STATUS.WATERMARK)
+                    is QualityEvalFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
+                    is ImageQualityFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.QUALITY_EVAL)
+                    is VideoQualityFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.QUALITY_EVAL)
                     else -> selectFragment(FFViewModel.FRAGMENT_STATUS.IMAGE_ENHANCE)
                 }
             }
@@ -130,6 +139,9 @@ class MainActivity : AppCompatActivity() {
                 FFViewModel.FRAGMENT_STATUS.WATERMARK -> WatermarkFragment()
                 FFViewModel.FRAGMENT_STATUS.WM_EMBED_EXTRACT -> WatermarkEmbedFragment()
                 FFViewModel.FRAGMENT_STATUS.WM_ATTACK -> WatermarkAttackFragment()
+                FFViewModel.FRAGMENT_STATUS.QUALITY_EVAL -> QualityEvalFragment()
+                FFViewModel.FRAGMENT_STATUS.QE_IMAGE -> ImageQualityFragment()
+                FFViewModel.FRAGMENT_STATUS.QE_VIDEO -> VideoQualityFragment()
             }
         }
 

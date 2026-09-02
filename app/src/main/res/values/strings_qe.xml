@@ -1,0 +1,74 @@
+<resources>
+    <!-- 图片与视频质量评价模块字符串（中文默认） -->
+    <!-- Image and video quality evaluation module strings (Chinese default) -->
+
+    <!-- 主界面卡片 -->
+    <string name="main_card_qe">图片与视频质量评价</string>
+    <string name="main_card_qe_desc">图片与视频质量评价</string>
+
+    <!-- 二级菜单 -->
+    <string name="qe_menu_title">图片与视频质量评价</string>
+    <string name="qe_card_image">图像质量的客观评价</string>
+    <string name="qe_card_image_desc">图像质量的客观评价</string>
+    <string name="qe_card_image_sub">MSE / PSNR / SSIM / 熵</string>
+    <string name="qe_card_video">视频质量的客观评价</string>
+    <string name="qe_card_video_desc">视频质量的客观评价</string>
+    <string name="qe_card_video_sub">逐帧 PSNR / SSIM · 率失真</string>
+
+    <!-- 图像质量客观评价页 -->
+    <string name="qe_image_title">图像质量的客观评价</string>
+    <string name="qe_distortion_hint">请选择失真类型（一次仅选中一项）：</string>
+    <string name="qe_dist_jpeg">JPEG 压缩</string>
+    <string name="qe_dist_gaussian">高斯噪声</string>
+    <string name="qe_dist_salt">椒盐噪声</string>
+    <string name="qe_dist_blur">均值模糊</string>
+    <string name="qe_dist_brightness">亮度偏移</string>
+    <string name="qe_btn_evaluate">生成失真并客观评价</string>
+
+    <string name="qe_image_status_idle">就绪。请选择失真类型，点击「生成失真并客观评价」。</string>
+    <string name="qe_status_running">正在生成失真并计算客观指标…</string>
+    <string name="qe_status_done">评价完成。</string>
+    <string name="qe_status_error">出错：%1$s</string>
+
+    <string name="qe_image_result_title">评价结果（原始 / 失真图像对比，亮度通道）</string>
+    <string name="qe_distorted_image">失真图像</string>
+    <string name="qe_distorted_image_desc">失真图像</string>
+
+    <string name="qe_image_metrics">"失真类型：%1$s\n\nMSE：%2$.2f（均方误差，式 9-2）\nMAE：%3$.2f（平均绝对误差，式 9-1）\nPSNR：%4$.2f dB（峰值信噪比，式 9-3）\nSSIM：%5$.4f（结构相似度，式 9-4）\n熵(原始)：%6$.3f bit/像素\n熵(失真)：%7$.3f bit/像素\n\n质量等级：%8$s"</string>
+
+    <string name="qe_grade_excellent">极好（PSNR≥40dB 且 SSIM≥0.95，失真几乎不可察觉）</string>
+    <string name="qe_grade_good">良好（PSNR 30~40dB 且 SSIM 0.85~0.95，失真可察觉但不影响观看）</string>
+    <string name="qe_grade_fair">一般（PSNR 20~30dB 且 SSIM 0.60~0.85，失真明显可见）</string>
+    <string name="qe_grade_poor">差（PSNR 低于 20dB 或 SSIM 低于 0.60，失真严重）</string>
+
+    <!-- 各失真类型的原理说明 -->
+    <string name="qe_note_jpeg">"【失真原理】JPEG 有损压缩（质量因子 Q=10，第 5 章）：图像分 8×8 块 → DCT 变换 → 按量化表粗量化（高频系数大量置零，信息损失根源）→ 熵编码。重建图像出现块效应与振铃，高频细节丢失。\n【评价表现】PSNR/SSIM 显著下降；熵（信息量）因细节丢失而下降。"</string>
+    <string name="qe_note_gaussian">"【失真原理】加性高斯白噪声（σ=15）：每个像素叠加 N(0,σ²) 随机扰动，模拟信号采集/传输噪声。\n【评价表现】MSE 均匀上升，PSNR 约 24~25dB；SSIM 因局部结构被噪声破坏而下降；熵因灰度直方图展宽而上升。"</string>
+    <string name="qe_note_salt">"【失真原理】椒盐噪声（密度 5%）：像素以概率 p 随机取 0（椒）或 255（盐），模拟脉冲干扰。\n【评价表现】少量像素剧烈错误 → MSE 大、PSNR 低；但多数像素未变，SSIM 相对 MSE 表现更好——体现 SSIM 对结构性失真更敏感、对孤立点误差相对宽容。"</string>
+    <string name="qe_note_blur">"【失真原理】3×3 均值滤波（低通模糊）：高频细节被衰减，模拟散焦。\n【评价表现】MSE 上升，但更关键的是 SSIM 的结构/对比度因子显著下降——模糊不改变亮度均值，却破坏边缘与纹理结构，SSIM 比 PSNR 更能反映这种主观质量损失。"</string>
+    <string name="qe_note_brightness">"【失真原理】亮度偏移（Δ=+30）：所有像素加同一常数，不改变对比度与结构（高频信息不变）。\n【评价表现】MSE=Δ²=900（PSNR≈18.6dB 很低），但 SSIM 仅亮度因子 l 下降、结构与对比度因子不变——教科书结论：PSNR 与主观质量可能不一致，SSIM 更符合人眼感知。"</string>
+
+    <!-- 指标公式 -->
+    <string name="qe_image_formula">"【客观评价原理】（第 9 章 9.2~9.4 节）客观评价用数学模型自动度量图像质量，无需人眼打分（主观评价 MOS）。全参考（Full-Reference）评价需同时提供原始图像 f 与失真图像 g：\n【式 9-1】MAE = (1/MN)·ΣΣ|f(i,j)−g(i,j)|\n【式 9-2】MSE = (1/MN)·ΣΣ[f(i,j)−g(i,j)]²\n【式 9-3】PSNR = 10·lg(L²/MSE)，L=255（8bit），单位 dB；PSNR 越高失真越小（>40dB 通常不可察觉）。\n【式 9-4】SSIM(x,y) = [l(x,y)]^α·[c(x,y)]^β·[s(x,y)]^γ\n【式 9-5】l=(2μxμy+C1)/(μx²+μy²+C1)（亮度）\n        c=(2σxσy+C2)/(σx²+σy²+C2)（对比度）\n        s=(σxy+C3)/(σxσy+C3)（结构），C1=(0.01L)²、C2=(0.03L)²、C3=C2/2\n【式 9-6】本例取 α=β=γ=1，8×8 分块计算后取全图平均；SSIM∈(0,1]，越接近 1 结构越相似。\n【信息熵】H = −Σ p(i)·log₂p(i)（bit/像素），度量信息量。\n【流程】解码 assets 图片 → 提取亮度分量 Y → 施加所选失真 → 逐指标计算 → 对比展示与等级结论。"</string>
+
+    <!-- 视频质量客观评价页 -->
+    <string name="qe_video_title">视频质量的客观评价</string>
+    <string name="qe_video_info">源视频：%1$d×%2$d，%3$d fps，共 %4$d 帧，%5$.2f MB（H.264/MP4）</string>
+    <string name="qe_bitrate_hint">请选择压缩目标码率（一次仅选中一项）：</string>
+    <string name="qe_bitrate_high">4 Mbps</string>
+    <string name="qe_bitrate_mid">1 Mbps</string>
+    <string name="qe_bitrate_low">256 kbps</string>
+    <string name="qe_btn_transcode_eval">转码并逐帧客观评价</string>
+
+    <string name="qe_video_status_idle">就绪。请选择目标码率，点击「转码并逐帧客观评价」。码率越低压缩比越高，PSNR/SSIM 越低（率失真关系）。</string>
+    <string name="qe_status_transcoding">阶段一：按 %1$.1f Mbps 重新编码（H.264）…</string>
+    <string name="qe_status_evaluating">阶段二：双路解码，逐帧计算 PSNR / SSIM…</string>
+
+    <string name="qe_video_result_title">评价结果（中间帧对比：原始 / 压缩）</string>
+    <string name="qe_compressed_frame">压缩帧</string>
+    <string name="qe_compressed_frame_desc">压缩视频帧</string>
+
+    <string name="qe_video_metrics">"目标码率：%1$.1f Mbps\n\n平均 PSNR：%2$.2f dB（全部帧平均）\n最差帧 PSNR：%3$.2f dB（第 %4$d 帧）\n平均 SSIM：%5$.4f\n最差帧 SSIM：%6$.4f\n\n原始大小：%7$.2f MB\n压缩大小：%8$.2f MB\n压缩比：%9$.1f : 1\n\n评价帧数：%11$d 帧\n耗时：%10$.1f s"</string>
+
+    <string name="qe_video_formula">"【视频质量客观评价原理】（第 9 章 + 第 5/6/7 章压缩知识）视频是图像序列，客观评价以「逐帧全参考度量 + 时间轴聚合」为基础：对原始视频 x(n) 与压缩视频 y(n) 的每一帧在亮度平面计算 PSNR（式 9-3）与 SSIM（式 9-4~9-6），再对全部帧取平均，并统计最差帧（质量下限）。\n【率失真 R-D】（第 5 章 5.5 节/第 6 章）：有损压缩的码率 R 与失真 D 互相制约——R↓（如 4Mbps→256kbps）→ 量化步长↑ → D↑（PSNR/SSIM↓）。H.264 编码器（第 6 章）通过帧内预测、运动补偿帧间预测、变换+量化、熵编码控制码率；MP4 容器（第 7 章）封装码流。\n【本页流程】assets/video.mp4 → 按所选码率 H.264 转码（阶段一）→ 双路解码原始/压缩视频逐帧评价（阶段二：PSNR 全分辨率、SSIM 2× 下采样加速）→ 输出平均/最差帧指标、压缩比与中间帧对比。\n【结论验证】分别选 4Mbps / 1Mbps / 256kbps 各评价一次，可观察码率下降时 PSNR/SSIM 单调下降、压缩比上升——率失真理论的直观验证。"</string>
+</resources>

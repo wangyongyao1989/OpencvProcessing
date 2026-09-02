@@ -32,6 +32,9 @@ class FFViewModel : ViewModel() {
         WATERMARK,            // 二级：数字水印技术（嵌入提取/攻击对策菜单）
         WM_EMBED_EXTRACT,     // 三级：数字水印的嵌入/提取
         WM_ATTACK,            // 三级：水印的攻击方法和对策
+        QUALITY_EVAL,         // 二级：图片与视频质量评价（图像/视频客观评价菜单）
+        QE_IMAGE,             // 三级：图像质量的客观评价
+        QE_VIDEO,             // 三级：视频质量的客观评价
     }
 
     val switchFragment: MutableLiveData<FRAGMENT_STATUS> = MutableLiveData()

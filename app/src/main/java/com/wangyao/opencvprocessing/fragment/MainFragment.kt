@@ -56,5 +56,11 @@ class MainFragment : BaseFragment() {
             ffViewModel.switchFragment
                 .postValue(FFViewModel.FRAGMENT_STATUS.WATERMARK)
         }
+
+        // 点击「图片与视频质量评价」卡片进入二级菜单（图像/视频客观评价）
+        binding.btnQualityEval.setOnClickListener {
+            ffViewModel.switchFragment
+                .postValue(FFViewModel.FRAGMENT_STATUS.QUALITY_EVAL)
+        }
     }
 }

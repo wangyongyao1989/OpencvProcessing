@@ -1,0 +1,73 @@
+<resources>
+    <!-- Image and video quality evaluation module strings (English) -->
+
+    <!-- Main menu card -->
+    <string name="main_card_qe">Image &amp; Video Quality</string>
+    <string name="main_card_qe_desc">Image and video quality evaluation</string>
+
+    <!-- Second-level menu -->
+    <string name="qe_menu_title">Image &amp; Video Quality Evaluation</string>
+    <string name="qe_card_image">Image Quality Evaluation</string>
+    <string name="qe_card_image_desc">Objective image quality evaluation</string>
+    <string name="qe_card_image_sub">MSE / PSNR / SSIM / Entropy</string>
+    <string name="qe_card_video">Video Quality Evaluation</string>
+    <string name="qe_card_video_desc">Objective video quality evaluation</string>
+    <string name="qe_card_video_sub">Per-frame PSNR / SSIM · Rate-distortion</string>
+
+    <!-- Image quality evaluation page -->
+    <string name="qe_image_title">Objective Image Quality Evaluation</string>
+    <string name="qe_distortion_hint">Select a distortion type (only one at a time):</string>
+    <string name="qe_dist_jpeg">JPEG compression</string>
+    <string name="qe_dist_gaussian">Gaussian noise</string>
+    <string name="qe_dist_salt">Salt-and-pepper noise</string>
+    <string name="qe_dist_blur">Mean blur</string>
+    <string name="qe_dist_brightness">Brightness shift</string>
+    <string name="qe_btn_evaluate">Apply Distortion and Evaluate</string>
+
+    <string name="qe_image_status_idle">Ready. Select a distortion type and tap "Apply Distortion and Evaluate".</string>
+    <string name="qe_status_running">Generating distortion and computing objective metrics…</string>
+    <string name="qe_status_done">Evaluation finished.</string>
+    <string name="qe_status_error">Error: %1$s</string>
+
+    <string name="qe_image_result_title">Result (original vs distorted, luminance channel)</string>
+    <string name="qe_distorted_image">Distorted image</string>
+    <string name="qe_distorted_image_desc">Distorted image</string>
+
+    <string name="qe_image_metrics">"Distortion: %1$s\n\nMSE: %2$.2f (mean squared error, Eq. 9-2)\nMAE: %3$.2f (mean absolute error, Eq. 9-1)\nPSNR: %4$.2f dB (peak signal-to-noise ratio, Eq. 9-3)\nSSIM: %5$.4f (structural similarity, Eq. 9-4)\nEntropy (original): %6$.3f bit/px\nEntropy (distorted): %7$.3f bit/px\n\nQuality grade: %8$s"</string>
+
+    <string name="qe_grade_excellent">Excellent (PSNR≥40dB and SSIM≥0.95, distortion nearly imperceptible)</string>
+    <string name="qe_grade_good">Good (PSNR 30~40dB and SSIM 0.85~0.95, perceptible but not objectionable)</string>
+    <string name="qe_grade_fair">Fair (PSNR 20~30dB and SSIM 0.60~0.85, clearly visible distortion)</string>
+    <string name="qe_grade_poor">Poor (PSNR below 20dB or SSIM below 0.60, severe distortion)</string>
+
+    <!-- Distortion explanations -->
+    <string name="qe_note_jpeg">"【Distortion】Lossy JPEG compression (quality Q=10, Ch. 5): 8×8 blocks → DCT transform → coarse quantization (most high-frequency coefficients zeroed — the root of information loss) → entropy coding. The reconstructed image shows blocking artifacts and ringing; high-frequency detail is lost.\n【Evaluation】PSNR/SSIM drop significantly; entropy (information) decreases with lost detail."</string>
+    <string name="qe_note_gaussian">"【Distortion】Additive white Gaussian noise (σ=15): each pixel receives an N(0,σ²) random perturbation, modeling acquisition/transmission noise.\n【Evaluation】MSE rises uniformly, PSNR ≈ 24~25dB; SSIM drops as local structures are corrupted; entropy rises as the histogram widens."</string>
+    <string name="qe_note_salt">"【Distortion】Salt-and-pepper noise (density 5%): pixels randomly forced to 0 (pepper) or 255 (salt), modeling impulse interference.\n【Evaluation】A few pixels are grossly wrong → large MSE and low PSNR; but most pixels are intact, so SSIM degrades less than MSE suggests — showing SSIM is sensitive to structural distortion yet relatively tolerant of isolated outliers."</string>
+    <string name="qe_note_blur">"【Distortion】3×3 mean filtering (low-pass blur): high-frequency detail attenuated, modeling defocus.\n【Evaluation】MSE rises, but more importantly the structure/contrast factors of SSIM drop sharply — blur preserves mean luminance yet destroys edges and texture; SSIM reflects this subjective loss better than PSNR."</string>
+    <string name="qe_note_brightness">"【Distortion】Brightness shift (Δ=+30): a constant added to all pixels; contrast and structure (high-frequency content) unchanged.\n【Evaluation】MSE=Δ²=900 (PSNR≈18.6dB, very low), yet only the luminance factor l of SSIM drops while contrast and structure factors stay 1 — the textbook conclusion: PSNR may disagree with perceived quality, while SSIM matches human perception better."</string>
+
+    <!-- Metric formulas -->
+    <string name="qe_image_formula">"【Objective evaluation】(Ch. 9, 9.2~9.4) Objective evaluation measures image quality with mathematical models, without human scoring (subjective MOS). Full-reference evaluation requires both the original image f and the distorted image g:\n【Eq. 9-1】MAE = (1/MN)·ΣΣ|f(i,j)−g(i,j)|\n【Eq. 9-2】MSE = (1/MN)·ΣΣ[f(i,j)−g(i,j)]²\n【Eq. 9-3】PSNR = 10·lg(L²/MSE), L=255 (8bit), in dB; higher PSNR means less distortion (>40dB is usually imperceptible).\n【Eq. 9-4】SSIM(x,y) = [l(x,y)]^α·[c(x,y)]^β·[s(x,y)]^γ\n【Eq. 9-5】l=(2μxμy+C1)/(μx²+μy²+C1) (luminance)\n        c=(2σxσy+C2)/(σx²+σy²+C2) (contrast)\n        s=(σxy+C3)/(σxσy+C3) (structure), C1=(0.01L)², C2=(0.03L)², C3=C2/2\n【Eq. 9-6】Here α=β=γ=1; SSIM is computed over 8×8 blocks and averaged over the image; SSIM∈(0,1], closer to 1 means more similar structure.\n【Entropy】H = −Σ p(i)·log₂p(i) (bit/px), measures information content.\n【Pipeline】Decode the assets image → extract luminance Y → apply the selected distortion → compute all metrics → comparison display and grade."</string>
+
+    <!-- Video quality evaluation page -->
+    <string name="qe_video_title">Objective Video Quality Evaluation</string>
+    <string name="qe_video_info">Source video: %1$d×%2$d, %3$d fps, %4$d frames, %5$.2f MB (H.264/MP4)</string>
+    <string name="qe_bitrate_hint">Select a target bitrate (only one at a time):</string>
+    <string name="qe_bitrate_high">4 Mbps</string>
+    <string name="qe_bitrate_mid">1 Mbps</string>
+    <string name="qe_bitrate_low">256 kbps</string>
+    <string name="qe_btn_transcode_eval">Transcode and Evaluate Per-frame</string>
+
+    <string name="qe_video_status_idle">Ready. Select a target bitrate and tap "Transcode and Evaluate Per-frame". Lower bitrate gives higher compression and lower PSNR/SSIM (rate-distortion trade-off).</string>
+    <string name="qe_status_transcoding">Phase 1: re-encoding at %1$.1f Mbps (H.264)…</string>
+    <string name="qe_status_evaluating">Phase 2: dual decoding, computing per-frame PSNR / SSIM…</string>
+
+    <string name="qe_video_result_title">Result (middle frame comparison: original vs compressed)</string>
+    <string name="qe_compressed_frame">Compressed frame</string>
+    <string name="qe_compressed_frame_desc">Compressed video frame</string>
+
+    <string name="qe_video_metrics">"Target bitrate: %1$.1f Mbps\n\nAverage PSNR: %2$.2f dB (over all frames)\nWorst-frame PSNR: %3$.2f dB (frame %4$d)\nAverage SSIM: %5$.4f\nWorst-frame SSIM: %6$.4f\n\nOriginal size: %7$.2f MB\nCompressed size: %8$.2f MB\nCompression ratio: %9$.1f : 1\n\nFrames evaluated: %11$d\nElapsed: %10$.1f s"</string>
+
+    <string name="qe_video_formula">"【Video quality evaluation】(Ch. 9 + Ch. 5/6/7) A video is an image sequence; objective evaluation is based on per-frame full-reference metrics plus temporal aggregation: PSNR (Eq. 9-3) and SSIM (Eq. 9-4~9-6) are computed on the luminance plane of every frame of the original x(n) and compressed y(n), then averaged over all frames, with the worst frame (quality floor) also reported.\n【Rate-distortion R-D】(Ch. 5, 5.5 / Ch. 6): rate R and distortion D constrain each other in lossy compression — lower R (4Mbps→256kbps) → larger quantization step → higher D (lower PSNR/SSIM). The H.264 encoder (Ch. 6) controls the bitrate via intra prediction, motion-compensated inter prediction, transform+quantization and entropy coding; the MP4 container (Ch. 7) packages the bitstream.\n【Pipeline】assets/video.mp4 → H.264 transcode at the selected bitrate (phase 1) → dual decode of original/compressed videos with per-frame evaluation (phase 2: PSNR at full resolution, SSIM on 2× downsampled luma for speed) → average/worst-frame metrics, compression ratio and middle-frame comparison.\n【Verification】Evaluate at 4Mbps / 1Mbps / 256kbps in turn and observe PSNR/SSIM decreasing monotonically while the compression ratio increases — a direct verification of rate-distortion theory."</string>
+</resources>
