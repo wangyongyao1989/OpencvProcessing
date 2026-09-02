@@ -1,5 +1,6 @@
 package com.wangyao.opencvprocessing.fragment
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Matrix
 import android.graphics.SurfaceTexture
@@ -146,6 +147,7 @@ class WatermarkEmbedFragment : BaseFragment() {
     }
 
     /** 把当前算法写入 SharedPreferences（攻击页须用同一算法提取）。 */
+    @SuppressLint("UseKtx")
     private fun saveAlgoPref() {
         requireContext()
             .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
