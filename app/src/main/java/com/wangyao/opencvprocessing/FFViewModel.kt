@@ -35,6 +35,9 @@ class FFViewModel : ViewModel() {
         QUALITY_EVAL,         // 二级：图片与视频质量评价（图像/视频客观评价菜单）
         QE_IMAGE,             // 三级：图像质量的客观评价
         QE_VIDEO,             // 三级：视频质量的客观评价
+        CONTENT_SEARCH,       // 二级：基于内容的图像和视频检索（图像/视频检索菜单）
+        CS_IMAGE,             // 三级：基于内容的图像检索
+        CS_VIDEO,             // 三级：基于内容的视频检索
     }
 
     val switchFragment: MutableLiveData<FRAGMENT_STATUS> = MutableLiveData()

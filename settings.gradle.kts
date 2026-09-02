@@ -27,4 +27,5 @@ include(":app")
 include(":imageCVdeal")
 include(":digitalwatermark")
 include(":qualityevaluation")
+include(":contentsearch")
  

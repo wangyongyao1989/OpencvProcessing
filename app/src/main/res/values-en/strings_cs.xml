@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Content-based image and video retrieval (Chapter 10) -->
+    <string name="main_card_cs">Content-based Image &amp; Video Retrieval</string>
+    <string name="main_card_cs_desc">Content retrieval entry</string>
+
+    <!-- Second-level menu -->
+    <string name="cs_menu_title">Content-based Image &amp; Video Retrieval</string>
+    <string name="cs_card_image">Content-based Image Retrieval</string>
+    <string name="cs_card_image_desc">Image retrieval entry</string>
+    <string name="cs_card_image_sub">Color/texture features + similarity ranking</string>
+    <string name="cs_card_video">Content-based Video Retrieval</string>
+    <string name="cs_card_video_desc">Video retrieval entry</string>
+    <string name="cs_card_video_sub">Keyframe extraction + content localization</string>
+
+    <!-- Image retrieval page -->
+    <string name="cs_image_title">Content-based Image Retrieval (CBIR)</string>
+    <string name="cs_query_hint">Select query type (verifies retrieval robustness to illumination/geometric changes):</string>
+    <string name="cs_query_original">Original</string>
+    <string name="cs_query_bright">Brightness+40</string>
+    <string name="cs_query_flip">Mirror</string>
+    <string name="cs_query_rotate">Rotate 10°</string>
+    <string name="cs_query_noise">Noise</string>
+    <string name="cs_query_scale">Scale</string>
+    <string name="cs_btn_search">Build Index &amp; Search</string>
+    <string name="cs_image_status_idle">Not searched yet. Tap \"Build Index &amp; Search\" to start the CBIR pipeline.</string>
+    <string name="cs_status_indexing">Building database and extracting features (HSV color histogram + gradient-orientation texture histogram)…</string>
+    <string name="cs_status_searching">Database of %1$d images indexed, computing similarity…</string>
+    <string name="cs_status_done">Search finished, Top-%1$d results returned.</string>
+    <string name="cs_query_preview">Query preview</string>
+    <string name="cs_query_preview_desc">Query image</string>
+    <string name="cs_result_title">Results (sorted by combined similarity, descending)</string>
+    <string name="cs_result_row">No.%1$d %2$s\nCombined similarity %3$.4f (color %4$.4f / texture %5$.4f)</string>
+    <string name="cs_image_formula">CBIR principle (Ch.10, 10.2–10.4):\n① Feature extraction (Eq. 10-1): HSV space quantized to a 72-bin (8,3,3) color histogram, L1-normalized; texture uses a Sobel gradient-orientation histogram (18 bins, magnitude-weighted).\n② Similarity measures: histogram intersection Sim=Σ min(h1(i),h2(i)) (Eq. 10-2); cosine similarity (Eq. 10-3); Euclidean distance (Eq. 10-4).\n③ Combined similarity: Sim=0.6×color-intersection + 0.4×texture-cosine, in [0,1].\n④ Color histograms are invariant to rotation/translation/scale; mirroring and rotation only slightly perturb the histogram, so images of the same content are still retrieved correctly; synthetic distractors (grass/sky/sunset/checker) rank last due to very different color distributions.</string>
+
+    <!-- Video retrieval page -->
+    <string name="cs_video_title">Content-based Video Retrieval</string>
+    <string name="cs_btn_extract">Extract Keyframes &amp; Build Index</string>
+    <string name="cs_video_status_idle">No keyframes extracted yet. Tap the button above to start (full software decode, may take seconds to tens of seconds).</string>
+    <string name="cs_status_extracting">Decoding video and uniformly sampling keyframes (software decoder)…</string>
+    <string name="cs_status_extracted">%1$d keyframes extracted and indexed. Tap a keyframe to select the query frame, then tap \"Search\".</string>
+    <string name="cs_status_error">Error: %1$s</string>
+    <string name="cs_keyframe_strip">Keyframe strip (tap to select query frame)</string>
+    <string name="cs_keyframe_desc">Keyframe %1$d</string>
+    <string name="cs_keyframe_time">%1$.1f s</string>
+    <string name="cs_query_distortion">Query frame distortion (single choice, verifies robustness):</string>
+    <string name="cs_dist_none">None</string>
+    <string name="cs_dist_bright">Brightness+40</string>
+    <string name="cs_dist_noise">Noise</string>
+    <string name="cs_dist_crop">Crop 85%</string>
+    <string name="cs_btn_search_video">Search Video with Query Frame</string>
+    <string name="cs_video_result_title">Results (Top-K matched keyframes)</string>
+    <string name="cs_video_result_row">No.%1$d at %2$.1f s (frame %3$d)\nCombined similarity %4$.4f (color %5$.4f / texture %6$.4f)</string>
+    <string name="cs_status_searching_video">Computing similarity between query frame and all keyframes…</string>
+    <string name="cs_status_video_hit">Search done: best match at %1$.1f s (similarity %2$.4f).</string>
+    <string name="cs_video_formula">Video retrieval principle (Ch.10, 10.5):\n① Keyframe extraction: video retrieval builds on image retrieval by reducing a video to a set of representative frames (12 frames uniformly sampled here; practical systems use shot boundary detection).\n② Feature indexing: each keyframe is described by \"HSV color histogram + gradient-orientation texture histogram\", stored with its timestamp to form the video index.\n③ Retrieval localization: given a frame (or its distorted copy) as query, keyframes are ranked by combined similarity; the best match\'s timestamp locates the content in the video — the basic principle of \"search video by image\".\n④ Robustness: under brightness/noise/cropping distortions the color and texture features are only mildly perturbed, so the Top-1 match should still be the keyframe the query came from.</string>
+</resources>

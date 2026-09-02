@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 基于内容的图像和视频检索（第 10 章）-->
+    <string name="main_card_cs">基于内容的图像和视频检索</string>
+    <string name="main_card_cs_desc">内容检索入口</string>
+
+    <!-- 二级菜单 -->
+    <string name="cs_menu_title">基于内容的图像和视频检索</string>
+    <string name="cs_card_image">基于内容的图像检索</string>
+    <string name="cs_card_image_desc">图像检索入口</string>
+    <string name="cs_card_image_sub">颜色/纹理特征 + 相似度排序</string>
+    <string name="cs_card_video">基于内容的视频检索</string>
+    <string name="cs_card_video_desc">视频检索入口</string>
+    <string name="cs_card_video_sub">关键帧抽取 + 内容定位</string>
+
+    <!-- 图像检索页 -->
+    <string name="cs_image_title">基于内容的图像检索（CBIR）</string>
+    <string name="cs_query_hint">选择查询图类型（验证检索对光照/几何变化的鲁棒性）：</string>
+    <string name="cs_query_original">原图</string>
+    <string name="cs_query_bright">亮度+40</string>
+    <string name="cs_query_flip">镜像</string>
+    <string name="cs_query_rotate">旋转10°</string>
+    <string name="cs_query_noise">噪声</string>
+    <string name="cs_query_scale">缩放</string>
+    <string name="cs_btn_search">建库索引并检索</string>
+    <string name="cs_image_status_idle">尚未检索。点击「建库索引并检索」开始 CBIR 流程。</string>
+    <string name="cs_status_indexing">正在建库并提取特征（HSV 颜色直方图 + 梯度方向纹理直方图）…</string>
+    <string name="cs_status_searching">图像库 %1$d 幅已索引，正在计算相似度…</string>
+    <string name="cs_status_done">检索完成，返回 Top-%1$d 结果。</string>
+    <string name="cs_query_preview">查询图预览</string>
+    <string name="cs_query_preview_desc">查询图</string>
+    <string name="cs_result_title">检索结果（按综合相似度降序）</string>
+    <string name="cs_result_row">No.%1$d %2$s\n综合相似度 %3$.4f（颜色 %4$.4f / 纹理 %5$.4f）</string>
+    <string name="cs_image_formula">CBIR 原理（第 10 章 10.2~10.4 节）：\n① 特征提取（式 10-1）：HSV 空间按 (8,3,3) 量化为 72 维颜色直方图，L1 归一化；纹理采用 Sobel 梯度方向直方图（18 bins，幅值加权）。\n② 相似性度量：直方图相交 Sim=Σ min(h1(i),h2(i))（式 10-2）；余弦相似度（式 10-3）；欧氏距离（式 10-4）。\n③ 综合相似度：Sim=0.6×颜色相交 + 0.4×纹理余弦，∈[0,1]。\n④ 颜色直方图具有旋转/平移/尺度不变性；镜像与旋转仅轻微改变直方图分布，因此仍能正确命中同内容图像；合成干扰图（草地/天空/晚霞/棋盘）因颜色分布迥异而排在末尾。</string>
+
+    <!-- 视频检索页 -->
+    <string name="cs_video_title">基于内容的视频检索</string>
+    <string name="cs_btn_extract">抽取关键帧并建立索引</string>
+    <string name="cs_video_status_idle">尚未抽取关键帧。点击上方按钮开始（软件解码全视频，需数秒至数十秒）。</string>
+    <string name="cs_status_extracting">正在解码视频并均匀抽取关键帧（软件解码器）…</string>
+    <string name="cs_status_extracted">已抽取并索引 %1$d 个关键帧。点击关键帧选择查询帧，再点击「检索」。</string>
+    <string name="cs_status_error">出错：%1$s</string>
+    <string name="cs_keyframe_strip">关键帧带（点击选择查询帧）</string>
+    <string name="cs_keyframe_desc">关键帧%1$d</string>
+    <string name="cs_keyframe_time">%1$.1f s</string>
+    <string name="cs_query_distortion">查询帧失真（单选，验证抗失真能力）：</string>
+    <string name="cs_dist_none">原始帧</string>
+    <string name="cs_dist_bright">亮度+40</string>
+    <string name="cs_dist_noise">噪声</string>
+    <string name="cs_dist_crop">裁剪85%</string>
+    <string name="cs_btn_search_video">以查询帧检索视频</string>
+    <string name="cs_video_result_title">检索结果（Top-K 命中关键帧）</string>
+    <string name="cs_video_result_row">No.%1$d  %2$.1f s（第 %3$d 帧）\n综合相似度 %4$.4f（颜色 %5$.4f / 纹理 %6$.4f）</string>
+    <string name="cs_status_searching_video">正在计算查询帧与全部关键帧的相似度…</string>
+    <string name="cs_status_video_hit">检索完成：最佳命中 %1$.1f s 处（相似度 %2$.4f）。</string>
+    <string name="cs_video_formula">视频检索原理（第 10 章 10.5 节）：\n① 关键帧抽取：视频检索以图像检索为基础，先将视频降维为代表帧集合（本例均匀抽取 12 帧，实际系统按镜头边界检测抽取）。\n② 特征索引：每个关键帧提取「HSV 颜色直方图 + 梯度方向纹理直方图」，与时间戳一起构成视频索引。\n③ 检索定位：以一帧画面（或其失真副本）为查询，按综合相似度排序找到最相似的关键帧，其时间戳即为目标内容在视频中的位置——这是「以图搜视频」的基本原理。\n④ 鲁棒性：亮度/噪声/裁剪失真下颜色与纹理特征仅发生小幅扰动，Top-1 命中应仍为查询帧的来源关键帧。</string>
+</resources>

@@ -62,5 +62,11 @@ class MainFragment : BaseFragment() {
             ffViewModel.switchFragment
                 .postValue(FFViewModel.FRAGMENT_STATUS.QUALITY_EVAL)
         }
+
+        // 点击「基于内容的图像和视频检索」卡片进入二级菜单（图像/视频检索）
+        binding.btnContentSearch.setOnClickListener {
+            ffViewModel.switchFragment
+                .postValue(FFViewModel.FRAGMENT_STATUS.CONTENT_SEARCH)
+        }
     }
 }

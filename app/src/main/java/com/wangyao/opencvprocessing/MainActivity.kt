@@ -24,6 +24,9 @@ import com.wangyao.opencvprocessing.fragment.SegmentationFragment
 import com.wangyao.opencvprocessing.fragment.QualityEvalFragment
 import com.wangyao.opencvprocessing.fragment.ImageQualityFragment
 import com.wangyao.opencvprocessing.fragment.VideoQualityFragment
+import com.wangyao.opencvprocessing.fragment.ContentSearchFragment
+import com.wangyao.opencvprocessing.fragment.ImageSearchFragment
+import com.wangyao.opencvprocessing.fragment.VideoSearchFragment
 import com.wangyao.opencvprocessing.fragment.WatermarkFragment
 import com.wangyao.opencvprocessing.fragment.WatermarkEmbedFragment
 import com.wangyao.opencvprocessing.fragment.WatermarkAttackFragment
@@ -96,6 +99,12 @@ class MainActivity : AppCompatActivity() {
                         selectFragment(FFViewModel.FRAGMENT_STATUS.QUALITY_EVAL)
                     is VideoQualityFragment ->
                         selectFragment(FFViewModel.FRAGMENT_STATUS.QUALITY_EVAL)
+                    is ContentSearchFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
+                    is ImageSearchFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.CONTENT_SEARCH)
+                    is VideoSearchFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.CONTENT_SEARCH)
                     else -> selectFragment(FFViewModel.FRAGMENT_STATUS.IMAGE_ENHANCE)
                 }
             }
@@ -142,6 +151,9 @@ class MainActivity : AppCompatActivity() {
                 FFViewModel.FRAGMENT_STATUS.QUALITY_EVAL -> QualityEvalFragment()
                 FFViewModel.FRAGMENT_STATUS.QE_IMAGE -> ImageQualityFragment()
                 FFViewModel.FRAGMENT_STATUS.QE_VIDEO -> VideoQualityFragment()
+                FFViewModel.FRAGMENT_STATUS.CONTENT_SEARCH -> ContentSearchFragment()
+                FFViewModel.FRAGMENT_STATUS.CS_IMAGE -> ImageSearchFragment()
+                FFViewModel.FRAGMENT_STATUS.CS_VIDEO -> VideoSearchFragment()
             }
         }
 
