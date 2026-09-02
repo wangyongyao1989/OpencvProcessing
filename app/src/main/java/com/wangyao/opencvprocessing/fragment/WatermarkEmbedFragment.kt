@@ -150,6 +150,7 @@ class WatermarkEmbedFragment : BaseFragment() {
 
         val startMs = System.currentTimeMillis()
         thread(start = true) {
+            val tempFile = File(requireContext().filesDir, "wm_watermarked.mp4.tmp")
             try {
                 val pipeline = VideoWatermarkPipeline()
                 val total = pipeline.probe(sourceFile.absolutePath).frameCount
@@ -159,7 +160,7 @@ class WatermarkEmbedFragment : BaseFragment() {
 
                 val frames = pipeline.transcode(
                     sourceFile.absolutePath,
-                    watermarkedFile.absolutePath,
+                    tempFile.absolutePath,
                     onFrame = { luma, w, h, idx ->
                         // 采集中间帧做对比：嵌入前（原图）/ 嵌入后（含水印）
                         if (idx == midIdx) originalFrame = luma.copyOf()
@@ -175,6 +176,12 @@ class WatermarkEmbedFragment : BaseFragment() {
                         }
                     }
                 )
+
+                // 成功后才替换正式文件
+                if (tempFile.exists()) {
+                    if (watermarkedFile.exists()) watermarkedFile.delete()
+                    tempFile.renameTo(watermarkedFile)
+                }
 
                 val elapsed = (System.currentTimeMillis() - startMs) / 1000.0
                 val psnr = if (originalFrame != null && watermarkedFrame != null)
@@ -199,6 +206,7 @@ class WatermarkEmbedFragment : BaseFragment() {
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                if (tempFile.exists()) tempFile.delete()
                 activity?.runOnUiThread {
                     binding.tvStatus.text = getString(R.string.wm_status_error, e.message ?: "")
                     busy = false
@@ -213,7 +221,7 @@ class WatermarkEmbedFragment : BaseFragment() {
     // -------------------------------------------------------------------------
 
     private fun runExtract() {
-        if (!watermarkedFile.exists()) {
+        if (!watermarkedFile.exists() || watermarkedFile.length() == 0L) {
             Toast.makeText(requireContext(), R.string.wm_need_embed_first, Toast.LENGTH_SHORT)
                 .show()
             return

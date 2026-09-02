@@ -47,13 +47,26 @@ class VideoWatermarkPipeline {
 
     /** 探测源视频：宽高 / 时长 / 帧率 / 估计帧数。 */
     fun probe(inputPath: String): VideoInfo {
+        val file = java.io.File(inputPath)
+        if (!file.exists() || file.length() == 0L) {
+            throw java.io.IOException("File is empty or not found: $inputPath")
+        }
+
         val extractor = MediaExtractor()
         try {
             extractor.setDataSource(inputPath)
             val trackIdx = selectVideoTrack(extractor)
             val fmt = extractor.getTrackFormat(trackIdx)
-            val w = fmt.getInteger(MediaFormat.KEY_WIDTH)
-            val h = fmt.getInteger(MediaFormat.KEY_HEIGHT)
+            
+            // 获取可见区域宽高（处理 1088 对齐等硬件差异）
+            val left = if (fmt.containsKey("crop-left")) fmt.getInteger("crop-left") else 0
+            val right = if (fmt.containsKey("crop-right")) fmt.getInteger("crop-right") else fmt.getInteger(MediaFormat.KEY_WIDTH) - 1
+            val top = if (fmt.containsKey("crop-top")) fmt.getInteger("crop-top") else 0
+            val bottom = if (fmt.containsKey("crop-bottom")) fmt.getInteger("crop-bottom") else fmt.getInteger(MediaFormat.KEY_HEIGHT) - 1
+            
+            val w = right - left + 1
+            val h = bottom - top + 1
+
             val dur = if (fmt.containsKey(MediaFormat.KEY_DURATION))
                 fmt.getLong(MediaFormat.KEY_DURATION) else 0L
             val fps = if (fmt.containsKey(MediaFormat.KEY_FRAME_RATE))
@@ -94,8 +107,16 @@ class VideoWatermarkPipeline {
             val srcFormat = extractor.getTrackFormat(trackIdx)
             val mime = srcFormat.getString(MediaFormat.KEY_MIME)
                 ?: MediaFormat.MIMETYPE_VIDEO_AVC
-            val width = srcFormat.getInteger(MediaFormat.KEY_WIDTH)
-            val height = srcFormat.getInteger(MediaFormat.KEY_HEIGHT)
+            
+            // 获取可见区域宽高（处理 1088 对齐等硬件差异）
+            val left = if (srcFormat.containsKey("crop-left")) srcFormat.getInteger("crop-left") else 0
+            val right = if (srcFormat.containsKey("crop-right")) srcFormat.getInteger("crop-right") else srcFormat.getInteger(MediaFormat.KEY_WIDTH) - 1
+            val top = if (srcFormat.containsKey("crop-top")) srcFormat.getInteger("crop-top") else 0
+            val bottom = if (srcFormat.containsKey("crop-bottom")) srcFormat.getInteger("crop-bottom") else srcFormat.getInteger(MediaFormat.KEY_HEIGHT) - 1
+            
+            val width = right - left + 1
+            val height = bottom - top + 1
+
             val fps = if (srcFormat.containsKey(MediaFormat.KEY_FRAME_RATE))
                 srcFormat.getInteger(MediaFormat.KEY_FRAME_RATE) else 30
 
@@ -264,8 +285,15 @@ class VideoWatermarkPipeline {
             val srcFormat = extractor.getTrackFormat(trackIdx)
             val mime = srcFormat.getString(MediaFormat.KEY_MIME)
                 ?: MediaFormat.MIMETYPE_VIDEO_AVC
-            val width = srcFormat.getInteger(MediaFormat.KEY_WIDTH)
-            val height = srcFormat.getInteger(MediaFormat.KEY_HEIGHT)
+            
+            // 获取可见区域宽高
+            val left = if (srcFormat.containsKey("crop-left")) srcFormat.getInteger("crop-left") else 0
+            val right = if (srcFormat.containsKey("crop-right")) srcFormat.getInteger("crop-right") else srcFormat.getInteger(MediaFormat.KEY_WIDTH) - 1
+            val top = if (srcFormat.containsKey("crop-top")) srcFormat.getInteger("crop-top") else 0
+            val bottom = if (srcFormat.containsKey("crop-bottom")) srcFormat.getInteger("crop-bottom") else srcFormat.getInteger(MediaFormat.KEY_HEIGHT) - 1
+            
+            val width = right - left + 1
+            val height = bottom - top + 1
 
             decoder = MediaCodec.createDecoderByType(mime)
             decoder.configure(srcFormat, null, null, 0)
@@ -381,18 +409,24 @@ class VideoWatermarkPipeline {
         var pos = 0
         if (pixelStride == 1 && rowStride == w) {
             buf.position(0)
-            buf.get(dst, 0, w * h)
+            val length = (w * h).coerceAtMost(buf.remaining())
+            buf.get(dst, 0, length)
         } else if (pixelStride == 1) {
             for (row in 0 until h) {
-                buf.position(row * rowStride)
-                buf.get(dst, pos, w)
+                val offset = row * rowStride
+                if (offset >= buf.capacity()) break
+                buf.position(offset)
+                val bytesToRead = w.coerceAtMost(buf.remaining())
+                buf.get(dst, pos, bytesToRead)
                 pos += w
             }
         } else {
             for (row in 0 until h) {
                 var colIdx = row * rowStride
                 for (col in 0 until w) {
-                    dst[pos++] = buf.get(colIdx)
+                    if (colIdx < buf.capacity()) {
+                        dst[pos++] = buf.get(colIdx)
+                    }
                     colIdx += pixelStride
                 }
             }
@@ -419,18 +453,24 @@ class VideoWatermarkPipeline {
         var pos = 0
         if (pixelStride == 1 && rowStride == w) {
             buf.position(0)
-            buf.put(src, 0, w * h)
+            val length = (w * h).coerceAtMost(buf.remaining())
+            buf.put(src, 0, length)
         } else if (pixelStride == 1) {
             for (row in 0 until h) {
-                buf.position(row * rowStride)
-                buf.put(src, pos, w)
+                val offset = row * rowStride
+                if (offset >= buf.capacity()) break
+                buf.position(offset)
+                val bytesToWrite = w.coerceAtMost(buf.remaining())
+                buf.put(src, pos, bytesToWrite)
                 pos += w
             }
         } else {
             for (row in 0 until h) {
                 var colIdx = row * rowStride
                 for (col in 0 until w) {
-                    buf.put(colIdx, src[pos++])
+                    if (colIdx < buf.capacity()) {
+                        buf.put(colIdx, src[pos++])
+                    }
                     colIdx += pixelStride
                 }
             }
