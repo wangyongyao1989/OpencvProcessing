@@ -29,4 +29,5 @@ include(":digitalwatermark")
 include(":qualityevaluation")
 include(":contentsearch")
 include(":imagerecognition")
+include(":videorecognition")
  

@@ -41,6 +41,7 @@ class FFViewModel : ViewModel() {
         IMAGE_RECOGNITION,    // 二级：图像识别（图像识别/视频识别菜单）
         IR_IMAGE,             // 三级：图像的识别处理
         IR_VIDEO,             // 三级：视频的图像识别处理
+        VIDEO_RECOGNITION,    // 二级：视频识别（视频人脸识别验证）
     }
 
     val switchFragment: MutableLiveData<FRAGMENT_STATUS> = MutableLiveData()

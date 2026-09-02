@@ -74,5 +74,11 @@ class MainFragment : BaseFragment() {
             ffViewModel.switchFragment
                 .postValue(FFViewModel.FRAGMENT_STATUS.IMAGE_RECOGNITION)
         }
+
+        // 点击「视频识别」卡片进入视频人脸识别验证页
+        binding.btnVideoRecognition.setOnClickListener {
+            ffViewModel.switchFragment
+                .postValue(FFViewModel.FRAGMENT_STATUS.VIDEO_RECOGNITION)
+        }
     }
 }

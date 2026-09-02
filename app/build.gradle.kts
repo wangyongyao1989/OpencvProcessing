@@ -41,6 +41,14 @@ android {
     buildFeatures {
         viewBinding = true
     }
+
+    // imageCVdeal 与 videorecognition 均自带 OpenCV 预编译库
+    // (libopencv_java4.so，内容完全相同)，取其一即可
+    packaging {
+        jniLibs {
+            pickFirsts += "lib/**/libopencv_java4.so"
+        }
+    }
 }
 
 dependencies {
@@ -56,6 +64,7 @@ dependencies {
     implementation(project(":qualityevaluation"))
     implementation(project(":contentsearch"))
     implementation(project(":imagerecognition"))
+    implementation(project(":videorecognition"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

@@ -33,6 +33,7 @@ import com.wangyao.opencvprocessing.fragment.RecognitionMenuFragment
 import com.wangyao.opencvprocessing.fragment.WatermarkFragment
 import com.wangyao.opencvprocessing.fragment.WatermarkEmbedFragment
 import com.wangyao.opencvprocessing.fragment.WatermarkAttackFragment
+import com.wangyao.opencvprocessing.fragment.FaceVideoFragment
 
 /**
  * 应用唯一的 Activity，负责：
@@ -108,6 +109,14 @@ class MainActivity : AppCompatActivity() {
                         selectFragment(FFViewModel.FRAGMENT_STATUS.CONTENT_SEARCH)
                     is VideoSearchFragment ->
                         selectFragment(FFViewModel.FRAGMENT_STATUS.CONTENT_SEARCH)
+                    is RecognitionMenuFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
+                    is ImageRecognitionFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.IMAGE_RECOGNITION)
+                    is VideoRecognitionFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.IMAGE_RECOGNITION)
+                    is FaceVideoFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
                     else -> selectFragment(FFViewModel.FRAGMENT_STATUS.IMAGE_ENHANCE)
                 }
             }
@@ -160,6 +169,7 @@ class MainActivity : AppCompatActivity() {
                 FFViewModel.FRAGMENT_STATUS.IMAGE_RECOGNITION -> RecognitionMenuFragment()
                 FFViewModel.FRAGMENT_STATUS.IR_IMAGE -> ImageRecognitionFragment()
                 FFViewModel.FRAGMENT_STATUS.IR_VIDEO -> VideoRecognitionFragment()
+                FFViewModel.FRAGMENT_STATUS.VIDEO_RECOGNITION -> FaceVideoFragment()
             }
         }
 
