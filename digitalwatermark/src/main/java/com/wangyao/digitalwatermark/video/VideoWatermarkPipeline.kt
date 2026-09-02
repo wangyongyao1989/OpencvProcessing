@@ -157,6 +157,11 @@ class VideoWatermarkPipeline {
             var u: ByteArray? = null
             var v: ByteArray? = null
 
+            // 输出时间戳基准：把首帧 PTS 归一化到 0。
+            // 若直接透传源视频 PTS（首帧非 0），MediaMuxer 写出的 MP4
+            // 起播点不为 0，部分播放器（MediaPlayer）会长时间黑屏。
+            var ptsBaseUs = -1L
+
             while (!encoderDone) {
                 // ---- 1. 送入解码器 ----
                 if (!inputDone) {
@@ -196,9 +201,10 @@ class VideoWatermarkPipeline {
                                     // 水印嵌入 / 攻击变换（就地修改亮度平面）
                                     val keep = onFrame(y, width, height, processed)
 
+                                    if (ptsBaseUs < 0) ptsBaseUs = info.presentationTimeUs
                                     if (keep) feedEncoder(
                                         encoder!!, y, u, v, width, height,
-                                        info.presentationTimeUs
+                                        info.presentationTimeUs - ptsBaseUs
                                     )
                                     processed++
                                     onProgress(processed, total)
@@ -386,7 +392,9 @@ class VideoWatermarkPipeline {
         } finally {
             image.close()
         }
-        encoder.queueInputBuffer(encIdx, 0, 0, ptsUs, 0)
+        // 对于 YUV420，数据总量为宽*高*1.5
+        val size = width * height * 3 / 2
+        encoder.queueInputBuffer(encIdx, 0, size, ptsUs, 0)
     }
 
     /** Image(YUV_420_888) → 紧凑 Y/U/V 数组（处理 rowStride/pixelStride）。 */

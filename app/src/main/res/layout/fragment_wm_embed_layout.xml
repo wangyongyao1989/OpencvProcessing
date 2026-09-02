@@ -159,8 +159,8 @@
             android:textSize="16sp"
             android:textStyle="bold" />
 
-        <!-- 嵌入结果：帧对比 -->
-        <!-- Embedding result: frame comparison -->
+        <!-- 嵌入结果：原视频 / 含水印视频 同步播放对比 -->
+        <!-- Embedding result: side-by-side synchronized video comparison -->
         <TextView
             android:id="@+id/tv_frame_compare_title"
             android:layout_width="match_parent"
@@ -178,6 +178,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:orientation="horizontal"
+            android:baselineAligned="false"
             android:visibility="gone">
 
             <LinearLayout
@@ -191,19 +192,16 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"
-                    android:text="@string/common_original"
+                    android:text="@string/wm_original_video"
                     android:textColor="#111111"
-                    android:textSize="16sp"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
 
-                <ImageView
-                    android:id="@+id/iv_frame_original"
+                <TextureView
+                    android:id="@+id/video_original"
                     android:layout_width="match_parent"
-                    android:layout_height="120dp"
-                    android:layout_marginTop="4dp"
-                    android:background="#DDDDDD"
-                    android:contentDescription="@string/common_original_desc"
-                    android:scaleType="fitCenter" />
+                    android:layout_height="480dp"
+                    android:layout_marginTop="4dp" />
             </LinearLayout>
 
             <LinearLayout
@@ -217,21 +215,28 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"
-                    android:text="@string/wm_watermarked_frame"
+                    android:text="@string/wm_watermarked_video"
                     android:textColor="#111111"
-                    android:textSize="16sp"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
 
-                <ImageView
-                    android:id="@+id/iv_frame_watermarked"
+                <TextureView
+                    android:id="@+id/video_watermarked"
                     android:layout_width="match_parent"
-                    android:layout_height="120dp"
-                    android:layout_marginTop="4dp"
-                    android:background="#DDDDDD"
-                    android:contentDescription="@string/wm_watermarked_frame_desc"
-                    android:scaleType="fitCenter" />
+                    android:layout_height="480dp"
+                    android:layout_marginTop="4dp" />
             </LinearLayout>
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_compare_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/wm_compare_hint"
+            android:textColor="#666666"
+            android:textSize="12sp"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/tv_embed_metrics"

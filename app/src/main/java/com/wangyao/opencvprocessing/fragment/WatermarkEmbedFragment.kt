@@ -1,9 +1,13 @@
 package com.wangyao.opencvprocessing.fragment
 
 import android.content.Context
-import android.graphics.Bitmap
+import android.graphics.Matrix
+import android.graphics.SurfaceTexture
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.Surface
+import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CompoundButton
@@ -19,7 +23,6 @@ import com.wangyao.opencvprocessing.R
 import com.wangyao.opencvprocessing.databinding.FragmentWmEmbedLayoutBinding
 import java.io.File
 import kotlin.concurrent.thread
-import kotlin.math.roundToInt
 
 /**
  * 三级页：数字水印的嵌入/提取（《数字图像与视频处理》第 8 章 8.2~8.4 节）。
@@ -28,7 +31,8 @@ import kotlin.math.roundToInt
  * 1. 生成 64×64 二值水印（水印生成 G）；
  * 2. 选择算法（LSB 空间域 / DCT 变换域）后「嵌入水印到视频」：
  *    解码全部视频帧 → 在亮度平面嵌入水印（式 8-1）→ 重新编码为 MP4；
- *    展示中间帧的原图/含水印对比与 PSNR（不可感知性评价）；
+ *    左右两个 TextureView 同步循环播放「原视频 / 含水印视频」，
+ *    直观对比嵌入前后肉眼几乎无差别（不可感知性），并给出 PSNR；
  * 3. 「从视频提取水印」：解码含水印视频 → 逐帧盲提取（式 8-4）→
  *    帧间多数投票 → 展示提取水印与 NC/BER（鲁棒性评价）。
  */
@@ -49,6 +53,10 @@ class WatermarkEmbedFragment : BaseFragment() {
 
     private var busy = false
 
+    /** 左右两路对比播放器（TextureView + MediaPlayer，显式生命周期管理）。 */
+    private var playerOriginal: ComparePlayer? = null
+    private var playerWatermarked: ComparePlayer? = null
+
     override fun getLayoutBinding(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -59,6 +67,8 @@ class WatermarkEmbedFragment : BaseFragment() {
     }
 
     override fun initView() {
+        playerOriginal = ComparePlayer(binding.videoOriginal)
+        playerWatermarked = ComparePlayer(binding.videoWatermarked)
     }
 
     override fun initData() {
@@ -85,6 +95,14 @@ class WatermarkEmbedFragment : BaseFragment() {
 
         binding.tvFormula.text = getString(R.string.wm_embed_formula)
         binding.tvStatus.text = getString(R.string.wm_status_idle)
+
+        // 上次已生成含水印视频：重建页面时直接恢复前后对比播放
+        if (watermarkedFile.exists() && watermarkedFile.length() > 0L) {
+            binding.tvFrameCompareTitle.visibility = View.VISIBLE
+            binding.layoutFrameCompare.visibility = View.VISIBLE
+            binding.tvCompareHint.visibility = View.VISIBLE
+            playCompareVideos()
+        }
     }
 
     override fun initObserver() {
@@ -148,6 +166,9 @@ class WatermarkEmbedFragment : BaseFragment() {
         binding.progress.progress = 0
         binding.tvStatus.text = getString(R.string.wm_status_preparing)
 
+        // 停止之前的播放，释放文件句柄
+        stopCompareVideos()
+
         val startMs = System.currentTimeMillis()
         thread(start = true) {
             val tempFile = File(requireContext().filesDir, "wm_watermarked.mp4.tmp")
@@ -178,9 +199,14 @@ class WatermarkEmbedFragment : BaseFragment() {
                 )
 
                 // 成功后才替换正式文件
-                if (tempFile.exists()) {
+                if (tempFile.exists() && tempFile.length() > 0) {
                     if (watermarkedFile.exists()) watermarkedFile.delete()
-                    tempFile.renameTo(watermarkedFile)
+                    val success = tempFile.renameTo(watermarkedFile)
+                    if (!success) {
+                        throw java.io.IOException("Failed to rename temp file to $watermarkedFile")
+                    }
+                } else {
+                    throw java.io.IOException("Transcoding failed: output file is empty or missing")
                 }
 
                 val elapsed = (System.currentTimeMillis() - startMs) / 1000.0
@@ -190,8 +216,8 @@ class WatermarkEmbedFragment : BaseFragment() {
                 activity?.runOnUiThread {
                     binding.tvFrameCompareTitle.visibility = View.VISIBLE
                     binding.layoutFrameCompare.visibility = View.VISIBLE
-                    binding.ivFrameOriginal.setImageBitmap(lumaToBitmap(originalFrame))
-                    binding.ivFrameWatermarked.setImageBitmap(lumaToBitmap(watermarkedFrame))
+                    binding.tvCompareHint.visibility = View.VISIBLE
+                    playCompareVideos()
                     binding.tvEmbedMetrics.visibility = View.VISIBLE
                     binding.tvEmbedMetrics.text = getString(
                         R.string.wm_embed_metrics,
@@ -296,25 +322,159 @@ class WatermarkEmbedFragment : BaseFragment() {
         binding.cbAlgoDct.isEnabled = enabled
     }
 
-    /** 亮度平面 → 灰度 Bitmap（帧预览用，降采样到 480 宽）。 */
-    private fun lumaToBitmap(luma: ByteArray?): Bitmap? {
-        if (luma == null) return null
-        val info = VideoWatermarkPipeline().probe(sourceFile.absolutePath)
-        val w = info.width
-        val h = info.height
-        val scale = maxOf(1, (w / 480.0).roundToInt())
-        val bw = w / scale
-        val bh = h / scale
-        val bmp = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
-        val px = IntArray(bw * bh)
-        for (y in 0 until bh) {
-            for (x in 0 until bw) {
-                val v = luma[(y * scale) * w + (x * scale)].toInt() and 0xFF
-                px[y * bw + x] = (0xFF shl 24) or (v shl 16) or (v shl 8) or v
+    /**
+     * 嵌入完成后左右同步播放「原视频 / 含水印视频」（静音 + 循环）。
+     *
+     * 播放基于 TextureView + MediaPlayer 显式驱动（不再用 VideoView）：
+     * - TextureView 不依赖 SurfaceHolder 创建时序，容器 GONE→VISIBLE、
+     *   Fragment hide→show 均能稳定创建 SurfaceTexture；
+     * - 每路独立 prepared 即 start，两路都启动后 seekTo(0) 对齐帧级同步；
+     * - 任何一路出错都显示到状态栏，绝不静默黑屏。
+     */
+    private fun playCompareVideos() {
+        if (!sourceFile.exists() || sourceFile.length() == 0L) return
+        if (!watermarkedFile.exists() || watermarkedFile.length() == 0L) return
+
+        var startedCount = 0
+        val alignBoth: () -> Unit = {
+            if (++startedCount == 2) {
+                playerOriginal?.seekToStart()
+                playerWatermarked?.seekToStart()
             }
         }
-        bmp.setPixels(px, 0, bw, 0, 0, bw, bh)
-        return bmp
+        playerOriginal?.onStarted = alignBoth
+        playerWatermarked?.onStarted = alignBoth
+        playerOriginal?.play(sourceFile.absolutePath)
+        playerWatermarked?.play(watermarkedFile.absolutePath)
+    }
+
+    /** 停止并释放两路播放（重新嵌入 / 离开页面前调用）。 */
+    private fun stopCompareVideos() {
+        playerOriginal?.release()
+        playerWatermarked?.release()
+    }
+
+    override fun onDestroyView() {
+        stopCompareVideos()
+        playerOriginal = null
+        playerWatermarked = null
+        super.onDestroyView()
+    }
+
+    // -------------------------------------------------------------------------
+    // 单路对比播放器：TextureView + MediaPlayer，显式管理 Surface 生命周期
+    // -------------------------------------------------------------------------
+
+    /**
+     * 播放状态机：
+     * 1. [play] 时若 SurfaceTexture 已就绪 → 立即创建 MediaPlayer 异步准备；
+     *    若未就绪（容器刚从 GONE 变 VISIBLE）→ 记住路径，
+     *    等 onSurfaceTextureAvailable 回调后再打开；
+     * 2. Fragment 被 hide（MainActivity 用 hide/show 切页）时 SurfaceTexture
+     *    销毁 → 释放 MediaPlayer；show 回来后自动从 0 重新播放；
+     * 3. onVideoSizeChanged 里做宽高比适配（fit-center），避免画面拉伸。
+     */
+    private inner class ComparePlayer(private val view: TextureView) {
+
+        /** 该路视频成功 start 后回调（用于两路对齐）。 */
+        var onStarted: (() -> Unit)? = null
+
+        private var player: MediaPlayer? = null
+
+        /** 当前应播放的文件路径（surface 未就绪时挂起，销毁重建后续播）。 */
+        private var currentPath: String? = null
+
+        init {
+            view.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                override fun onSurfaceTextureAvailable(
+                    st: SurfaceTexture, width: Int, height: Int
+                ) {
+                    currentPath?.let { open(it) }
+                }
+
+                override fun onSurfaceTextureSizeChanged(
+                    st: SurfaceTexture, width: Int, height: Int
+                ) {
+                    player?.let { applyAspect(it.videoWidth, it.videoHeight) }
+                }
+
+                override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
+                    // 页面被隐藏/视图分离：释放播放器，SurfaceTexture 由系统回收
+                    releasePlayer()
+                    return true
+                }
+
+                override fun onSurfaceTextureUpdated(st: SurfaceTexture) = Unit
+            }
+        }
+
+        fun play(path: String) {
+            currentPath = path
+            releasePlayer()
+            if (view.isAvailable) open(path)
+            // surface 未就绪时：等 onSurfaceTextureAvailable 再打开
+        }
+
+        fun seekToStart() {
+            player?.seekTo(0)
+        }
+
+        fun release() {
+            currentPath = null
+            releasePlayer()
+        }
+
+        private fun releasePlayer() {
+            player?.run {
+                runCatching { stop() }
+                runCatching { release() }
+            }
+            player = null
+        }
+
+        private fun open(path: String) {
+            try {
+                player = MediaPlayer().apply {
+                    setDataSource(path)
+                    setSurface(Surface(view.surfaceTexture))
+                    isLooping = true
+                    setVolume(0f, 0f)
+                    setOnVideoSizeChangedListener { _, w, h ->
+                        if (w > 0 && h > 0) applyAspect(w, h)
+                    }
+                    setOnPreparedListener { mp ->
+                        mp.start()
+                        onStarted?.invoke()
+                    }
+                    setOnErrorListener { _, what, extra ->
+                        binding.tvStatus.text =
+                            getString(R.string.wm_play_error, what, extra)
+                        true
+                    }
+                    prepareAsync()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                binding.tvStatus.text = getString(R.string.wm_status_error, e.message ?: "")
+            }
+        }
+
+        /** 按视频宽高比做 fit-center 缩放（TextureView 默认会拉伸填充）。 */
+        private fun applyAspect(vw: Int, vh: Int) {
+            if (vw <= 0 || vh <= 0 || view.width <= 0 || view.height <= 0) return
+            val scale = minOf(
+                view.width.toFloat() / vw,
+                view.height.toFloat() / vh
+            )
+            val dx = (view.width - vw * scale) / 2f
+            val dy = (view.height - vh * scale) / 2f
+            view.setTransform(
+                Matrix().apply {
+                    setScale(scale, scale)
+                    postTranslate(dx, dy)
+                }
+            )
+        }
     }
 
     companion object {
