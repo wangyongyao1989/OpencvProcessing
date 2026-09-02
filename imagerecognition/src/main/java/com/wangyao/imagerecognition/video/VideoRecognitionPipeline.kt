@@ -119,12 +119,10 @@ class VideoRecognitionPipeline {
 
                 if (frameIdx == 0) {
                     // 首帧：中央取模板，初始位置即模板位置
-                    curX = (ww - tw) / 2
-                    curY = (wh - th) / 2
-                    tpl = ByteArray(tw * th)
-                    for (j in 0 until th) {
-                        System.arraycopy(small, (curY + j) * ww + curX, tpl, j * tw, tw)
-                    }
+                    val (t, tx, ty) = extractCenterTemplate(small, ww, wh, tw, th)
+                    tpl = t
+                    curX = tx
+                    curY = ty
                     Log.d(TAG, "template ${tw}x${th} taken at ($curX,$curY)")
                 }
 
@@ -149,28 +147,10 @@ class VideoRecognitionPipeline {
                 var motionRatio = 0.0
                 var box: android.graphics.RectF? = null
                 if (prev != null && prev.size == small.size) {
-                    var cnt = 0
-                    var minX = Int.MAX_VALUE; var minY = Int.MAX_VALUE
-                    var maxX = -1; var maxY = -1
-                    for (i in small.indices) {
-                        val d = (small[i].toInt() and 0xFF) - (prev[i].toInt() and 0xFF)
-                        if (d > diffThreshold || d < -diffThreshold) {
-                            cnt++
-                            val x = i % ww
-                            val y = i / ww
-                            if (x < minX) minX = x
-                            if (x > maxX) maxX = x
-                            if (y < minY) minY = y
-                            if (y > maxY) maxY = y
-                        }
-                    }
-                    motionRatio = cnt.toDouble() / small.size
-                    if (cnt > 0 && cnt > small.size * 0.0005) {
-                        box = android.graphics.RectF(
-                            minX.toFloat(), minY.toFloat(),
-                            (maxX + 1).toFloat(), (maxY + 1).toFloat()
-                        )
-                    }
+                    val (ratio, bbox) =
+                        computeMotion(small, prev, ww, diffThreshold, 0.0005)
+                    motionRatio = ratio
+                    box = bbox?.toRectF()
                 }
                 prev = small
 
@@ -214,6 +194,75 @@ class VideoRecognitionPipeline {
     // -------------------------------------------------------------------------
     // 内部工具
     // -------------------------------------------------------------------------
+
+    companion object {
+        /**
+         * 运动区域外接框（半开区间：right/bottom = 最大索引 + 1）。
+         * 独立于 android.graphics.RectF，保证纯算法可在 JVM 单测
+         * 中验证（RectF 在本地单测中是 mockable 桩类）。
+         */
+        data class MotionBox(
+            val left: Int, val top: Int, val right: Int, val bottom: Int
+        ) {
+            /** 转换为 Android RectF（UI 层使用）。 */
+            fun toRectF() = android.graphics.RectF(
+                left.toFloat(), top.toFloat(), right.toFloat(), bottom.toFloat()
+            )
+        }
+
+        /**
+         * 帧差运动检测（纯函数，便于单元测试）：
+         * D(x,y)=|cur-prev| > [threshold] 的像素视为运动像素，
+         * 统计占比与外接框；运动像素数不超过总像素 × [minAreaRatio]
+         * 时视为噪声、不输出外接框（占比仍然统计）。
+         *
+         * @return (运动占比 ∈[0,1], 外接框或 null)
+         */
+        internal fun computeMotion(
+            cur: ByteArray, prev: ByteArray, width: Int,
+            threshold: Int, minAreaRatio: Double
+        ): Pair<Double, MotionBox?> {
+            require(cur.size == prev.size) { "frame size mismatch" }
+            var cnt = 0
+            var minX = Int.MAX_VALUE
+            var minY = Int.MAX_VALUE
+            var maxX = -1
+            var maxY = -1
+            for (i in cur.indices) {
+                val d = (cur[i].toInt() and 0xFF) - (prev[i].toInt() and 0xFF)
+                if (d > threshold || d < -threshold) {
+                    cnt++
+                    val x = i % width
+                    val y = i / width
+                    if (x < minX) minX = x
+                    if (x > maxX) maxX = x
+                    if (y < minY) minY = y
+                    if (y > maxY) maxY = y
+                }
+            }
+            val ratio = cnt.toDouble() / cur.size
+            val box = if (cnt > 0 && cnt > cur.size * minAreaRatio) {
+                MotionBox(minX, minY, maxX + 1, maxY + 1)
+            } else null
+            return ratio to box
+        }
+
+        /**
+         * 首帧中央模板提取（纯函数，便于单元测试）。
+         * @return (模板像素, 左上角 x, 左上角 y)
+         */
+        internal fun extractCenterTemplate(
+            frame: ByteArray, width: Int, height: Int, tw: Int, th: Int
+        ): Triple<ByteArray, Int, Int> {
+            val x = (width - tw) / 2
+            val y = (height - th) / 2
+            val tpl = ByteArray(tw * th)
+            for (j in 0 until th) {
+                System.arraycopy(frame, (y + j) * width + x, tpl, j * tw, tw)
+            }
+            return Triple(tpl, x, y)
+        }
+    }
 
     /** 预遍历统计视频轨道 sample 数（≈帧数）。 */
     private fun countSamples(path: String): Int {

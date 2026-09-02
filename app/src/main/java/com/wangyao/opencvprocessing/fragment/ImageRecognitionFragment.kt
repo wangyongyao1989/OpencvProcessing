@@ -274,7 +274,7 @@ class ImageRecognitionFragment : BaseFragment() {
         }
     }
 
-    /** 计算查询与指定形状原始样本的距离（展示类间可分性）。 */
+    /** 计算查询与指定形状原始样本的距离（展示类间可分性，与分类器同口径：仅 H1~H3）。 */
     private fun shapeDistances(recognizer: ShapeRecognizer, shape: ShapeRecognizer.Shape): Double {
         val mask = renderQueryMask()
         val qf = com.wangyao.imagerecognition.core.HuMoments.logTransform(
@@ -284,7 +284,7 @@ class ImageRecognitionFragment : BaseFragment() {
         )
         val ref = recognizer.huOf(shape)
         var s = 0.0
-        for (i in qf.indices) {
+        for (i in 0 until 3) {
             val d = qf[i] - ref[i]
             s += d * d
         }

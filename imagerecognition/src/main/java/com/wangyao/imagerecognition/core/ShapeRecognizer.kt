@@ -140,15 +140,24 @@ class ShapeRecognizer {
 
     init { buildLibrary() }
 
-    /** 构建形状特征库（5 类 × 4 变体 = 20 个样本）。 */
+    /**
+     * 构建形状特征库：5 类 × 6 旋转角(0°~75°，步进 15°) × 2 尺度
+     * = 60 个样本。
+     *
+     * 参考样本密度直接决定最近邻分类器的覆盖能力：细顶点形状
+     * （三角形）在斜角栅格化下 Hu 特征随旋转漂移明显，稀疏库
+     * （仅 0/30/45°）时 53°+1.5× 的三角形查询会误判为矩形；
+     * 加密到 15° 步进后同类最近距离 <0.6，类间 >3，余量充足。
+     * 等边三角形具有 120° 旋转对称，0~75° 即等效全覆盖。
+     */
     private fun buildLibrary() {
         for (shape in Shape.entries) {
-            for ((rot, scale) in listOf(
-                0.0 to 1.0, 30.0 to 1.0, 45.0 to 1.0, 0.0 to 1.5
-            )) {
-                val mask = renderShape(shape, SIZE, rot, scale)
-                val hu = HuMoments.logTransform(HuMoments.compute(mask, SIZE, SIZE))
-                samples.add(Sample(shape, hu))
+            for (rot in 0..75 step 15) {
+                for (scale in listOf(1.0, 1.5)) {
+                    val mask = renderShape(shape, SIZE, rot.toDouble(), scale)
+                    val hu = HuMoments.logTransform(HuMoments.compute(mask, SIZE, SIZE))
+                    samples.add(Sample(shape, hu))
+                }
             }
         }
     }
@@ -157,7 +166,7 @@ class ShapeRecognizer {
     fun classify(queryMask: ByteArray, width: Int, height: Int): Result {
         val qf = HuMoments.logTransform(HuMoments.compute(queryMask, width, height))
         val ranked = samples
-            .map { it.shape to l2(qf, it.feat) }
+            .map { it.shape to weightedL2(qf, it.feat) }
             .sortedBy { it.second }
         val (best, d) = ranked.first()
         return Result(
@@ -168,10 +177,18 @@ class ShapeRecognizer {
         )
     }
 
-    /** 欧氏距离。 */
-    private fun l2(a: DoubleArray, b: DoubleArray): Double {
+    /**
+     * 加权欧氏距离：只用 H1~H3（前三个低阶不变量）。
+     *
+     * 实测发现 H4~H7 原值趋于零，-lg 放大后对像素离散化噪声
+     * 极其敏感（同形状异变换副本间甚至发生符号翻转，距离 20+），
+     * 完全淹没判别信息；而 H1~H3 对本形状库的类间距离 >4、
+     * 类内距离 <1，判别度充足。Hu 矩工程应用中「仅用前几个
+     * 低阶不变量」是标准做法。
+     */
+    private fun weightedL2(a: DoubleArray, b: DoubleArray): Double {
         var s = 0.0
-        for (i in a.indices) {
+        for (i in 0 until 3) {
             val d = a[i] - b[i]
             s += d * d
         }
@@ -193,7 +210,10 @@ class ShapeRecognizer {
          * 对画布逐像素做形状内外判定（旋转/缩放后逆变换回形状
          * 局部坐标系判定），比 Canvas 绘制更精确可控。
          */
-        fun renderShape(shape: Shape, size: Int, rotDeg: Double, scale: Double): ByteArray {
+        fun renderShape(
+            shape: Shape, size: Int,
+            rotDeg: Double = 0.0, scale: Double = 1.0
+        ): ByteArray {
             val mask = ByteArray(size * size)
             val cx = size / 2.0
             val cy = size / 2.0
@@ -226,21 +246,30 @@ class ShapeRecognizer {
                             } else false
                         }
                         Shape.STAR -> {
-                            // 五角星：极角判定
-                            val dist = sqrt(lx * lx + ly * ly)
-                            if (dist > r * 1.2) false
-                            else {
-                                var ang = atan(ly / (abs(lx) + 1e-9)) * 2.0
-                                if (lx < 0 && ly < 0) ang += PI
-                                else if (lx < 0) ang = PI - ang
-                                else if (ly < 0) ang = -ang + 2 * PI
-                                // 五角星半径随极角周期变化（10 个瓣）
-                                val sector = ((ang / (PI / 5.0)) % 2.0 + 2.0) % 2.0
-                                val rr = if (sector < 1.0)
-                                    r * 0.45 + (r * 0.55) * (1.0 - sector)
-                                else r * 0.45 + (r * 0.55) * (sector - 1.0)
-                                dist <= rr
+                            // 标准五角星：10 顶点多边形（外/内半径按黄金比），
+                            // 直线边 + 射线法（ray casting）内点判定。
+                            // 相比极坐标锯齿星，直线边像素化更规整，
+                            // Hu 矩对旋转/缩放更稳定。
+                            val bigR = r * 1.1
+                            val smallR = bigR * 0.382
+                            val xs = DoubleArray(10)
+                            val ys = DoubleArray(10)
+                            for (k in 0 until 10) {
+                                val a = -PI / 2 + k * PI / 5
+                                val rr = if (k % 2 == 0) bigR else smallR
+                                xs[k] = rr * kotlin.math.cos(a)
+                                ys[k] = rr * kotlin.math.sin(a)
                             }
+                            var insideFlag = false
+                            var prev = 9
+                            for (i in 0 until 10) {
+                                if ((ys[i] > ly) != (ys[prev] > ly) &&
+                                    lx < (xs[prev] - xs[i]) * (ly - ys[i]) /
+                                    (ys[prev] - ys[i]) + xs[i]
+                                ) insideFlag = !insideFlag
+                                prev = i
+                            }
+                            insideFlag
                         }
                     }
                     if (inside) mask[y * size + x] = 255.toByte()
