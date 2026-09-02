@@ -197,12 +197,16 @@ class VideoQualityFragment : BaseFragment() {
                     binding.tvStatus.text = getString(R.string.qe_status_done)
                 }
             } catch (e: Exception) {
+                // 关键诊断信息：完整堆栈进 logcat，界面显示「异常类名: 消息」
+                // （CodecException 等的 getMessage() 可能为 null，只有类名也能定位）
+                android.util.Log.e("QE_VideoFragment", "evaluate pipeline failed", e)
+                val errText = "${e.javaClass.simpleName}: ${e.message}"
                 activity?.runOnUiThread {
                     if (!isAdded) return@runOnUiThread
                     binding.progress.visibility = View.GONE
                     binding.btnEvaluate.isEnabled = true
                     busy = false
-                    binding.tvStatus.text = getString(R.string.qe_status_error, e.message ?: "")
+                    binding.tvStatus.text = getString(R.string.qe_status_error, errText)
                 }
             }
         }
