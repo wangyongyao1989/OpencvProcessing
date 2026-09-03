@@ -49,6 +49,13 @@ class VideoKeyframeIndexer {
         val textureScore: Double
     )
 
+    /** 查询帧：用于检索的工作分辨率亮度平面。 */
+    class QueryFrame(
+        val luma: ByteArray,
+        val width: Int,
+        val height: Int
+    )
+
     /** 已索引的关键帧（时间升序）。 */
     val keyframes = mutableListOf<Keyframe>()
 
@@ -141,6 +148,33 @@ class VideoKeyframeIndexer {
     }
 
     companion object {
+
+        /**
+         * 任意画面 Bitmap → 查询帧：等比降采样（双线性）到工作
+         * 分辨率后按 ITU-R BT.601 加权转亮度平面——使「播放中
+         * 捕获的当前帧」与关键帧特征在同一表示空间，可直接
+         * 以 [search] 检索（「以查询帧检索视频」的查询来源之一）。
+         */
+        fun bitmapToLuma(bmp: Bitmap, targetWidth: Int = 320): QueryFrame {
+            val scale = maxOf(1, (bmp.width + targetWidth - 1) / targetWidth)
+            val w = (bmp.width / scale).coerceAtLeast(1)
+            val h = (bmp.height / scale).coerceAtLeast(1)
+            val small = if (w != bmp.width || h != bmp.height)
+                Bitmap.createScaledBitmap(bmp, w, h, true)
+            else
+                bmp
+            val px = IntArray(w * h)
+            small.getPixels(px, 0, w, 0, 0, w, h)
+            val luma = ByteArray(w * h)
+            for (i in px.indices) {
+                val p = px[i]
+                val v = (0.299 * ((p shr 16) and 0xFF) +
+                    0.587 * ((p shr 8) and 0xFF) +
+                    0.114 * (p and 0xFF)).toInt()
+                luma[i] = v.coerceIn(0, 255).toByte()
+            }
+            return QueryFrame(luma, w, h)
+        }
 
         /** 亮度平面 → 灰度 Bitmap（UI 缩略图）。 */
         fun lumaToBitmap(luma: ByteArray, width: Int, height: Int, maxWidth: Int = 160): Bitmap {

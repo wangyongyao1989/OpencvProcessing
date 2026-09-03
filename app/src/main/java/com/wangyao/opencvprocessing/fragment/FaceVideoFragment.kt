@@ -36,7 +36,10 @@ import kotlin.concurrent.thread
  *    JNI）→ IoU 关联时间平滑 → 逐帧人脸框与全片统计；
  *    播放（UI 线程）：MediaPlayer 播放视频，人脸框叠加层按
  *    播放进度实时刷新——用户可直观看到框选随人脸移动的跟踪
- *    效果（播放/暂停/拖动进度条均保持同步）。
+ *    效果（播放/暂停/拖动进度条均保持同步）；
+ *    以该帧检索视频：任意播放时刻捕获当前画面作为查询帧，
+ *    复用关键帧索引按综合相似度检索相似时刻（结果附该时刻
+ *    检出人脸数），点击跳转播放以检查各时刻的人脸识别效果。
  *
  * 2. 关键帧检索（基于内容的视频检索，第 10 章 10.5 节）：
  *    抽取关键帧并建立索引 → 点击关键帧作为查询帧 → 以综合
@@ -64,6 +67,9 @@ class FaceVideoFragment : BaseFragment() {
     /** 用户选中的查询关键帧下标（关键帧带中），-1 未选。 */
     private var selectedKfIndex = -1
     private var kfBusy = false
+
+    // ---- 人脸识别页签：以该帧检索视频 ----
+    private var faceSearchBusy = false
 
     // ---- 播放器 ----
     private var player: MediaPlayer? = null
@@ -131,6 +137,11 @@ class FaceVideoFragment : BaseFragment() {
 
         binding.btnAnalyze.setOnClickListener {
             if (!analyzing) startAnalysis()
+        }
+
+        // 人脸识别页签：以当前播放帧检索视频（供人脸识别检查）
+        binding.btnFaceSearch.setOnClickListener {
+            if (!faceSearchBusy) runFaceFrameSearch()
         }
 
         // 右栏页签切换
@@ -287,6 +298,130 @@ class FaceVideoFragment : BaseFragment() {
         // surface 就绪即播放
         wantPlay = true
         tryStartPlayback()
+    }
+
+    // -------------------------------------------------------------------------
+    // 人脸识别页签：以该帧检索视频（供人脸识别检查分析）
+    // -------------------------------------------------------------------------
+
+    /**
+     * 捕获当前播放画面作为查询帧，复用关键帧索引按综合相似度
+     * 检索相似时刻（「以查询帧检索视频」）：
+     * 1. UI 线程捕获 TextureView 当前帧（用户所见即所查）；
+     * 2. 索引未建立时先「抽取关键帧并建立索引」（与关键帧检索
+     *    页签共用同一索引，只建一次）；
+     * 3. 查询帧 → 亮度平面 → 综合相似度 Top-5，结果附该时刻
+     *    检出人脸数（已完成人脸分析时）；
+     * 4. 点击结果行跳转播放——人脸框随即叠加，直接检查相似
+     *    时刻的人脸识别效果。
+     */
+    private fun runFaceFrameSearch() {
+        if (!playerPrepared) {
+            binding.tvFaceSearchStatus.text =
+                getString(R.string.vr_face_search_hint_no_player)
+            return
+        }
+        val frame = binding.textureView.bitmap
+        if (frame == null) {
+            binding.tvFaceSearchStatus.text =
+                getString(R.string.vr_face_search_hint_no_player)
+            return
+        }
+
+        faceSearchBusy = true
+        binding.btnFaceSearch.isEnabled = false
+        binding.progressFaceSearch.visibility = View.VISIBLE
+        binding.progressFaceSearch.progress = 0
+        binding.layoutFaceResults.removeAllViews()
+        binding.tvFaceResultTitle.visibility = View.GONE
+        // 查询帧预览：用户所见画面
+        binding.ivFaceQuery.setImageBitmap(frame)
+        binding.ivFaceQuery.visibility = View.VISIBLE
+        binding.tvFaceSearchStatus.text = getString(
+            if (indexer.keyframes.isEmpty()) R.string.vr_face_search_extracting
+            else R.string.vr_kf_searching
+        )
+
+        thread(start = true, name = "face-frame-search") {
+            try {
+                // 索引未建立：先抽取关键帧并建立索引（后台）
+                if (indexer.keyframes.isEmpty()) {
+                    val kfs = indexer.extractKeyframes(
+                        videoFile.absolutePath, KEYFRAME_COUNT
+                    ) { done, total ->
+                        activity?.runOnUiThread {
+                            if (isAdded) {
+                                binding.progressFaceSearch.progress =
+                                    (done * 100L / total).toInt()
+                                binding.tvFaceSearchStatus.text =
+                                    getString(R.string.vr_kf_progress, done, total)
+                            }
+                        }
+                    }
+                    activity?.runOnUiThread {
+                        if (isAdded) {
+                            // 同步关键帧检索页签：填充关键帧带
+                            buildKeyframeStrip(kfs)
+                            binding.tvKfStatus.text =
+                                getString(R.string.vr_kf_status_extracted, kfs.size)
+                        }
+                    }
+                }
+                // 以查询帧检索视频：画面 → 亮度平面 → 综合相似度 Top-K
+                val query = VideoKeyframeIndexer.bitmapToLuma(frame)
+                val topK = indexer.search(
+                    query.luma, query.width, query.height, k = TOP_K
+                )
+                activity?.runOnUiThread {
+                    if (!isAdded) return@runOnUiThread
+                    faceSearchBusy = false
+                    binding.btnFaceSearch.isEnabled = true
+                    binding.progressFaceSearch.visibility = View.GONE
+                    binding.tvFaceResultTitle.visibility = View.VISIBLE
+                    binding.layoutFaceResults.removeAllViews()
+                    for ((rank, m) in topK.withIndex()) {
+                        binding.layoutFaceResults.addView(
+                            buildKfResultRow(
+                                rank + 1, m,
+                                faceCountAt(m.keyframe.timestampUs)
+                            )
+                        )
+                    }
+                    val top = topK.firstOrNull()
+                    binding.tvFaceSearchStatus.text = if (top != null) {
+                        getString(
+                            R.string.vr_face_search_hit,
+                            top.keyframe.timestampUs / 1_000_000f, top.score
+                        )
+                    } else {
+                        getString(
+                            R.string.vr_kf_status_extracted, indexer.keyframes.size
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "face frame search failed", e)
+                val err = "${e.javaClass.simpleName}: ${e.message}"
+                activity?.runOnUiThread {
+                    if (!isAdded) return@runOnUiThread
+                    faceSearchBusy = false
+                    binding.btnFaceSearch.isEnabled = true
+                    binding.progressFaceSearch.visibility = View.GONE
+                    binding.tvFaceSearchStatus.text =
+                        getString(R.string.vr_status_error, err)
+                }
+            }
+        }
+    }
+
+    /**
+     * 关键帧时间戳处最近分析帧的检出人脸数（检索结果辅助人脸
+     * 识别检查）；未完成人脸分析时返回 -1（界面显示「未分析」）。
+     */
+    private fun faceCountAt(timestampUs: Long): Int {
+        val r = analysis ?: return -1
+        val idx = FaceTrackMath.findNearestFrameIndex(r.frames, timestampUs)
+        return if (idx >= 0) r.frames[idx].faces.size else -1
     }
 
     // -------------------------------------------------------------------------
@@ -458,10 +593,15 @@ class FaceVideoFragment : BaseFragment() {
         }
     }
 
-    /** 检索结果行：排名 + 缩略图 + 时间点 + 综合相似度及分项。 */
+    /**
+     * 检索结果行：排名 + 缩略图 + 时间点 + 综合相似度及分项；
+     * [faceCount] 非空时（人脸识别页签「以该帧检索视频」）追加
+     * 该时刻检出人脸数，供人脸识别检查。
+     */
     private fun buildKfResultRow(
         rank: Int,
-        m: VideoKeyframeIndexer.Match
+        m: VideoKeyframeIndexer.Match,
+        faceCount: Int? = null
     ): View {
         val ctx = requireContext()
         val row = LinearLayout(ctx).apply {
@@ -491,11 +631,22 @@ class FaceVideoFragment : BaseFragment() {
             layoutParams = LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
             )
-            text = getString(
-                R.string.vr_kf_result_row,
-                rank, m.keyframe.timestampUs / 1_000_000f,
-                m.score, m.colorScore, m.textureScore
-            )
+            text = if (faceCount != null) {
+                getString(
+                    R.string.vr_face_result_row,
+                    rank, m.keyframe.timestampUs / 1_000_000f,
+                    m.score, m.colorScore, m.textureScore,
+                    // 未完成人脸分析时显示「未分析」
+                    if (faceCount >= 0) faceCount.toString()
+                    else getString(R.string.vr_face_count_unknown)
+                )
+            } else {
+                getString(
+                    R.string.vr_kf_result_row,
+                    rank, m.keyframe.timestampUs / 1_000_000f,
+                    m.score, m.colorScore, m.textureScore
+                )
+            }
             textSize = 12f
             setTextColor(0xFF333333.toInt())
         }

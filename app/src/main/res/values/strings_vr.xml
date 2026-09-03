@@ -26,12 +26,24 @@
 
     <!-- 右栏：原理 -->
     <string name="vr_panel_principle">实现原理</string>
-    <string name="vr_principle">① 人脸检测（Viola-Jones 框架，教材第 11 章）：Haar 矩形特征 + 积分图 O(1) 求和 + AdaBoost 特征选择 + 级联分类器（前级快速排除非人脸窗口）。OpenCV cv::CascadeClassifier 以 scaleFactor=1.1 多尺度扫描、minNeighbors=5 去重。\n② 光照适应：检测前对每帧做直方图均衡化，缓解战争片明暗剧烈场景的影响。\n③ 时间平滑：相邻帧检测框按 IoU(阈值0.3) 关联后滑动平均，抑制逐帧抖动，播放时框选平滑跟随人脸移动。\n④ 播放同步：MediaPlayer 播放原始视频，叠加层按播放进度（33ms 刷新）查找最近分析帧的人脸框实时绘制——检测与播放分离，保证流畅。\n⑤ 性能：1920×858 → 640×286 工作分辨率 + 软件解码逐帧处理，满足文档 ≥10fps 的处理要求。</string>
+    <string name="vr_principle">① 人脸检测（Viola-Jones 框架，教材第 11 章）：Haar 矩形特征 + 积分图 O(1) 求和 + AdaBoost 特征选择 + 级联分类器（前级快速排除非人脸窗口）。OpenCV cv::CascadeClassifier 以 scaleFactor=1.1 多尺度扫描、minNeighbors=5 去重。\n② 光照适应：检测前对每帧做直方图均衡化，缓解战争片明暗剧烈场景的影响。\n③ 时间平滑：相邻帧检测框按 IoU(阈值0.3) 关联后滑动平均，抑制逐帧抖动，播放时框选平滑跟随人脸移动。\n④ 播放同步：MediaPlayer 播放原始视频，叠加层按播放进度（33ms 刷新）查找最近分析帧的人脸框实时绘制——检测与播放分离，保证流畅。\n⑤ 性能：1920×858 → 640×286 工作分辨率 + 软件解码逐帧处理，满足文档 ≥10fps 的处理要求。\n⑥ 以该帧检索视频：任意播放时刻可捕获当前画面作为查询帧（转为亮度平面后与关键帧特征同空间），复用关键帧索引按综合相似度检索相似时刻并一键跳转——用于检查各相似时刻的人脸识别效果。</string>
 
     <!-- 右栏页签 -->
     <string name="vr_tab_face">人脸识别</string>
     <string name="vr_tab_retrieval">关键帧检索</string>
     <string name="vr_tab_track">跟踪评价</string>
+
+    <!-- 面板一扩展：以该帧检索视频（供人脸识别检查分析） -->
+    <string name="vr_face_search_panel_title">以该帧检索视频</string>
+    <string name="vr_face_search_idle">播放中任意时刻点击「以当前帧检索视频」：捕获当前画面作为查询帧，按综合相似度找出视频中的相似时刻，点击结果跳转播放即可检查各时刻的人脸识别效果。</string>
+    <string name="vr_face_search_hint_no_player">播放器尚未就绪（画面未显示），请稍候再试。</string>
+    <string name="vr_face_btn_search">以当前帧检索视频</string>
+    <string name="vr_face_search_extracting">首次检索：正在抽取关键帧并建立索引…</string>
+    <string name="vr_face_result_title">检索结果 Top-5（按综合相似度降序，点击跳转检查人脸识别）</string>
+    <string name="vr_face_result_row">第 %1$d 名 · %2$.1f s 处\n综合相似度 %3$.3f（颜色 %4$.3f · 纹理 %5$.3f）\n该时刻检出人脸：%6$s</string>
+    <string name="vr_face_count_unknown">未分析</string>
+    <string name="vr_face_search_hit">检索完成：最相似内容位于 %1$.1f s（综合相似度 %2$.3f）。点击结果行跳转播放，检查该时刻的人脸识别。</string>
+    <string name="vr_face_query_desc">查询帧预览</string>
 
     <!-- 面板二：关键帧检索（综合相似度） -->
     <string name="vr_kf_panel_title">基于内容的视频检索 · 综合相似度</string>
