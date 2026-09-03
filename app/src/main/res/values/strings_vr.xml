@@ -27,4 +27,34 @@
     <!-- 右栏：原理 -->
     <string name="vr_panel_principle">实现原理</string>
     <string name="vr_principle">① 人脸检测（Viola-Jones 框架，教材第 11 章）：Haar 矩形特征 + 积分图 O(1) 求和 + AdaBoost 特征选择 + 级联分类器（前级快速排除非人脸窗口）。OpenCV cv::CascadeClassifier 以 scaleFactor=1.1 多尺度扫描、minNeighbors=5 去重。\n② 光照适应：检测前对每帧做直方图均衡化，缓解战争片明暗剧烈场景的影响。\n③ 时间平滑：相邻帧检测框按 IoU(阈值0.3) 关联后滑动平均，抑制逐帧抖动，播放时框选平滑跟随人脸移动。\n④ 播放同步：MediaPlayer 播放原始视频，叠加层按播放进度（33ms 刷新）查找最近分析帧的人脸框实时绘制——检测与播放分离，保证流畅。\n⑤ 性能：1920×858 → 640×286 工作分辨率 + 软件解码逐帧处理，满足文档 ≥10fps 的处理要求。</string>
+
+    <!-- 右栏页签 -->
+    <string name="vr_tab_face">人脸识别</string>
+    <string name="vr_tab_retrieval">关键帧检索</string>
+    <string name="vr_tab_track">跟踪评价</string>
+
+    <!-- 面板二：关键帧检索（综合相似度） -->
+    <string name="vr_kf_panel_title">基于内容的视频检索 · 综合相似度</string>
+    <string name="vr_kf_status_idle">尚未建立索引。点击「抽取关键帧并建立索引」，完成后点击关键帧缩略图选择查询帧。</string>
+    <string name="vr_kf_btn_extract">抽取关键帧并建立索引</string>
+    <string name="vr_kf_extracting">正在解码视频并抽取关键帧…</string>
+    <string name="vr_kf_progress">已处理 %1$d / %2$d 帧</string>
+    <string name="vr_kf_status_extracted">已抽取 %1$d 个关键帧并建立特征索引。点击缩略图选择查询帧，再点击「以该帧检索视频」。</string>
+    <string name="vr_kf_keyframe_time">%1$.1f s</string>
+    <string name="vr_kf_keyframe_desc">关键帧 %1$d</string>
+    <string name="vr_kf_btn_search">以该帧检索视频</string>
+    <string name="vr_kf_hint_select">请先点击关键帧缩略图选择查询帧</string>
+    <string name="vr_kf_searching">正在以查询帧检索视频（计算综合相似度）…</string>
+    <string name="vr_kf_result_title">检索结果（按综合相似度降序，点击可跳转播放）</string>
+    <string name="vr_kf_result_row">第 %1$d 名 · %2$.1f s 处\n综合相似度 %3$.3f\n颜色 %4$.3f · 纹理 %5$.3f</string>
+    <string name="vr_kf_status_hit">检索完成：最相似内容位于 %1$.1f s（综合相似度 %2$.3f）。</string>
+    <string name="vr_kf_panel_principle">原理：综合相似度</string>
+    <string name="vr_kf_principle">① 关键帧抽取并建立索引（第 10 章 10.5 节）：软解逐帧解码，按帧序均匀抽取 12 个关键帧——关键帧是视频内容的代表，将检索规模从「逐帧」降到「镜头级」；每个关键帧降采样到宽 320 后提取「64 维亮度直方图（颜色特征，L1 归一化）+ 18 维 Sobel 梯度方向直方图（纹理特征，幅值加权）」并记录时间戳，即完成索引。\n② 以查询帧检索视频：点击关键帧作为查询帧，与全部关键帧特征逐一计算综合相似度，按相似度降序返回 Top-5。\n③ 综合相似度 = w_c·直方图相交(颜色) + w_t·余弦(纹理)，w_c=0.6、w_t=0.4，∈[0,1]——颜色（亮度分布）为主特征、纹理（边缘结构）补充，弥补单一特征的歧义。\n④ 点击结果行可将播放器跳转到该关键帧时间点，直观验证「相似内容定位」。</string>
+
+    <!-- 面板三：跟踪评价（跟踪命中率） -->
+    <string name="vr_track_panel_title">人脸跟踪质量评价 · 跟踪命中率</string>
+    <string name="vr_track_status_idle">完成「人脸识别」页签的人脸检测分析后，在此显示跟踪评价统计。</string>
+    <string name="vr_track_stats_done">跟踪命中率：%1$.1f%%\n候选帧对：%2$d（前一帧检出目标）\n命中帧对：%3$d（IoU 关联成功）\n丢失帧对：%4$d（目标消失或位移过大）\n最长连续跟踪：%5$d 帧\n命中帧对平均关联 IoU：%6$.3f</string>
+    <string name="vr_track_panel_principle">原理：跟踪命中率</string>
+    <string name="vr_track_principle">① 概念（「视频的图像识别处理」跟踪命中率 trackRate 的时序推广）：衡量视频中目标被持续跟踪的比例。\n② 定义：相邻帧对 (i-1, i) 中，若第 i-1 帧检出人脸（目标存在）则计为候选帧对；若第 i 帧存在与前一帧任一检测框 IoU &gt; 0.3 的关联框则计为命中（目标被持续跟踪）。\n③ 跟踪命中率 = 命中帧对 / 候选帧对。目标消失或帧间位移过大（关联失败）均计为丢失——对应模板跟踪中 trackScore &lt; 0.5 即丢失的判定。\n④ 辅助指标：最长连续跟踪帧段（评价跟踪稳定性）、命中帧对平均关联 IoU（评价关联质量）。</string>
 </resources>

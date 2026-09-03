@@ -27,4 +27,34 @@
     <!-- Right panel: principle -->
     <string name="vr_panel_principle">How It Works</string>
     <string name="vr_principle">① Face detection (Viola-Jones framework, Ch.11): Haar rectangular features + integral image for O(1) region sums + AdaBoost feature selection + cascade classifier (early stages quickly reject non-face windows). OpenCV cv::CascadeClassifier scans multi-scale with scaleFactor=1.1 and minNeighbors=5 de-duplication.\n② Illumination adaptation: histogram equalization is applied to every frame before detection to cope with the dramatic lighting of war-movie scenes.\n③ Temporal smoothing: boxes across adjacent frames are associated by IoU (threshold 0.3) and moving-averaged to suppress per-frame jitter, so boxes follow faces smoothly during playback.\n④ Playback sync: MediaPlayer plays the original video while the overlay looks up the nearest analyzed frame\'s boxes by playback position (refreshed every 33 ms) — detection is decoupled from playback for smoothness.\n⑤ Performance: 1920×858 → 640×286 working resolution + software decoding frame by frame, meeting the document\'s ≥10fps processing requirement.</string>
+
+    <!-- Right panel tabs -->
+    <string name="vr_tab_face">Face</string>
+    <string name="vr_tab_retrieval">Keyframe Retrieval</string>
+    <string name="vr_tab_track">Tracking</string>
+
+    <!-- Panel 2: keyframe retrieval (comprehensive similarity) -->
+    <string name="vr_kf_panel_title">Content-Based Video Retrieval · Comprehensive Similarity</string>
+    <string name="vr_kf_status_idle">No index yet. Tap \"Extract Keyframes &amp; Build Index\", then tap a keyframe thumbnail to choose the query frame.</string>
+    <string name="vr_kf_btn_extract">Extract Keyframes &amp; Build Index</string>
+    <string name="vr_kf_extracting">Decoding video and extracting keyframes…</string>
+    <string name="vr_kf_progress">Processed %1$d / %2$d frames</string>
+    <string name="vr_kf_status_extracted">%1$d keyframes extracted and indexed. Tap a thumbnail to select the query frame, then tap \"Search Video with This Frame\".</string>
+    <string name="vr_kf_keyframe_time">%1$.1f s</string>
+    <string name="vr_kf_keyframe_desc">Keyframe %1$d</string>
+    <string name="vr_kf_btn_search">Search Video with This Frame</string>
+    <string name="vr_kf_hint_select">Tap a keyframe thumbnail first to select the query frame</string>
+    <string name="vr_kf_searching">Searching the video with the query frame (computing comprehensive similarity)…</string>
+    <string name="vr_kf_result_title">Results (descending by comprehensive similarity; tap to jump and play)</string>
+    <string name="vr_kf_result_row">Rank %1$d · at %2$.1f s\nComprehensive similarity %3$.3f\nColor %4$.3f · Texture %5$.3f</string>
+    <string name="vr_kf_status_hit">Search done: most similar content is at %1$.1f s (comprehensive similarity %2$.3f).</string>
+    <string name="vr_kf_panel_principle">How It Works: Comprehensive Similarity</string>
+    <string name="vr_kf_principle">① Keyframe extraction &amp; indexing (Ch.10 §10.5): the video is decoded frame by frame in software and 12 keyframes are uniformly sampled — keyframes represent the video content, reducing retrieval scale from per-frame to shot level. Each keyframe is downsampled to width 320, from which a 64-bin brightness histogram (color feature, L1-normalized) and an 18-bin Sobel gradient-orientation histogram (texture feature, magnitude-weighted) are extracted with its timestamp — that completes the index.\n② Query-frame retrieval: tap a keyframe as the query frame; its feature is compared with every indexed keyframe by comprehensive similarity, and the Top-5 are returned in descending order.\n③ Comprehensive similarity = w_c·histogram intersection (color) + w_t·cosine (texture), w_c=0.6, w_t=0.4, ∈[0,1] — brightness distribution is the primary feature and edge texture complements it, resolving the ambiguity of a single feature.\n④ Tap a result row to seek the player to that keyframe\'s timestamp, visually verifying \"locating similar content\".</string>
+
+    <!-- Panel 3: tracking evaluation (tracking hit rate) -->
+    <string name="vr_track_panel_title">Face Tracking Quality · Tracking Hit Rate</string>
+    <string name="vr_track_status_idle">Run the face detection analysis on the \"Face\" tab first; tracking evaluation statistics will be shown here.</string>
+    <string name="vr_track_stats_done">Tracking hit rate: %1$.1f%%\nCandidate pairs: %2$d (target present in previous frame)\nHit pairs: %3$d (IoU association succeeded)\nLost pairs: %4$d (target vanished or displaced too far)\nLongest continuous track: %5$d frames\nAverage association IoU of hit pairs: %6$.3f</string>
+    <string name="vr_track_panel_principle">How It Works: Tracking Hit Rate</string>
+    <string name="vr_track_principle">① Concept (a temporal extension of the tracking hit rate trackRate in \"video image recognition\"): measures the proportion of frames in which the target is continuously tracked.\n② Definition: for adjacent frame pair (i-1, i), the pair is a candidate if frame i-1 has detected faces (target present); it is a hit if frame i contains a box associated (IoU &gt; 0.3) with any box of frame i-1 (target continuously tracked).\n③ Tracking hit rate = hit pairs / candidate pairs. Target disappearance or over-large inter-frame displacement (association failure) both count as lost — mirroring the template-tracking rule that trackScore &lt; 0.5 means lost.\n④ Auxiliary metrics: longest continuous tracking segment (stability) and average association IoU of hit pairs (association quality).</string>
 </resources>

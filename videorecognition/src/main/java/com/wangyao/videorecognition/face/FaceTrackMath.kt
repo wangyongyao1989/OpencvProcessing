@@ -9,7 +9,9 @@ package com.wangyao.videorecognition.face
  * 1. IoU（交并比）——跨帧检测框关联度量；
  * 2. 时间平滑——IoU 关联 + 滑动平均，抑制逐帧抖动；
  * 3. 均值下采样——控制检测耗时的整倍降采样；
- * 4. 最近帧查找——按播放时间戳二分定位分析帧（播放同步）。
+ * 4. 最近帧查找——按播放时间戳二分定位分析帧（播放同步）；
+ * 5. 跟踪统计——IoU 关联评价的跟踪命中率（参考 imagerecognition
+ *    模块「视频的图像识别处理」中 trackRate 概念的时序推广）。
  */
 
 /** 单个人脸框（工作分辨率坐标，半开区间）。 */
@@ -116,5 +118,89 @@ object FaceTrackMath {
             Math.abs(frames[lo - 1].timestampUs - targetUs) <
             Math.abs(frames[lo].timestampUs - targetUs)
         ) lo - 1 else lo
+    }
+
+    // -------------------------------------------------------------------------
+    // 跟踪统计（跟踪命中率）
+    // -------------------------------------------------------------------------
+
+    /** 跟踪质量统计（跟踪命中率及分解指标）。 */
+    class TrackStats(
+        /** 候选帧对数：前一帧检出人脸（目标存在）的相邻帧对数。 */
+        val candidatePairs: Int,
+        /** 成功关联（跟踪命中）的帧对数。 */
+        val hitPairs: Int,
+        /** 目标连续跟踪的最长帧段长度（≥1，无检出为 0）。 */
+        val longestStreak: Int,
+        /** 命中帧对的平均最优关联 IoU。 */
+        val avgAssociationIoU: Double
+    ) {
+        /** 跟踪丢失帧对数（目标消失或关联失败）。 */
+        val lostPairs: Int get() = candidatePairs - hitPairs
+
+        /**
+         * 跟踪命中率 ∈[0,1]：目标存在的帧中，下一帧成功跟踪
+         * 到该目标（存在 IoU > 阈值的关联框）的比例。
+         */
+        val hitRate: Double
+            get() = if (candidatePairs > 0) hitPairs.toDouble() / candidatePairs else 0.0
+    }
+
+    /** 跟踪命中判定的 IoU 关联阈值（与时间平滑一致）。 */
+    const val TRACK_IOU_THRESHOLD = 0.3
+
+    /**
+     * 由逐帧人脸检测结果计算跟踪统计（跟踪命中率）。
+     *
+     * 帧对 (i-1, i) 计为候选：第 i-1 帧检出 ≥1 张人脸（目标
+     * 存在）；计为命中：第 i 帧存在与前一帧任一框 IoU >
+     * [TRACK_IOU_THRESHOLD] 的检测框（目标被持续跟踪）。
+     * 目标消失或位移过大（关联失败）均计为丢失——对应
+     * 「视频的图像识别处理」中 trackScore < 阈值即丢失的定义。
+     */
+    fun trackingStats(frames: List<FaceFrame>): TrackStats {
+        if (frames.size < 2) {
+            val streak = frames.firstOrNull()?.faces?.isNotEmpty() == true
+            return TrackStats(0, 0, if (streak) 1 else 0, 0.0)
+        }
+        var candidates = 0
+        var hits = 0
+        var streak = 0
+        var longest = 0
+        var iouSum = 0.0
+        for (i in 1 until frames.size) {
+            val prev = frames[i - 1].faces
+            val cur = frames[i].faces
+            if (prev.isEmpty()) {
+                // 无目标：重置连续段
+                longest = maxOf(longest, streak)
+                streak = 0
+                continue
+            }
+            candidates++
+            val best = prev.maxOf { p -> cur.maxOfOrNull { iou(p, it) } ?: 0.0 }
+            if (best > TRACK_IOU_THRESHOLD) {
+                hits++
+                iouSum += best
+                streak++
+                if (streak > longest) longest = streak
+            } else {
+                streak = 0
+            }
+        }
+        longest = maxOf(longest, streak)
+        // 连续段长度按「帧」计：streak 次成功关联对应 streak+1 帧；
+        // 无任何命中但首帧有检出时，孤立检出段长度为 1
+        val longestFrames = when {
+            longest > 0 -> longest + 1
+            frames.firstOrNull()?.faces?.isNotEmpty() == true -> 1
+            else -> 0
+        }
+        return TrackStats(
+            candidatePairs = candidates,
+            hitPairs = hits,
+            longestStreak = longestFrames,
+            avgAssociationIoU = if (hits > 0) iouSum / hits else 0.0
+        )
     }
 }
