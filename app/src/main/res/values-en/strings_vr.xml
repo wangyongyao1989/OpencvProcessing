@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Video recognition (face recognition verification) -->
+    <string name="main_card_vr">Video Recognition</string>
+    <string name="main_card_vr_desc">Video face recognition entry</string>
+
+    <string name="vr_title">Video Recognition · Face Verification</string>
+    <string name="vr_play_desc">Play or pause</string>
+
+    <!-- Right panel: analysis -->
+    <string name="vr_panel_analysis">Face Detection Analysis</string>
+    <string name="vr_status_idle">Not analyzed yet. Tap \"Start Face Detection\"; the video will play automatically with live face boxes overlaid when done.</string>
+    <string name="vr_status_analyzing">Decoding and detecting faces frame by frame…</string>
+    <string name="vr_status_progress">Analyzed %1$d / %2$d frames…</string>
+    <string name="vr_status_done">Analysis done: up to %1$d faces detected in a single frame.</string>
+    <string name="vr_status_playing">Playing: face boxes track the video in real time. Pause or drag the seek bar to inspect any moment.</string>
+    <string name="vr_status_error">Error: %1$s</string>
+    <string name="vr_btn_analyze">Start Face Detection</string>
+    <string name="vr_analyzing">Detecting faces frame by frame…</string>
+    <string name="vr_analyzing_progress">Detected %1$d / %2$d frames</string>
+
+    <!-- Right panel: statistics -->
+    <string name="vr_panel_stats">Detection Statistics</string>
+    <string name="vr_stats_idle">Statistics will be shown here after analysis.\nNote: the Haar cascade is trained for frontal faces; profile or very small faces may be missed.</string>
+    <string name="vr_stats_done">Video: %1$d×%2$d, %3$d frames in total\nFrames with faces: %4$d (%5$.1f%%)\nAverage faces per frame: %6$.2f\nMax in one frame: %7$d\nAnalysis time: %8$.1f s</string>
+
+    <!-- Right panel: principle -->
+    <string name="vr_panel_principle">How It Works</string>
+    <string name="vr_principle">① Face detection (Viola-Jones framework, Ch.11): Haar rectangular features + integral image for O(1) region sums + AdaBoost feature selection + cascade classifier (early stages quickly reject non-face windows). OpenCV cv::CascadeClassifier scans multi-scale with scaleFactor=1.1 and minNeighbors=5 de-duplication.\n② Illumination adaptation: histogram equalization is applied to every frame before detection to cope with the dramatic lighting of war-movie scenes.\n③ Temporal smoothing: boxes across adjacent frames are associated by IoU (threshold 0.3) and moving-averaged to suppress per-frame jitter, so boxes follow faces smoothly during playback.\n④ Playback sync: MediaPlayer plays the original video while the overlay looks up the nearest analyzed frame\'s boxes by playback position (refreshed every 33 ms) — detection is decoupled from playback for smoothness.\n⑤ Performance: 1920×858 → 640×286 working resolution + software decoding frame by frame, meeting the document\'s ≥10fps processing requirement.</string>
+</resources>

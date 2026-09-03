@@ -3,7 +3,7 @@
 
     <!-- 公共字符串（中文默认） -->
     <!-- Common strings (Chinese default) -->
-    <string name="main_title">openCV处理 功能集</string>
+    <string name="main_title">数字图像与视频处理功能集</string>
     <string name="common_back">← 返回</string>
     <string name="common_original">原 图</string>
     <string name="common_processed">处理后</string>

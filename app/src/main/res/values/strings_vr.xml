@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 视频识别（人脸识别验证） -->
+    <string name="main_card_vr">视频识别</string>
+    <string name="main_card_vr_desc">视频人脸识别入口</string>
+
+    <string name="vr_title">视频识别 · 人脸识别验证</string>
+    <string name="vr_play_desc">播放或暂停</string>
+
+    <!-- 右栏：分析 -->
+    <string name="vr_panel_analysis">人脸检测分析</string>
+    <string name="vr_status_idle">尚未分析。点击「开始人脸检测分析」，完成后自动播放视频并实时叠加人脸框。</string>
+    <string name="vr_status_analyzing">正在逐帧解码并检测人脸…</string>
+    <string name="vr_status_progress">已分析 %1$d / %2$d 帧…</string>
+    <string name="vr_status_done">分析完成：单帧最多检出 %1$d 张人脸。</string>
+    <string name="vr_status_playing">正在播放：人脸框随画面实时跟踪。可暂停/拖动进度条观察任意时刻。</string>
+    <string name="vr_status_error">出错：%1$s</string>
+    <string name="vr_btn_analyze">开始人脸检测分析</string>
+    <string name="vr_analyzing">逐帧人脸检测中…</string>
+    <string name="vr_analyzing_progress">已检测 %1$d / %2$d 帧</string>
+
+    <!-- 右栏：统计 -->
+    <string name="vr_panel_stats">检测统计</string>
+    <string name="vr_stats_idle">分析完成后在此显示统计。\n说明：Haar 级联针对正脸训练，侧脸/远小脸可能漏检。</string>
+    <string name="vr_stats_done">视频：%1$d×%2$d，共 %3$d 帧\n检出人脸的帧：%4$d（占比 %5$.1f%%）\n平均每帧人脸数：%6$.2f\n单帧最多：%7$d 张\n分析耗时：%8$.1f s</string>
+
+    <!-- 右栏：原理 -->
+    <string name="vr_panel_principle">实现原理</string>
+    <string name="vr_principle">① 人脸检测（Viola-Jones 框架，教材第 11 章）：Haar 矩形特征 + 积分图 O(1) 求和 + AdaBoost 特征选择 + 级联分类器（前级快速排除非人脸窗口）。OpenCV cv::CascadeClassifier 以 scaleFactor=1.1 多尺度扫描、minNeighbors=5 去重。\n② 光照适应：检测前对每帧做直方图均衡化，缓解战争片明暗剧烈场景的影响。\n③ 时间平滑：相邻帧检测框按 IoU(阈值0.3) 关联后滑动平均，抑制逐帧抖动，播放时框选平滑跟随人脸移动。\n④ 播放同步：MediaPlayer 播放原始视频，叠加层按播放进度（33ms 刷新）查找最近分析帧的人脸框实时绘制——检测与播放分离，保证流畅。\n⑤ 性能：1920×858 → 640×286 工作分辨率 + 软件解码逐帧处理，满足文档 ≥10fps 的处理要求。</string>
+</resources>

@@ -2,7 +2,7 @@
     <string name="app_name">OpencvProcessing</string>
 
     <!-- Common strings (English) -->
-    <string name="main_title">OpenCV Processing Suite</string>
+    <string name="main_title">Digital Image and Video Processing Function Set</string>
     <string name="common_back">← Back</string>
     <string name="common_original">Original</string>
     <string name="common_processed">Processed</string>
