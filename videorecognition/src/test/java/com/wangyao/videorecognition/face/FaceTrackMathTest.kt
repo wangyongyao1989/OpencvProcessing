@@ -288,4 +288,111 @@ class FaceTrackMathTest {
             )
         }
     }
+
+    // =========================================================================
+    // 5. 跟踪统计（跟踪命中率）
+    // =========================================================================
+
+    /** 含人脸的帧。 */
+    private fun faceFrame(idx: Int, pts: Long, vararg boxes: FaceBox) =
+        FaceFrame(idx, pts, boxes.toList())
+
+    @Test
+    fun tracking_emptyFrames_zeroStats() {
+        val s = FaceTrackMath.trackingStats(emptyList())
+        assertEquals(0, s.candidatePairs)
+        assertEquals(0.0, s.hitRate, 1e-9)
+        assertEquals(0, s.longestStreak)
+    }
+
+    @Test
+    fun tracking_singleFrameWithFace_isolatedStreak() {
+        val s = FaceTrackMath.trackingStats(listOf(faceFrame(0, 0, box(0, 0, 50))))
+        assertEquals(0, s.candidatePairs)
+        assertEquals(0, s.hitPairs)
+        assertEquals(1, s.longestStreak)
+        assertEquals(0.0, s.hitRate, 1e-9)
+    }
+
+    @Test
+    fun tracking_continuousFace_hitRateOne() {
+        // 5 帧同一人脸小幅移动：候选 4 对、命中 4 对 → 命中率 1
+        val fs = (0 until 5).map { i ->
+            faceFrame(i, i * 33_333L, box(i, 0, 50))
+        }
+        val s = FaceTrackMath.trackingStats(fs)
+        assertEquals(4, s.candidatePairs)
+        assertEquals(4, s.hitPairs)
+        assertEquals(0, s.lostPairs)
+        assertEquals(1.0, s.hitRate, 1e-9)
+        assertEquals(5, s.longestStreak)
+        assertTrue(s.avgAssociationIoU > 0)
+    }
+
+    @Test
+    fun tracking_faceDisappears_countedAsLost() {
+        // 帧序列：有人、有人、无人、有人
+        // 候选对：(0,1) 命中；(1,2) 帧帧1有目标但帧2无 → 丢失；
+        //         (2,3) 帧帧2无人 → 非候选
+        val fs = listOf(
+            faceFrame(0, 0L, box(0, 0, 50)),
+            faceFrame(1, 33L, box(1, 0, 50)),
+            faceFrame(2, 66L),                       // 目标消失
+            faceFrame(3, 99L, box(0, 0, 50))         // 目标重现（新段）
+        )
+        val s = FaceTrackMath.trackingStats(fs)
+        assertEquals(2, s.candidatePairs)
+        assertEquals(1, s.hitPairs)
+        assertEquals(1, s.lostPairs)
+        assertEquals(0.5, s.hitRate, 1e-9)
+        // 最长连续段：帧 0~1（2 帧）
+        assertEquals(2, s.longestStreak)
+    }
+
+    @Test
+    fun tracking_largeDisplacement_belowThreshold_lost() {
+        // 相邻帧人脸位移过大（IoU ≤ 0.3）→ 关联失败计丢失
+        val fs = listOf(
+            faceFrame(0, 0L, box(0, 0, 50)),
+            faceFrame(1, 33L, box(200, 200, 50))   // IoU=0
+        )
+        val s = FaceTrackMath.trackingStats(fs)
+        assertEquals(1, s.candidatePairs)
+        assertEquals(0, s.hitPairs)
+        assertEquals(0.0, s.hitRate, 1e-9)
+        // 两段孤立检出：各长 1 帧
+        assertEquals(1, s.longestStreak)
+    }
+
+    @Test
+    fun tracking_intermittentKnownRate() {
+        // 6 帧：命中、命中、丢失、无人、命中、无人
+        // 候选对：(0,1)✓ (1,2)✗ (2,3)：帧2有目标帧3无 → 候选且丢失
+        //         (4,5)：帧4有目标帧5无 → 候选且丢失
+        // 候选 4、命中 1 → 0.25
+        val fs = listOf(
+            faceFrame(0, 0L, box(0, 0, 50)),
+            faceFrame(1, 33L, box(1, 0, 50)),     // 命中
+            faceFrame(2, 66L, box(0, 0, 50)),     // IoU=1 → 也命中！
+            faceFrame(3, 99L),                    // 无人 → (2,3) 丢失
+            faceFrame(4, 132L, box(0, 0, 50)),    // (3,4) 帧帧3无人 → 非候选
+            faceFrame(5, 165L)                    // (4,5) 丢失
+        )
+        val s = FaceTrackMath.trackingStats(fs)
+        // 候选：(0,1)✓ (1,2)✓ (2,3)✗ (4,5)✗ = 4 对
+        assertEquals(4, s.candidatePairs)
+        assertEquals(2, s.hitPairs)
+        assertEquals(0.5, s.hitRate, 1e-9)
+        // 最长连续段：帧 0~2（3 帧）
+        assertEquals(3, s.longestStreak)
+    }
+
+    @Test
+    fun tracking_allEmptyFrames_zeroCandidates() {
+        val fs = (0 until 5).map { i -> faceFrame(i, i * 33L) }
+        val s = FaceTrackMath.trackingStats(fs)
+        assertEquals(0, s.candidatePairs)
+        assertEquals(0.0, s.hitRate, 1e-9)
+        assertEquals(0, s.longestStreak)
+    }
 }
