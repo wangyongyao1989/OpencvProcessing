@@ -4,7 +4,8 @@ import android.view.Surface
 
 /**
  * 相机人脸检测跟踪 JNI 桥（native 实现：cpp/CameraFaceDetector.cpp，
- * 移植自 ManiiuFace 工程的 native-lib.cpp）。
+ * 移植自 ManiiuFace 工程的 native-lib.cpp，并按需求文档第九章的
+ * Haar 级联模型库扩展为多级联融合检测）。
  *
  * 依赖加载顺序：先加载 OpenCV 动态库（本模块 cpp/libs 下的
  * 预编译 libopencv_java4.so，经 jniLibs 打包进 APK），
@@ -17,8 +18,18 @@ object CameraFaceJni {
         System.loadLibrary("camerarecognition_native")
     }
 
-    /** 创建检测跟踪器并加载级联模型，失败返回 0。 */
-    external fun nativeCreate(cascadePath: String): Long
+    /**
+     * 创建多级联检测跟踪器并加载级联模型，失败返回 0。
+     *
+     * @param faceCascadePaths    人脸级联模型路径（正脸 default/alt2
+     *                            + 侧脸 profileface，多模型并集检测）
+     * @param featureCascadePaths 面部特征模型路径（眼/戴眼镜眼/鼻/嘴，
+     *                            候选框验证降误检）
+     */
+    external fun nativeCreate(
+        faceCascadePaths: Array<String>,
+        featureCascadePaths: Array<String>
+    ): Long
 
     /** 释放检测跟踪器与渲染窗口。 */
     external fun nativeDestroy(handle: Long)

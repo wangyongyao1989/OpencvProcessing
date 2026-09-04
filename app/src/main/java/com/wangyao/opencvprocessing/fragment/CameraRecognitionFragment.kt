@@ -26,14 +26,15 @@ import com.wangyao.opencvprocessing.databinding.FragmentCameraRecognitionLayoutB
 import java.io.File
 
 /**
- * 相机识别页（移植自 ManiiuFace 工程）：
+ * 相机识别页（移植自 ManiiuFace 工程 + 需求文档第九章多级联扩展）：
  *
  * 打开相机预览后实时人脸检测与跟踪：
  * 1. [CameraHelper]（ManiiuFace CameraHelper 的 Kotlin 版）以 NV21
  *    格式输出 640×480 预览帧（setPreviewCallbackWithBuffer 缓冲区复用）；
- * 2. 每帧送 native（CameraFaceDetector.cpp，ManiiuFace native-lib.cpp
- *    的移植）：NV21→RGBA→方向校正→灰度均衡化→DetectionBasedTracker
- *    检测跟踪→红框绘制→ANativeWindow 渲染到 SurfaceView；
+ * 2. 每帧送 native（CameraFaceDetector.cpp）：NV21→RGBA→方向校正→
+ *    CLAHE 灰度增强→多级联融合检测（正脸 default/alt2 并集 + 侧脸
+ *    profileface 镜像补扫 + 眼/鼻/嘴特征验证）→DetectionBasedTracker
+ *    跟踪→红框绘制→ANativeWindow 渲染到 SurfaceView；
  * 3. 界面实时显示当前跟踪到的人脸数，可随时切换前后摄像头
  *    （切换后跟踪状态自动重置）。
  *
@@ -44,7 +45,32 @@ class CameraRecognitionFragment : BaseFragment() {
     private lateinit var binding: FragmentCameraRecognitionLayoutBinding
     private lateinit var ffViewModel: FFViewModel
 
-    private lateinit var cascadeFile: File
+    /** 人脸级联模型（需求文档第九章：正脸双模型并集 + 侧脸模型）。 */
+    private val faceModels = listOf(
+        "haarcascade_frontalface_default.xml",
+        "haarcascade_frontalface_alt2.xml",
+        "haarcascade_profileface.xml"
+    )
+
+    /**
+     * 面部特征级联模型（眼睛/鼻子/嘴巴，候选框验证降误检）。
+     *
+     * 注意：文档第九章的 mcs_nose/mcs_mouth 为 OpenCV 2 时代旧格式，
+     * 其特征矩形超出训练窗口，OpenCV 4 严格校验下加载即抛异常
+     * （线上崩溃根因），故替换为经验证可正常加载的等价模型；
+     * 去掉 eye_tree_eyeglasses 以满足文档「模型合计 < 5MB」要求。
+     */
+    private val featureModels = listOf(
+        "haarcascade_eye.xml",
+        "haarcascade_nose.xml",
+        "haarcascade_mouth.xml"
+    )
+
+    /** 旧版不兼容模型（曾在设备上拷贝过，加载会抛异常，需清理）。 */
+    private val legacyBrokenModels = listOf(
+        "haarcascade_mcs_nose.xml",
+        "haarcascade_mcs_mouth.xml"
+    )
 
     /** native 检测跟踪器句柄（onDestroy 释放）。 */
     private var trackerHandle = 0L
@@ -129,23 +155,35 @@ class CameraRecognitionFragment : BaseFragment() {
     }
 
     override fun initData() {
-        val ctx = requireContext()
-        // 级联模型从 assets 拷贝到私有目录（native 侧按文件路径加载）
-        cascadeFile = File(ctx.filesDir, "cr_haarcascade_frontalface_alt2.xml")
-        if (!cascadeFile.exists()) {
-            ctx.assets.open("haarcascade_frontalface_alt2.xml").use { input ->
-                cascadeFile.outputStream().use { input.copyTo(it) }
-            }
-        }
-
+        // 级联模型从 assets 拷贝到私有目录（native 侧按文件路径加载；
+        // 首次拷贝后缓存路径，后续直接使用——需求文档第九章加载流程）
         if (trackerHandle == 0L) {
-            trackerHandle = CameraFaceJni.nativeCreate(cascadeFile.absolutePath)
+            // 清理旧版不兼容模型（OpenCV 4 加载即异常的历史文件）
+            legacyBrokenModels.forEach {
+                File(requireContext().filesDir, it).delete()
+            }
+            val facePaths = faceModels.map { copyAssetIfAbsent(it) }
+            val featurePaths = featureModels.map { copyAssetIfAbsent(it) }
+            trackerHandle = CameraFaceJni.nativeCreate(
+                facePaths.toTypedArray(), featurePaths.toTypedArray()
+            )
         }
         if (trackerHandle == 0L) {
             binding.tvCrStatus.text = getString(R.string.cr_status_init_error)
         }
         binding.tvCrVersion.text =
             getString(R.string.cr_opencv_version, CameraFaceJni.nativeOpencvVersion())
+    }
+
+    /** 从 assets 拷贝模型到私有目录（已存在则直接复用），返回绝对路径。 */
+    private fun copyAssetIfAbsent(name: String): String {
+        val f = File(requireContext().filesDir, name)
+        if (!f.exists()) {
+            requireContext().assets.open(name).use { input ->
+                f.outputStream().use { input.copyTo(it) }
+            }
+        }
+        return f.absolutePath
     }
 
     override fun initObserver() {

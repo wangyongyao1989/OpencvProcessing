@@ -21,13 +21,14 @@
     <string name="cr_status_init_error">检测器初始化失败（级联模型加载失败），无法开始识别。</string>
     <string name="cr_camera_front">前置摄像头</string>
     <string name="cr_camera_back">后置摄像头</string>
-    <string name="cr_opencv_version">OpenCV 版本：%1$s · 预览 640×480 NV21 · 检测跟踪 DetectionBasedTracker</string>
+    <string name="cr_opencv_version">OpenCV 版本：%1$s · 预览 640×480 NV21 · 多级联融合检测（正脸×2 + 侧脸 + 特征验证，模型合计 4.7MB）· DetectionBasedTracker 跟踪</string>
+
 
     <!-- 右栏：人脸识别基本原理 -->
     <string name="cr_panel_principle">人脸识别基本原理</string>
-    <string name="cr_principle">① 人脸检测（Viola-Jones 框架，教材第 11 章）：Haar 矩形特征（明暗差分）+ 积分图 O(1) 区域求和 + AdaBoost 从海量特征中筛选最具判别力的弱分类器 + 级联结构逐级排除非人脸窗口。模型 haarcascade_frontalface_alt2.xml，detectMultiScale 以 scaleFactor=1.1 多尺度扫描、minNeighbors 去重。\n② 光照适应：每帧灰度化后做直方图均衡化，增强对比度，缓解逆光、暗光场景的漏检。\n③ 检测跟踪混合（DetectionBasedTracker）：主检测器在独立线程周期性做全帧扫描；两次全帧检测之间仅在已跟踪人脸的邻域内局部重检测，并对历史位置加权平滑输出——既保证实时性（640×480 软件检测可达实时），又让人脸框连续稳定地跟随移动（帧间不闪烁、不抖动）。\n④ 数据流水线（移植自 ManiiuFace）：相机 NV21 帧 → YUV2RGBA_NV21 颜色转换 → 按传感器方向/显示方向旋转镜像校正（前置摄像头呈自然自拍镜像）→ 灰度 → 直方图均衡 → 检测跟踪 → 红框绘制。\n⑤ 高效渲染：ANativeWindow 直接逐行写入 SurfaceView 的 Surface 缓冲区（注意 stride 行距对齐），避免 Bitmap 经 JNI 回传再上屏的多次拷贝；检测、绘制、显示均在预览回调线程内完成。</string>
+    <string name="cr_principle">① 人脸检测（Viola-Jones 框架，教材第 11 章）：Haar 矩形特征（明暗差分）+ 积分图 O(1) 区域求和 + AdaBoost 从海量特征中筛选最具判别力的弱分类器 + 级联结构逐级排除非人脸窗口。\n② 多级联融合提升识别率（需求文档第九章 Haar 级联模型库，模型合计 4.7MB &lt; 5MB）：正脸双模型 haarcascade_frontalface_default + frontalface_alt2 并集检测——两者训练侧重不同，任一命中即保留；侧脸模型 haarcascade_profileface 原图 + 水平镜像各扫一次，覆盖左右侧脸——转头/侧脸是单正脸模型漏检的主因；多模型结果按 IoU 聚类去重、簇内取平均框。\n③ 面部特征验证降误检：较大候选框内检出眼睛（haarcascade_eye），或同时检出鼻子（haarcascade_nose）与嘴巴（haarcascade_mouth）方确认为人脸；侧脸候选跳过验证。（注：第九章的 mcs_nose/mcs_mouth 为 OpenCV 2 时代旧格式，特征矩形超出训练窗口，OpenCV 4 加载即抛异常，故替换为验证兼容的等价模型。）\n④ 检测参数面向识别率优化：scaleFactor=1.08 更细的多尺度扫描、minNeighbors=3、最小人脸 48px；全帧扫描内部降采样 0.5（320×240 扫描后坐标还原），多模型并集的开销与单模型全分辨率相当。\n⑤ 光照适应：CLAHE 局部自适应直方图均衡（clipLimit=2.0），对逆光/侧光/阴影比全局均衡更鲁棒。\n⑥ 检测跟踪混合（DetectionBasedTracker）：主检测器在后台线程周期性做全帧多级联扫描；帧间仅在已跟踪人脸邻域内局部重检测（首个正脸模型 + 侧脸模型）+ 位置加权平滑输出——实时性与跟踪框连续稳定兼得。\n⑦ 数据流水线（移植自 ManiiuFace）：相机 NV21 帧 → YUV2RGBA_NV21 → 旋转镜像校正（前置呈自拍镜像）→ 灰度 → CLAHE → 检测跟踪 → 红框绘制 → ANativeWindow 逐行渲染（stride 对齐），检测/绘制/显示均在预览回调线程内完成。</string>
 
     <!-- 右栏：操作说明 -->
     <string name="cr_panel_operation">操作说明</string>
-    <string name="cr_operation">① 点击「打开预览」，首次使用在系统弹窗中允许相机权限；\n② 正对摄像头（正脸光照均匀时效果最佳），人脸出现红色方框并实时跟踪移动；\n③ 点击「切换摄像头」切换前置/后置，切换后跟踪状态自动重置并重新检测；\n④ 点击「关闭预览」或返回主界面释放摄像头；\n⑤ 提示：Haar 级联针对正脸训练，侧脸、遮挡或距离过远可能漏检。</string>
+    <string name="cr_operation">① 点击「打开预览」，首次使用在系统弹窗中允许相机权限（首次启动需拷贝级联模型，稍候片刻）；\n② 人脸出现红色方框并实时跟踪移动；正脸、左右侧脸（多级联融合检测）均可识别，光照均匀时效果最佳；\n③ 点击「切换摄像头」切换前置/后置，切换后跟踪状态自动重置并重新检测；\n④ 点击「关闭预览」或返回主界面释放摄像头；\n⑤ 提示：正脸由双模型并集检测、侧脸由专用人脸模型检测；严重遮挡或距离过远仍可能漏检。</string>
 </resources>
