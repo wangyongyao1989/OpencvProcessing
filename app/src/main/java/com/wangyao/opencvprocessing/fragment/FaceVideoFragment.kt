@@ -56,7 +56,20 @@ class FaceVideoFragment : BaseFragment() {
     private lateinit var ffViewModel: FFViewModel
 
     private lateinit var videoFile: File
-    private lateinit var cascadeFile: File
+
+    /** 人脸级联模型（需求文档第九章：正脸双模型并集 + 侧脸模型）。 */
+    private val faceModels = listOf(
+        "haarcascade_frontalface_default.xml",
+        "haarcascade_frontalface_alt2.xml",
+        "haarcascade_profileface.xml"
+    )
+
+    /** 面部特征级联模型（眼/鼻/嘴，候选框验证降误检）。 */
+    private val featureModels = listOf(
+        "haarcascade_eye.xml",
+        "haarcascade_nose.xml",
+        "haarcascade_mouth.xml"
+    )
 
     /** 分析结果（hide/show 切页后保留，无需重新分析）。 */
     private var analysis: FaceVideoAnalyzer.Result? = null
@@ -114,20 +127,32 @@ class FaceVideoFragment : BaseFragment() {
     override fun initData() {
         val ctx = requireContext()
         videoFile = File(ctx.filesDir, "vr_midway.mp4")
-        cascadeFile = File(ctx.filesDir, "haarcascade_frontalface_alt2.xml")
         if (!videoFile.exists()) {
             ctx.assets.open("midway.mp4").use { input ->
                 videoFile.outputStream().use { output -> input.copyTo(output) }
             }
         }
-        if (!cascadeFile.exists()) {
-            ctx.assets.open("haarcascade_frontalface_alt2.xml").use { input ->
-                cascadeFile.outputStream().use { output -> input.copyTo(output) }
-            }
-        }
+        // 级联模型从 assets 拷贝到私有目录（已存在则直接复用）
+        faceModelPaths = faceModels.map { copyAssetIfAbsent(it) }
+        featureModelPaths = featureModels.map { copyAssetIfAbsent(it) }
 
         // 已有分析结果（切页返回）：直接恢复播放
         analysis?.let { onAnalysisDone(it, restored = true) }
+    }
+
+    /** 已释放到私有目录的人脸/特征模型路径（initData 填充）。 */
+    private var faceModelPaths: List<String> = emptyList()
+    private var featureModelPaths: List<String> = emptyList()
+
+    /** 从 assets 拷贝模型到私有目录（已存在则直接复用），返回绝对路径。 */
+    private fun copyAssetIfAbsent(name: String): String {
+        val f = File(requireContext().filesDir, name)
+        if (!f.exists()) {
+            requireContext().assets.open(name).use { input ->
+                f.outputStream().use { output -> input.copyTo(output) }
+            }
+        }
+        return f.absolutePath
     }
 
     override fun initListener() {
@@ -229,7 +254,8 @@ class FaceVideoFragment : BaseFragment() {
                 val analyzer = FaceVideoAnalyzer()
                 val result = analyzer.analyze(
                     videoPath = videoFile.absolutePath,
-                    cascadePath = cascadeFile.absolutePath,
+                    faceCascadePaths = faceModelPaths,
+                    featureCascadePaths = featureModelPaths,
                     onProgress = { done, total ->
                         activity?.runOnUiThread {
                             if (isAdded) {

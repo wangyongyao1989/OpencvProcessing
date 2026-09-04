@@ -60,16 +60,20 @@ class FaceVideoAnalyzer {
     /**
      * 执行全片人脸分析。
      *
-     * @param cascadePath 已释放到本地文件的级联模型路径
+     * @param faceCascadePaths    已释放到本地文件的人脸级联模型路径
+     * @param featureCascadePaths 已释放到本地文件的面部特征模型路径
      * @param onProgress  进度回调 (done, total)
      */
     fun analyze(
         videoPath: String,
-        cascadePath: String,
+        faceCascadePaths: List<String>,
+        featureCascadePaths: List<String>,
         onProgress: (Int, Int) -> Unit
     ): Result {
-        val handle = FaceJni.nativeCreate(cascadePath)
-        check(handle != 0L) { "cascade model load failed: $cascadePath" }
+        val handle = FaceJni.nativeCreate(
+            faceCascadePaths.toTypedArray(), featureCascadePaths.toTypedArray()
+        )
+        check(handle != 0L) { "cascade model load failed: $faceCascadePaths" }
 
         val t0 = System.currentTimeMillis()
         val total = VideoFrameSource.countSamples(videoPath)

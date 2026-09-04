@@ -21,7 +21,7 @@
 
     <!-- 右栏：统计 -->
     <string name="vr_panel_stats">检测统计</string>
-    <string name="vr_stats_idle">分析完成后在此显示统计。\n说明：Haar 级联针对正脸训练，侧脸/远小脸可能漏检。</string>
+    <string name="vr_stats_idle">分析完成后在此显示统计。\n说明：多级联融合检测（正脸双模型并集 + 侧脸模型），严重遮挡或过远小脸仍可能漏检。</string>
     <string name="vr_stats_done">视频：%1$d×%2$d，共 %3$d 帧\n检出人脸的帧：%4$d（占比 %5$.1f%%）\n平均每帧人脸数：%6$.2f\n单帧最多：%7$d 张\n分析耗时：%8$.1f s</string>
 
     <!-- 右栏：原理 -->
