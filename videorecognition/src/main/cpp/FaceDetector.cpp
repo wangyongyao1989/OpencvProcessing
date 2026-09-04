@@ -275,14 +275,21 @@ private:
                 true); // outputRejectLevels = true，规避 clipObjects 断言错误
 
         const int w = img.cols;
+        // 置信度按模型量级校准（midway.mp4 实测 levelWeights 分布）：
+        // - 正脸级联（default/alt2）双峰分布：强命中 ~55、弱命中 1~7，
+        //   除数 15 → 强命中映射为 1.0、弱命中 < 0.5；
+        // - 侧脸级联（profileface）为旧格式级联，权重上限仅 ~2.6，
+        //   统一除数会使其永远低于任何门槛，故按其量级取除数 2.8，
+        //   仅最强的少数侧脸命中可超过 80% 门槛。
+        // Kotlin 侧以 conf > 0.80 作为「相似度 > 80%」的显示判据。
+        const double div = fromProfile ? 2.8 : 15.0;
         for (size_t i = 0; i < found.size(); i++) {
             cv::Rect r = found[i];
             if (flipped) {
                 r.x = w - r.x - r.width; // 镜像坐标还原
             }
             double lw = levelWeights.size() > i ? levelWeights[i] : 5.0;
-            // 权重典型范围 [0,15]，线性映射到 (0,1]
-            double conf = lw / 15.0;
+            double conf = lw / div;
             if (conf > 1.0) conf = 1.0;
             if (conf < 0.05) conf = 0.05;
             raw.push_back({r, fromProfile, conf});
