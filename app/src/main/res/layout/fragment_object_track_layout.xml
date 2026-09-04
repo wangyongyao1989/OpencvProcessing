@@ -63,7 +63,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent" />
 
-                <com.wangyao.opencvprocessing.fragment.ObjectSelectView
+                <com.wangyao.opencvprocessing.view.ObjectSelectView
                     android:id="@+id/object_select_view"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent" />

@@ -60,7 +60,7 @@ object ObjectTrackJni {
     /**
      * 导出「框选模板」缩略图（核验框选的 Object 是否正确）。
      *
-     * @return [w(4B)][h(4B)][RGBA...]（小端），无模板时返回空数组；
+     * @return [w(4B)][h(4B)][RGBA]（小端），无模板时返回空数组；
      *         UI 侧用 ByteBuffer.order(LITTLE_ENDIAN) 解析
      */
     external fun nativeGetTemplateThumb(handle: Long): ByteArray
