@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Camera recognition (real-time face detection and tracking) -->
+    <string name="main_card_cr">Camera Recognition</string>
+    <string name="main_card_cr_desc">Real-time camera face recognition entry</string>
+
+    <string name="cr_title">Camera Recognition · Real-time Face Detection &amp; Tracking</string>
+
+    <!-- Left panel: controls -->
+    <string name="cr_btn_open_preview">Open Preview</string>
+    <string name="cr_btn_close_preview">Close Preview</string>
+    <string name="cr_btn_switch_camera">Switch Camera</string>
+    <string name="cr_face_count">Faces: %1$d</string>
+
+    <!-- Right panel: detection status -->
+    <string name="cr_panel_status">Detection Status</string>
+    <string name="cr_status_idle">Preview not started. Tap \"Open Preview\" to start real-time face detection (camera permission required on first use).</string>
+    <string name="cr_status_previewing">Previewing (%1$s): %2$d face(s) detected, tracked in real time by red boxes.</string>
+    <string name="cr_status_stopped">Preview closed, camera released.</string>
+    <string name="cr_status_no_permission">Camera permission denied. Grant it in system settings and try again.</string>
+    <string name="cr_status_init_error">Detector initialization failed (cascade model load error); recognition unavailable.</string>
+    <string name="cr_camera_front">front camera</string>
+    <string name="cr_camera_back">back camera</string>
+    <string name="cr_opencv_version">OpenCV %1$s · 640×480 NV21 preview · DetectionBasedTracker</string>
+
+    <!-- Right panel: face recognition principles -->
+    <string name="cr_panel_principle">Face Recognition Principles</string>
+    <string name="cr_principle">① Face detection (Viola-Jones framework, Ch. 11): Haar rectangle features (brightness differences) + O(1) integral-image region sums + AdaBoost selecting the most discriminative weak classifiers + a cascade structure that rejects non-face windows stage by stage. Model: haarcascade_frontalface_alt2.xml; detectMultiScale scans multiple scales with scaleFactor=1.1 and de-duplicates by minNeighbors.\n② Illumination adaptation: each frame is converted to grayscale and histogram-equalized to boost contrast, reducing misses under backlight or dim light.\n③ Hybrid detection &amp; tracking (DetectionBasedTracker): the main detector scans the full frame periodically on a separate thread; between full scans, faces are re-detected only in tracked neighborhoods and positions are smoothed by weighted averaging — real-time performance at 640×480 with stable, non-flickering boxes that follow faces.\n④ Data pipeline (ported from ManiiuFace): camera NV21 frame → YUV2RGBA_NV21 conversion → rotation/mirror correction per sensor and display orientation (front camera shown as a natural mirrored selfie) → grayscale → histogram equalization → detection &amp; tracking → red box drawing.\n⑤ Efficient rendering: ANativeWindow writes rows directly into the SurfaceView Surface buffer (mind the stride alignment), avoiding extra Bitmap copies back over JNI; detection, drawing and display all run on the preview callback thread.</string>
+
+    <!-- Right panel: operation instructions -->
+    <string name="cr_panel_operation">How to Use</string>
+    <string name="cr_operation">① Tap \"Open Preview\" and grant camera permission on first use;\n② Face the camera (frontal, evenly lit faces work best); a red box appears and tracks the face in real time;\n③ Tap \"Switch Camera\" to toggle front/back; tracking resets and re-detects after switching;\n④ Tap \"Close Preview\" or go back to the main screen to release the camera;\n⑤ Note: Haar cascades are trained for frontal faces; profile views, occlusion, or long distances may cause missed detections.</string>
+</resources>

@@ -34,6 +34,7 @@ import com.wangyao.opencvprocessing.fragment.WatermarkFragment
 import com.wangyao.opencvprocessing.fragment.WatermarkEmbedFragment
 import com.wangyao.opencvprocessing.fragment.WatermarkAttackFragment
 import com.wangyao.opencvprocessing.fragment.FaceVideoFragment
+import com.wangyao.opencvprocessing.fragment.CameraRecognitionFragment
 
 /**
  * 应用唯一的 Activity，负责：
@@ -117,6 +118,8 @@ class MainActivity : AppCompatActivity() {
                         selectFragment(FFViewModel.FRAGMENT_STATUS.IMAGE_RECOGNITION)
                     is FaceVideoFragment ->
                         selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
+                    is CameraRecognitionFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
                     else -> selectFragment(FFViewModel.FRAGMENT_STATUS.IMAGE_ENHANCE)
                 }
             }
@@ -170,6 +173,7 @@ class MainActivity : AppCompatActivity() {
                 FFViewModel.FRAGMENT_STATUS.IR_IMAGE -> ImageRecognitionFragment()
                 FFViewModel.FRAGMENT_STATUS.IR_VIDEO -> VideoRecognitionFragment()
                 FFViewModel.FRAGMENT_STATUS.VIDEO_RECOGNITION -> FaceVideoFragment()
+                FFViewModel.FRAGMENT_STATUS.CAMERA_RECOGNITION -> CameraRecognitionFragment()
             }
         }
 

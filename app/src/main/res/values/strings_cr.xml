@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 相机识别（实时人脸检测跟踪） -->
+    <string name="main_card_cr">相机识别</string>
+    <string name="main_card_cr_desc">相机实时人脸识别入口</string>
+
+    <string name="cr_title">相机识别 · 实时人脸检测跟踪</string>
+
+    <!-- 左栏：控制 -->
+    <string name="cr_btn_open_preview">打开预览</string>
+    <string name="cr_btn_close_preview">关闭预览</string>
+    <string name="cr_btn_switch_camera">切换摄像头</string>
+    <string name="cr_face_count">当前人脸：%1$d</string>
+
+    <!-- 右栏：检测状态 -->
+    <string name="cr_panel_status">检测状态</string>
+    <string name="cr_status_idle">尚未打开预览。点击「打开预览」开始实时人脸检测（首次使用需授权相机权限）。</string>
+    <string name="cr_status_previewing">预览中（%1$s）：检测到 %2$d 张人脸，红色方框实时跟踪移动。</string>
+    <string name="cr_status_stopped">预览已关闭，摄像头已释放。</string>
+    <string name="cr_status_no_permission">相机权限被拒绝，无法打开预览。请到系统设置中授权后重试。</string>
+    <string name="cr_status_init_error">检测器初始化失败（级联模型加载失败），无法开始识别。</string>
+    <string name="cr_camera_front">前置摄像头</string>
+    <string name="cr_camera_back">后置摄像头</string>
+    <string name="cr_opencv_version">OpenCV 版本：%1$s · 预览 640×480 NV21 · 检测跟踪 DetectionBasedTracker</string>
+
+    <!-- 右栏：人脸识别基本原理 -->
+    <string name="cr_panel_principle">人脸识别基本原理</string>
+    <string name="cr_principle">① 人脸检测（Viola-Jones 框架，教材第 11 章）：Haar 矩形特征（明暗差分）+ 积分图 O(1) 区域求和 + AdaBoost 从海量特征中筛选最具判别力的弱分类器 + 级联结构逐级排除非人脸窗口。模型 haarcascade_frontalface_alt2.xml，detectMultiScale 以 scaleFactor=1.1 多尺度扫描、minNeighbors 去重。\n② 光照适应：每帧灰度化后做直方图均衡化，增强对比度，缓解逆光、暗光场景的漏检。\n③ 检测跟踪混合（DetectionBasedTracker）：主检测器在独立线程周期性做全帧扫描；两次全帧检测之间仅在已跟踪人脸的邻域内局部重检测，并对历史位置加权平滑输出——既保证实时性（640×480 软件检测可达实时），又让人脸框连续稳定地跟随移动（帧间不闪烁、不抖动）。\n④ 数据流水线（移植自 ManiiuFace）：相机 NV21 帧 → YUV2RGBA_NV21 颜色转换 → 按传感器方向/显示方向旋转镜像校正（前置摄像头呈自然自拍镜像）→ 灰度 → 直方图均衡 → 检测跟踪 → 红框绘制。\n⑤ 高效渲染：ANativeWindow 直接逐行写入 SurfaceView 的 Surface 缓冲区（注意 stride 行距对齐），避免 Bitmap 经 JNI 回传再上屏的多次拷贝；检测、绘制、显示均在预览回调线程内完成。</string>
+
+    <!-- 右栏：操作说明 -->
+    <string name="cr_panel_operation">操作说明</string>
+    <string name="cr_operation">① 点击「打开预览」，首次使用在系统弹窗中允许相机权限；\n② 正对摄像头（正脸光照均匀时效果最佳），人脸出现红色方框并实时跟踪移动；\n③ 点击「切换摄像头」切换前置/后置，切换后跟踪状态自动重置并重新检测；\n④ 点击「关闭预览」或返回主界面释放摄像头；\n⑤ 提示：Haar 级联针对正脸训练，侧脸、遮挡或距离过远可能漏检。</string>
+</resources>
