@@ -87,6 +87,12 @@ constexpr float SIM_ADAPT = 0.80f;
 constexpr int ADAPT_INTERVAL = 5;
 constexpr float ADAPT_ALPHA = 0.2f;
 
+/** 跟踪缩略图更新周期（帧，供 UI 对照「视频中的 Object」）。 */
+constexpr int THUMB_INTERVAL = 5;
+
+/** CamShift 结果日志周期（帧，避免每帧刷屏）。 */
+constexpr int LOG_INTERVAL = 15;
+
 /** 跟踪器状态（返回给 Kotlin 侧）。 */
 enum TrackState {
     STATE_IDLE = 0,    // 无模板，等待框选
@@ -216,6 +222,9 @@ public:
         state_ = STATE_IDLE;
         lostCount_ = 0;
         frameIdx_ = 0;
+        templateThumb_.release();
+        trackedThumb_.release();
+        LOGD("tracking reset: template cleared, thumbs released");
     }
 
     /**
@@ -264,6 +273,29 @@ public:
         }
     }
 
+    /**
+     * 导出「框选模板」缩略图（核验框选的 Object 是否正确）。
+     * @param out [w(4B)][h(4B)][RGBA...]（小端），无模板返回 false
+     */
+    bool getTemplateThumb(std::vector<uint8_t> &out) {
+        std::lock_guard<std::mutex> lock(stateMutex_);
+        if (templateThumb_.empty()) return false;
+        packThumb(templateThumb_, out);
+        return true;
+    }
+
+    /**
+     * 导出「实时跟踪框」缩略图（核验视频中的 Object 与框选/跟踪
+     * 是否同一实物）。
+     * @param out 格式同上，未跟踪/未缓存返回 false
+     */
+    bool getTrackedThumb(std::vector<uint8_t> &out) {
+        std::lock_guard<std::mutex> lock(stateMutex_);
+        if (trackedThumb_.empty()) return false;
+        packThumb(trackedThumb_, out);
+        return true;
+    }
+
 private:
     /** NV21 → RGBA → 方向校正（前置镜像），输出显示坐标系帧。 */
     cv::Mat decodeFrame(const uint8_t *data, int w, int h,
@@ -285,6 +317,18 @@ private:
                 break;
             default:
                 break;
+        }
+        // 坐标系锚点日志（参数变化时仅打印一次）：确认「视频中的
+        // Object」的显示坐标系尺寸——框选换算与 CamShift 跟踪坐标
+        // 均以此为基准（Kotlin 侧 imgW/imgH 须与 display 一致）
+        if (w != lastSrcW_ || h != lastSrcH_ ||
+            rotation != lastRot_ || mirror != lastMirror_) {
+            lastSrcW_ = w;
+            lastSrcH_ = h;
+            lastRot_ = rotation;
+            lastMirror_ = mirror;
+            LOGD("frame coords: src=%dx%d rot=%d mirror=%d -> display=%dx%d",
+                 w, h, rotation, mirror ? 1 : 0, src.cols, src.rows);
         }
         return src;
     }
@@ -320,8 +364,18 @@ private:
 
         // ---- ARMED：本帧提取目标模板（检索中的「查询特征」） ----
         if (armed_) {
+            // 坐标系一致性：框选 ROI 与视频帧同为「方向校正后的显示
+            // 坐标系」；若框选超出画面边界则按帧裁剪（日志可查差异）
             cv::Rect roi = pendingRoi_ &
                            cv::Rect(0, 0, frame.cols, frame.rows);
+            if (roi != pendingRoi_) {
+                LOGD("select roi clamped to frame %dx%d: "
+                     "(%d,%d %dx%d) -> (%d,%d %dx%d)",
+                     frame.cols, frame.rows,
+                     pendingRoi_.x, pendingRoi_.y,
+                     pendingRoi_.width, pendingRoi_.height,
+                     roi.x, roi.y, roi.width, roi.height);
+            }
             if (roi.width < MIN_ROI_SIZE || roi.height < MIN_ROI_SIZE) {
                 armed_ = false;
                 state_ = STATE_IDLE;
@@ -336,8 +390,14 @@ private:
             trackWindow_ = roi;
             lostCount_ = 0;
             frameIdx_ = 0;
-            LOGD("template built from roi=%d,%d %dx%d",
-                 roi.x, roi.y, roi.width, roi.height);
+            // 框选模板缩略图（显示坐标系，与绿框同坐标系），供 UI
+            // 核验「框选的 Object」；跟踪缩略图待跟踪后限频填充
+            templateThumb_ = frame(roi).clone();
+            trackedThumb_.release();
+            LOGD("template built from roi=%d,%d %dx%d, thumb cached "
+                 "(frame=%dx%d)",
+                 roi.x, roi.y, roi.width, roi.height,
+                 frame.cols, frame.rows);
         }
 
         if (!hasTemplate_) {
@@ -355,6 +415,7 @@ private:
         prob.convertTo(prob, CV_8U);
         cv::bitwise_and(prob, mask, prob);
 
+        const cv::Rect prevWin = trackWindow_; // CamShift 会原地更新窗口
         cv::TermCriteria criteria(
                 cv::TermCriteria::EPS | cv::TermCriteria::COUNT, 10, 1);
         cv::RotatedRect trackBox = cv::CamShift(prob, trackWindow_, criteria);
@@ -372,13 +433,25 @@ private:
         float sim = comprehensiveSimilarity(template_, candFeat);
 
         frameIdx_++;
+        // 限频坐标日志：cand（自动跟踪的）/ prevWin 与框选 ROI 同为
+        // 显示坐标系——对照「框选的/视频中的/自动跟踪的」三者一致性
+        if (frameIdx_ % LOG_INTERVAL == 0) {
+            LOGD("camshift #%d: cand=%d,%d %dx%d prevWin=%d,%d %dx%d "
+                 "sim=%.3f lost=%d",
+                 frameIdx_, cand.x, cand.y, cand.width, cand.height,
+                 prevWin.x, prevWin.y, prevWin.width, prevWin.height,
+                 sim, lostCount_);
+        }
         if (sim < SIM_LOST) {
             if (++lostCount_ > LOST_FRAMES) {
                 // 连续过低：判定丢失，清除模板等待重新框选
                 hasTemplate_ = false;
                 state_ = STATE_LOST;
                 *outSim = sim;
-                LOGD("object lost (sim=%.2f)", sim);
+                LOGD("object lost: sim=%.3f lostFrames=%d/%d "
+                     "(last cand=%d,%d %dx%d)",
+                     sim, lostCount_, LOST_FRAMES,
+                     cand.x, cand.y, cand.width, cand.height);
                 std::lock_guard<std::mutex> lock(windowMutex_);
                 if (window_ != nullptr) drawToWindow(frame);
                 return STATE_LOST;
@@ -389,6 +462,14 @@ private:
             // 自适应模板：跟踪稳定时小权重融合当前特征
             if (sim > SIM_ADAPT && frameIdx_ % ADAPT_INTERVAL == 0) {
                 adaptTemplate(candFeat, planes[0], mask, cand);
+                LOGD("template adapted @frame=%d sim=%.3f cand=%d,%d %dx%d",
+                     frameIdx_, sim, cand.x, cand.y,
+                     cand.width, cand.height);
+            }
+            // 实时跟踪缩略图（限频缓存绿框内画面 = 「视频中的
+            // Object」，与框选模板同坐标系，供 UI 对照核验）
+            if (frameIdx_ % THUMB_INTERVAL == 0) {
+                trackedThumb_ = frame(cand).clone();
             }
         }
 
@@ -426,6 +507,10 @@ private:
         if (valid < roi.area() / 10) {
             // 近灰目标：色调不可靠，回退为无掩码统计
             roiMask = cv::Mat();
+            LOGD("buildTemplate: near-gray target, hue mask fallback "
+                 "(valid=%d/%d)", valid, roi.area());
+        } else {
+            LOGD("buildTemplate: hue valid px=%d/%d", valid, roi.area());
         }
         hueHist_ = cv::Mat();
         const int chans[1] = {0};
@@ -494,6 +579,19 @@ private:
         ANativeWindow_unlockAndPost(window_);
     }
 
+    /**
+     * Mat(RGBA) → [w(4B)][h(4B)][像素...]（小端打包，
+     * 对应 Kotlin 侧 ByteBuffer.order(LITTLE_ENDIAN)）。
+     */
+    static void packThumb(const cv::Mat &m, std::vector<uint8_t> &out) {
+        out.resize(8 + m.total() * m.elemSize());
+        const int32_t w = m.cols;
+        const int32_t h = m.rows;
+        std::memcpy(out.data(), &w, 4);
+        std::memcpy(out.data() + 4, &h, 4);
+        std::memcpy(out.data() + 8, m.data, out.size() - 8);
+    }
+
     // ---- 状态（stateMutex_ 保护） ----
     bool armed_ = false;          // 待下一帧提取模板
     bool hasTemplate_ = false;    // 模板是否有效
@@ -504,6 +602,12 @@ private:
     Feature template_;            // 模板综合特征（检索特征空间）
     int lostCount_ = 0;           // 连续低相似度帧计数
     int frameIdx_ = 0;            // 帧计数（自适应模板周期用）
+    cv::Mat templateThumb_;       // 框选模板缩略图（RGBA，显示坐标系）
+    cv::Mat trackedThumb_;        // 跟踪框内画面缩略图（RGBA，限频更新）
+    int lastSrcW_ = -1;           // 坐标系锚点日志去重（最近源参数）
+    int lastSrcH_ = -1;
+    int lastRot_ = -1;
+    bool lastMirror_ = false;
     const float hueRanges_[2] = {0.f, 180.f};
 
     std::mutex stateMutex_;
@@ -617,6 +721,48 @@ Java_com_wangyao_camerarecognition_jni_ObjectTrackJni_nativePostFrame(
     result[4] = box[3];
     result[5] = sim;
     env->SetFloatArrayRegion(out, 0, 6, result);
+    return out;
+}
+
+/**
+ * 导出「框选模板」缩略图（核验框选的 Object 是否正确）：
+ * [w(4B)][h(4B)][RGBA...]（小端），无模板时返回空数组。
+ */
+JNIEXPORT jbyteArray JNICALL
+Java_com_wangyao_camerarecognition_jni_ObjectTrackJni_nativeGetTemplateThumb(
+        JNIEnv *env, jobject, jlong handle) {
+    ObjectTracker *tracker = asTracker(handle);
+    std::vector<uint8_t> buf;
+    if (tracker == nullptr || !tracker->getTemplateThumb(buf)) {
+        return env->NewByteArray(0);
+    }
+    jbyteArray out = env->NewByteArray(static_cast<jsize>(buf.size()));
+    if (out == nullptr) {
+        return nullptr;
+    }
+    env->SetByteArrayRegion(out, 0, static_cast<jsize>(buf.size()),
+                            reinterpret_cast<const jbyte *>(buf.data()));
+    return out;
+}
+
+/**
+ * 导出「实时跟踪框」缩略图（核验视频中的 Object 与框选/跟踪是否
+ * 同一实物）：格式同上，未跟踪/未缓存时返回空数组。
+ */
+JNIEXPORT jbyteArray JNICALL
+Java_com_wangyao_camerarecognition_jni_ObjectTrackJni_nativeGetTrackedThumb(
+        JNIEnv *env, jobject, jlong handle) {
+    ObjectTracker *tracker = asTracker(handle);
+    std::vector<uint8_t> buf;
+    if (tracker == nullptr || !tracker->getTrackedThumb(buf)) {
+        return env->NewByteArray(0);
+    }
+    jbyteArray out = env->NewByteArray(static_cast<jsize>(buf.size()));
+    if (out == nullptr) {
+        return nullptr;
+    }
+    env->SetByteArrayRegion(out, 0, static_cast<jsize>(buf.size()),
+                            reinterpret_cast<const jbyte *>(buf.data()));
     return out;
 }
 

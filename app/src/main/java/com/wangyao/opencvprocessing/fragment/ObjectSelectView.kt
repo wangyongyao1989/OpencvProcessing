@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 
@@ -68,7 +69,14 @@ class ObjectSelectView @JvmOverloads constructor(
                     val r = maxOf(startX, curX).coerceAtMost(width.toFloat())
                     val b = maxOf(startY, curY).coerceAtMost(height.toFloat())
                     if (r - l >= minSelectPx && b - t >= minSelectPx) {
+                        Log.d(TAG, "手势框选松手: viewRect=(${l.toInt()}," +
+                                "${t.toInt()},${r.toInt()},${b.toInt()}) " +
+                                "size=${(r - l).toInt()}x${(b - t).toInt()}")
                         onSelect?.invoke(RectF(l, t, r, b))
+                    } else {
+                        Log.d(TAG, "框选过小已忽略: size=" +
+                                "${(r - l).toInt()}x${(b - t).toInt()} " +
+                                "min=${minSelectPx}px")
                     }
                 }
                 dragging = false
@@ -88,5 +96,10 @@ class ObjectSelectView @JvmOverloads constructor(
         val b = maxOf(startY, curY)
         canvas.drawRect(l, t, r, b, fillPaint)
         canvas.drawRect(l, t, r, b, strokePaint)
+    }
+
+    private companion object {
+        /** 日志 tag（与 ObjectTrackFragment 的 CR_ObjectTrack 一致）。 */
+        const val TAG = "CR_ObjectTrack"
     }
 }

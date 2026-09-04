@@ -2,6 +2,7 @@ package com.wangyao.opencvprocessing.fragment
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.RectF
 import android.hardware.Camera
 import android.os.Build
@@ -9,6 +10,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Surface
@@ -24,6 +26,8 @@ import com.wangyao.camerarecognition.jni.ObjectTrackJni
 import com.wangyao.opencvprocessing.FFViewModel
 import com.wangyao.opencvprocessing.R
 import com.wangyao.opencvprocessing.databinding.FragmentObjectTrackLayoutBinding
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import kotlin.math.roundToInt
 
 /**
@@ -62,6 +66,10 @@ class ObjectTrackFragment : BaseFragment() {
     /** 上次 UI 刷新的状态与时间（状态变化立即刷，相似度限频刷）。 */
     private var lastState = -1
     private var lastUiUpdate = 0L
+
+    /** 目标核验缩略图（框选模板 / 实时跟踪框内画面）。 */
+    private var templateBitmap: Bitmap? = null
+    private var trackedBitmap: Bitmap? = null
 
     /** 相机权限请求（首次打开预览时触发）。 */
     private val permissionLauncher = registerForActivityResult(
@@ -218,6 +226,7 @@ class ObjectTrackFragment : BaseFragment() {
         binding.tvOtSim.text = ""
         lastState = -1
         binding.tvOtStatus.text = getString(R.string.cr_status_stopped)
+        clearVerifyThumbs("preview stopped")
     }
 
     /**
@@ -246,6 +255,11 @@ class ObjectTrackFragment : BaseFragment() {
         val y = (rect.top / vh * imgH).roundToInt()
         val w = (rect.width() / vw * imgW).roundToInt()
         val h = (rect.height() / vh * imgH).roundToInt()
+        Log.d(TAG, "onObjectSelected: viewRect=(${rect.left.toInt()}," +
+                "${rect.top.toInt()},${rect.right.toInt()}," +
+                "${rect.bottom.toInt()}) view=${vw.toInt()}x${vh.toInt()} " +
+                "→ imageRoi=[$x,$y ${w}x$h] img=${imgW}x$imgH " +
+                "rotation=$rotation")
         ObjectTrackJni.nativeSelectObject(trackerHandle, x, y, w, h)
         lastState = -1
         binding.tvOtStatus.text = getString(R.string.ot_status_selecting)
@@ -269,6 +283,16 @@ class ObjectTrackFragment : BaseFragment() {
         val state = result[0].toInt()
         val sim = result[5]
 
+        // 状态迁移立即打日志：跟踪框（自动跟踪的 Object）坐标与
+        // 相似度一并列出——与「框选的 Object」日志（imageRoi）同
+        // 坐标系，logcat 中可对照三者一致性与跟踪是否漂移
+        if (state != lastState) {
+            Log.d(TAG, "state ${stateName(lastState)} -> " +
+                    "${stateName(state)}: sim=${"%.3f".format(sim)} " +
+                    "box=[${result[1].toInt()},${result[2].toInt()} " +
+                    "${result[3].toInt()}x${result[4].toInt()}]")
+        }
+
         val now = SystemClock.elapsedRealtime()
         if (state != lastState || now - lastUiUpdate > 500) {
             lastState = state
@@ -284,10 +308,14 @@ class ObjectTrackFragment : BaseFragment() {
                 binding.tvOtStatus.text =
                     getString(R.string.ot_status_tracking, cameraName(), sim * 100f)
                 binding.tvOtSim.text = getString(R.string.ot_sim, sim * 100f)
+                refreshVerifyThumbs()
             }
             STATE_LOST -> {
                 binding.tvOtStatus.text = getString(R.string.ot_status_lost)
                 binding.tvOtSim.text = ""
+                // 保留模板缩略图便于对照，仅清空跟踪缩略图
+                trackedBitmap = null
+                binding.ivOtTrackedThumb.setImageDrawable(null)
             }
             STATE_ARMED ->
                 binding.tvOtStatus.text = getString(R.string.ot_status_selecting)
@@ -296,6 +324,54 @@ class ObjectTrackFragment : BaseFragment() {
                 binding.tvOtSim.text = ""
             }
         }
+    }
+
+    /**
+     * 刷新右栏「目标一致性核验」缩略图：框选模板（框选的 Object）
+     * 与实时跟踪框内画面（视频中的 Object），供人工对照验证
+     * 「框选的 / 视频中的 / 自动跟踪的」三者是否同一实物。
+     */
+    private fun refreshVerifyThumbs() {
+        if (trackerHandle == 0L) return
+        if (templateBitmap == null) {
+            decodeThumb(ObjectTrackJni.nativeGetTemplateThumb(trackerHandle))
+                ?.let { bmp ->
+                    templateBitmap = bmp
+                    binding.ivOtTemplateThumb.setImageBitmap(bmp)
+                    Log.d(TAG, "template thumb shown: ${bmp.width}x${bmp.height}")
+                }
+        }
+        decodeThumb(ObjectTrackJni.nativeGetTrackedThumb(trackerHandle))
+            ?.let { bmp ->
+                trackedBitmap = bmp
+                binding.ivOtTrackedThumb.setImageBitmap(bmp)
+            }
+    }
+
+    /** 解析 native 导出的缩略图 [w(4B)][h(4B)][RGBA]（小端）。 */
+    private fun decodeThumb(data: ByteArray): Bitmap? {
+        if (data.size < 8) return null
+        val buf = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN)
+        val w = buf.int
+        val h = buf.int
+        if (w <= 0 || h <= 0 || buf.remaining() < w * h * 4) return null
+        return try {
+            Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).apply {
+                copyPixelsFromBuffer(buf)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "decodeThumb failed: ${e.message}")
+            null
+        }
+    }
+
+    /** 清空目标核验缩略图（重新框选 / 切换摄像头 / 关闭预览后）。 */
+    private fun clearVerifyThumbs(reason: String) {
+        templateBitmap = null
+        trackedBitmap = null
+        binding.ivOtTemplateThumb.setImageDrawable(null)
+        binding.ivOtTrackedThumb.setImageDrawable(null)
+        Log.d(TAG, "verify thumbs cleared: $reason")
     }
 
     /** 预览 wrapper 按画面宽高比居中缩放（避免拉伸变形）。 */
@@ -388,10 +464,22 @@ class ObjectTrackFragment : BaseFragment() {
     }
 
     private companion object {
+        /** 日志 tag（与 native 侧 CR_ObjectTracker 配对过滤）。 */
+        const val TAG = "CR_ObjectTrack"
+
         /** native 返回的跟踪状态（ObjectTracker.cpp TrackState）。 */
         const val STATE_IDLE = 0
         const val STATE_ARMED = 1
         const val STATE_TRACKING = 2
         const val STATE_LOST = 3
+    }
+
+    /** 跟踪状态枚举名（日志可读性）。 */
+    private fun stateName(state: Int): String = when (state) {
+        STATE_IDLE -> "IDLE"
+        STATE_ARMED -> "ARMED"
+        STATE_TRACKING -> "TRACKING"
+        STATE_LOST -> "LOST"
+        else -> "UNKNOWN($state)"
     }
 }

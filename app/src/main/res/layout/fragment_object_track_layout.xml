@@ -154,6 +154,82 @@
                 android:textColor="#666666"
                 android:textSize="12sp" />
 
+            <!-- 目标一致性核验：框选模板 vs 实时跟踪框内画面，
+                 排查「框选的/视频中的/自动跟踪的」三者是否同一实物 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/ot_panel_verify"
+                android:textColor="#111111"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="#F5F5F5"
+                android:orientation="horizontal"
+                android:padding="10dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
+
+                    <ImageView
+                        android:id="@+id/iv_ot_template_thumb"
+                        android:layout_width="96dp"
+                        android:layout_height="96dp"
+                        android:background="#000000"
+                        android:contentDescription="@string/ot_thumb_template"
+                        android:scaleType="fitCenter" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/ot_thumb_template"
+                        android:textColor="#333333"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
+
+                    <ImageView
+                        android:id="@+id/iv_ot_tracked_thumb"
+                        android:layout_width="96dp"
+                        android:layout_height="96dp"
+                        android:background="#000000"
+                        android:contentDescription="@string/ot_thumb_tracked"
+                        android:scaleType="fitCenter" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/ot_thumb_tracked"
+                        android:textColor="#333333"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/ot_verify_hint"
+                android:textColor="#666666"
+                android:textSize="12sp" />
+
             <!-- 原理（以「以该帧检索视频」检索流程为基础） -->
             <TextView
                 android:layout_width="match_parent"

@@ -57,6 +57,22 @@ object ObjectTrackJni {
         rotation: Int, mirror: Boolean
     ): FloatArray
 
+    /**
+     * 导出「框选模板」缩略图（核验框选的 Object 是否正确）。
+     *
+     * @return [w(4B)][h(4B)][RGBA...]（小端），无模板时返回空数组；
+     *         UI 侧用 ByteBuffer.order(LITTLE_ENDIAN) 解析
+     */
+    external fun nativeGetTemplateThumb(handle: Long): ByteArray
+
+    /**
+     * 导出「实时跟踪框」缩略图（视频当前帧中绿框内画面，核验
+     * 「视频中的 Object」与「框选的 Object」是否同一实物）。
+     *
+     * @return 格式同上，未跟踪/未缓存时返回空数组
+     */
+    external fun nativeGetTrackedThumb(handle: Long): ByteArray
+
     /** OpenCV 版本串。 */
     external fun nativeOpencvVersion(): String
 }
