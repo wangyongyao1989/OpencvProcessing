@@ -201,7 +201,7 @@ class CameraRecognitionFragment : BaseFragment() {
 
     override fun initListener() {
         binding.btnBack.setOnClickListener {
-            ffViewModel.switchFragment.postValue(FFViewModel.FRAGMENT_STATUS.MAIN)
+            ffViewModel.switchFragment.postValue(FFViewModel.FRAGMENT_STATUS.CAMERA_MENU)
         }
 
         binding.btnTogglePreview.setOnClickListener {

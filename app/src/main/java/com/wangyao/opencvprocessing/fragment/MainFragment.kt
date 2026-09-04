@@ -81,10 +81,10 @@ class MainFragment : BaseFragment() {
                 .postValue(FFViewModel.FRAGMENT_STATUS.VIDEO_RECOGNITION)
         }
 
-        // 点击「相机识别」卡片进入相机实时人脸识别页
+        // 点击「相机识别」卡片进入二级菜单（实时人脸检测跟踪/框选实物实时检测跟踪）
         binding.btnCameraRecognition.setOnClickListener {
             ffViewModel.switchFragment
-                .postValue(FFViewModel.FRAGMENT_STATUS.CAMERA_RECOGNITION)
+                .postValue(FFViewModel.FRAGMENT_STATUS.CAMERA_MENU)
         }
     }
 }
