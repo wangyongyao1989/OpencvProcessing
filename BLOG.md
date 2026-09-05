@@ -111,7 +111,30 @@ cv::resize(smallBlur, L, f32.size(), ..., cv::INTER_LINEAR);
 
 这是 Retinex 光照估计的基础：光照图天然是低频的，没必要在全分辨率上算大核卷积。
 
-### 3.3 运用场景
+### 3.3 代码调用示例
+
+UI 层调用就是一行——Bitmap 进、Bitmap 出，参数即教材公式的自变量（摘自 `ImageHomomorphicFragment.kt`）：
+
+```kotlin
+// 同态滤波：src 为原始 Bitmap
+// 参数对应式 2-84 的传递函数：D0=80（截止频率）、c=1.5（过渡陡度）、
+// HL=0.5/HH=2.0（低频增益/高频增益）
+val enhanced: Bitmap = OpencvDealJni.homoFilter(src, 80.0, 1.5, 0.5, 2.0)
+
+// 变体：只取光照分量 / 反射分量 / 对数域中间结果（教学分步演示）
+val illum = OpencvDealJni.homoIllumination(src)      // 照度 I(x,y)
+val reflect = OpencvDealJni.homoReflectance(src)     // 反射 R(x,y)
+
+// 其他功能组同样是一行式调用：
+val gray = OpencvDealJni.grayGamma(src, 0.6)         // 伽马变换（暗部提亮）
+val denoised = OpencvDealJni.smoothMedian(src, 5)    // 中值去椒盐噪声
+val sharp = OpencvDealJni.sharpLaplacian(src, 2.0)   // Laplacian 锐化
+val msr = OpencvDealJni.retinexMsr(src, 3)           // 多尺度 Retinex
+```
+
+注意 native 方法运行在调用线程——Fragment 中务必放在后台线程执行，结果再 `runOnUiThread` 回 UI。
+
+### 3.4 运用场景
 
 - **低照度监控/行车记录仪**：夜间画面直方图均衡化或 MSRCR 增强，提升可视性；
 
@@ -206,7 +229,46 @@ fun extractVotes(luma: ByteArray, width: Int, height: Int,
 
 视频水印走 `MediaExtractor → MediaCodec 解码 → Y 平面嵌入 → MediaCodec 编码 → MediaMuxer` 的逐帧转码管线，多帧提取时再**帧间投票**，鲁棒性进一步提升。
 
-### 4.3 运用场景
+### 4.3 代码调用示例
+
+视频水印的完整调用链（摘自 `WatermarkEmbedFragment.kt`）——`transcode` 管线逐帧回调亮度平面，在回调里嵌入，多帧提取时累加投票：
+
+```kotlin
+val pipeline = VideoWatermarkPipeline()
+
+// ---- 嵌入：解码 → 回调嵌入 → 编码 ----
+val watermarkBits = WatermarkGenerator.generateBits(text)   // 文本 → 64×64 bit 阵
+pipeline.transcode(
+    inputPath = srcVideo.absolutePath,
+    outputPath = tempFile.absolutePath,
+    onFrame = { luma, w, h, _ ->
+        // 二选一：空间域 LSB / 变换域 DCT（原地修改 luma）
+        if (useLsb) LsbWatermark.embed(luma, w, h, watermarkBits)
+        else DctWatermark.embed(luma, w, h, watermarkBits)
+        true    // 返回 false 可模拟「帧丢失攻击」
+    },
+    onProgress = { done, total -> /* 更新进度条 */ }
+)
+
+// ---- 盲提取：只需含水印视频 + 密钥，多帧投票 ----
+val votes = IntArray(watermarkBits.size)
+pipeline.decodeOnly(watermarkedVideo.absolutePath,
+    onFrame = { luma, w, h, _ ->
+        val v = if (useLsb) LsbWatermark.extractVotes(luma, w, h)
+                else DctWatermark.extractVotes(luma, w, h)   // 默认密钥
+        for (i in votes.indices) votes[i] += v[i]            // 帧间投票累加
+    },
+    onProgress = { _, _ -> }
+)
+val recovered = votes.map { it > 0 }                          // 票决出比特
+
+// ---- 不可见性评价：嵌入前后 PSNR ----
+val psnr = WatermarkMetrics.psnr(originalFrame, watermarkedFrame)  // >38dB 合格
+```
+
+改用自己的密钥只需传 `key` 参数：`DctWatermark.embed(luma, w, h, bits, key = 0x1234ABCD)`，提取用同一密钥——**没有密钥相关检测就是随机噪声**。
+
+### 4.4 运用场景
 
 - **版权保护/溯源取证**：摄影作品、视频素材发布前嵌入作者 ID 水印，被盗用后提取取证——DCT 方案即使截图/转码/加 logo 也大概率存活；
 
@@ -262,7 +324,36 @@ fun ssim(a: ByteArray, b: ByteArray, width: Int, height: Int): Double {
 
 模块还内置**失真生成器**（JPEG/高斯噪声/椒盐噪声/均值模糊/亮度偏移），可以亲手制造失真再看指标变化——这是理解「PSNR 高 ≠ 看着好」的最快途径（椒盐噪声 PSNR 不低但视觉极差）。
 
-### 5.3 运用场景
+### 5.3 代码调用示例
+
+一站式评价（摘自 `ImageQualityFragment.kt`）——输入是两幅灰度图的亮度字节数组：
+
+```kotlin
+// srcLuma/distortedLuma：ByteArray（行紧凑灰度，长度 w*h）
+val result = ImageQualityMetrics.evaluateAll(
+    srcLuma, distortedLuma, imgWidth, imgHeight
+)
+// result.psnr     42.3 dB（>35 质量良好，>38 水印不可见性合格）
+// result.ssim     0.96（结构高度保持）
+// result.entropyOriginal / entropyDistorted：信息量对比
+
+// 也可以单指标调用：
+val p = ImageQualityMetrics.psnr(a, b)                 // 只要 PSNR
+val s = ImageQualityMetrics.ssim(a, b, width, height)  // 只要 SSIM
+val h = ImageQualityMetrics.entropy(a)                 // 只要熵
+```
+
+配合模块内置的失真生成器 `ImageDistortions`（原地修改风格），可以快速构建「制造失真 → 量化失真」的完整实验：
+
+```kotlin
+val distorted = srcLuma.copyOf()                 // 别动原图，先拷贝
+ImageDistortions.gaussianNoise(distorted, sigma = 15.0)   // 原地加噪
+// 也可用 saltPepperNoise / meanBlur / brightnessShift / jpeg
+val r = ImageQualityMetrics.evaluateAll(srcLuma, distorted, w, h)
+println("PSNR=${r.psnr}dB, SSIM=${r.ssim}")
+```
+
+### 5.4 运用场景
 
 - **编码器/转码参数调优**：视频平台在码率-质量曲线上选拐点（CRF 每加 2，PSNR 掉多少 dB）；
 
@@ -320,7 +411,35 @@ fun colorHistogram(argb: IntArray): FloatArray {
 
 检索引擎 `ImageSearchEngine` 的图像库会自动构造「原图 + 光度/几何变换副本（亮度调整/翻转/裁剪）+ 合成干扰图」，检索结果能直观验证特征的不变性。
 
-### 6.3 运用场景
+### 6.3 代码调用示例
+
+两阶段调用：离线建库索引 → 在线检索（摘自 `ImageSearchFragment.kt`）：
+
+```kotlin
+val engine = ImageSearchEngine()
+
+// ---- 阶段一：建库并索引（离线，一次）----
+// 自动生成「原图 + 亮度±/噪声/模糊/JPEG + 旋转/镜像/裁剪 + 干扰图」
+val libSize = engine.buildDatabase(srcBitmap)   // 返回库大小
+
+// ---- 阶段二：以查询图检索（在线）----
+// queryType 可选：原图 / 亮度+40 / 旋转10° / 镜像……验证特征不变性
+val query = engine.buildQuery(srcBitmap, queryType)
+val topK: List<ImageSearchEngine.Match> = engine.search(query, k = 6)
+
+// 每个 Match 附带分量得分，可看「像它的是颜色还是纹理」：
+//   match.entry.label   "原图" / "旋转 10°" / "合成：草地"
+//   match.score         综合相似度 0.6×颜色 + 0.4×纹理
+//   match.colorScore / match.textureScore   分量相似度
+topK.forEach { m ->
+    Log.d("CBIR", "${m.entry.label}: ${"%.3f".format(m.score)} " +
+            "(color=${"%.3f".format(m.colorScore)}, tex=${"%.3f".format(m.textureScore)})")
+}
+```
+
+典型输出：`原图: 1.000`、`亮度+40: 0.95`（颜色特征稳定）、`镜像: 0.88`（直方图对镜像不变）——不变性结论直接从数字里读出来。
+
+### 6.4 运用场景
 
 - **以图搜图**：电商拍照搜同款（颜色+纹理特征是最早的工业方案，现在多与深度特征融合）；
 
@@ -382,7 +501,35 @@ val score = cross / kotlin.math.sqrt(fVar * tVar)   // 归一化到 [-1,1]
 
 `similarityMap()` 还能输出粗网格 NCC 热力图，UI 上渲染成相似度分布——教学演示「匹配发生在哪里」。
 
-### 7.3 运用场景
+### 7.3 代码调用示例
+
+NCC 模板匹配（摘自 `ImageRecognitionFragment.kt`）：
+
+```kotlin
+// gray：全图灰度（ByteArray，行紧凑）；tpl：模板灰度（方形，边长 ts）
+val r = NccMatcher.searchFull(gray, w, h, tpl, ts, ts)
+// r = [bestX, bestY, bestScore]（模板左上角坐标 + NCC 得分）
+// r[2] > 0.8 → 高置信命中；< 0.5 → 疑似目标不在画面内
+
+// 相似度热力图（粗网格 step 采样，UI 渲染用）
+val heat = NccMatcher.similarityMap(gray, w, h, tpl, ts, ts, HEAT_STEP)
+
+// 也可在指定窗口内搜索（已知目标大致位置时，跳过全图粗搜）：
+val r2 = NccMatcher.searchWindow(gray, w, h, tpl, ts, ts,
+                                  x0, y0, x1, y1)     // 窗口边界（含）
+```
+
+Hu 不变矩形状识别（三行流式调用）：
+
+```kotlin
+// mask：二值形状图（ByteArray 0/255，Size×Size）
+val hu = HuMoments.compute(mask, ShapeRecognizer.SIZE, ShapeRecognizer.SIZE)  // 7 个矩
+val feature = HuMoments.logTransform(hu)   // 取对数压缩动态范围
+// 与参考形状的 7 维（工程上取前 3 维已够）欧氏距离最近者胜出：
+val dist = sqrt((0 until 3).sumOf { (feature[it] - ref[it]).let { d -> d * d } })
+```
+
+### 7.4 运用场景
 
 - **工业质检**：PCB 板上定位元件/Mark 点（光照车间明暗不一，NCC 的光照不变性恰好对症）；缺陷区域与模板比对找差异；
 
@@ -576,7 +723,66 @@ private fun runFaceFrameSearch() {
 }
 ```
 
-### 8.5 运用场景
+### 8.5 代码调用示例
+
+**人脸分析**（摘自 `FaceVideoFragment.kt`）——一次调用拿到逐帧检测框与全片统计：
+
+```kotlin
+thread(start = true, name = "face-analyze") {          // 后台线程跑
+    val analyzer = FaceVideoAnalyzer()
+    val result = analyzer.analyze(
+        videoPath = videoFile.absolutePath,            // assets 拷贝到私有目录后的路径
+        cascadePath = cascadeFile.absolutePath,        // haarcascade_frontalface_alt2.xml
+        onProgress = { done, total ->                  // 进度回调（459/459 帧）
+            activity?.runOnUiThread { updateProgress(done, total) }
+        }
+    )
+    activity?.runOnUiThread {
+        // 全片统计
+        result.frames.size          // 总帧数
+        result.coverage             // 人脸帧占比（如 0.43）
+        result.avgFaces             // 平均每帧人脸数
+        result.trackStats.hitRate   // 跟踪命中率（IoU 关联评价）
+        result.trackStats.longestStreak  // 最长连续跟踪段
+        analysis = result           // 供播放同步循环查表使用
+    }
+}
+```
+
+**关键帧抽取 + 查询帧检索**——与上文「以当前帧检索」对应的完整调用：
+
+```kotlin
+val indexer = VideoKeyframeIndexer()
+
+// ---- 抽取关键帧并建立索引（一次，进度回调）----
+val keyframes = indexer.extractKeyframes(videoPath, count = 12) { done, total ->
+    activity?.runOnUiThread { updateProgress(done, total) }
+}
+// keyframes: List<Keyframe>，每项含 frameIndex / timestampUs / luma / feature
+
+// ---- 以查询帧检索视频（综合相似度 Top-5）----
+// 方式 A：用户点选某个关键帧作查询帧
+val matches = indexer.search(
+    keyframes[sel].luma, keyframes[sel].width, keyframes[sel].height,
+    k = 5, exclude = keyframes[sel]        // 排除自身
+)
+// 方式 B：播放中捕获当前画面（TextureView.getBitmap()）
+val frame = binding.textureView.bitmap
+val q = VideoKeyframeIndexer.bitmapToLuma(frame)       // → 亮度平面（同特征空间）
+val topK = indexer.search(q.luma, q.width, q.height, k = 5)
+
+// 每个 Match：match.keyframe.timestampUs（点击跳转播放）+ match.score（相似度）
+```
+
+**播放同步查表**——叠加层每 33ms 按播放进度取最近分析帧：
+
+```kotlin
+// pos = player.currentPosition（毫秒）
+val idx = FaceTrackMath.findNearestFrameIndex(analysis.frames, pos * 1000L)
+overlayView.setFaces(analysis.frames[idx].faces)       // 视频原始分辨率坐标
+```
+
+### 8.6 运用场景
 
 - **安防监控**：录像中人脸出现位置快速浏览（检出人脸的帧占比 43% 这类统计直接告诉侦查人员哪些时段有人）；关键帧检索定位「与某画面相似的时刻」；
 
@@ -586,7 +792,7 @@ private fun runFaceFrameSearch() {
 
 - **智能相册/短视频**：自动统计「谁在什么时间出现」，人脸覆盖率驱动的精彩片段抽取。
 
-### 8.6 自包含的 native 构建
+### 8.7 自包含的 native 构建
 
 `videorecognition` 没有依赖 `imageCVdeal`，而是把 OpenCV 头文件和 `.so` 复制进自己的 `src/main/cpp`，独立 CMake 编译。代价是 APK 体积（\~75MB），换来的是**模块可独立编译、可整体移植**到其他工程。
 

@@ -9,31 +9,34 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
 import androidx.lifecycle.ViewModelProvider
-import com.wangyao.opencvprocessing.fragment.ImageEnhanceFragment
-import com.wangyao.opencvprocessing.fragment.ImageGrayTransformFragment
-import com.wangyao.opencvprocessing.fragment.ImageHomomorphicFragment
-import com.wangyao.opencvprocessing.fragment.ImageRetinexFragment
-import com.wangyao.opencvprocessing.fragment.ImageColorEnhanceFragment
-import com.wangyao.opencvprocessing.fragment.ImageSharpenFragment
-import com.wangyao.opencvprocessing.fragment.ImageSmoothDenoiseFragment
-import com.wangyao.opencvprocessing.fragment.MainFragment
-import com.wangyao.opencvprocessing.fragment.MorphOpFragment
-import com.wangyao.opencvprocessing.fragment.MorphologyFragment
-import com.wangyao.opencvprocessing.fragment.SegOpFragment
-import com.wangyao.opencvprocessing.fragment.SegmentationFragment
-import com.wangyao.opencvprocessing.fragment.QualityEvalFragment
-import com.wangyao.opencvprocessing.fragment.ImageQualityFragment
-import com.wangyao.opencvprocessing.fragment.VideoQualityFragment
-import com.wangyao.opencvprocessing.fragment.ContentSearchFragment
-import com.wangyao.opencvprocessing.fragment.ImageSearchFragment
-import com.wangyao.opencvprocessing.fragment.VideoSearchFragment
-import com.wangyao.opencvprocessing.fragment.ImageRecognitionFragment
-import com.wangyao.opencvprocessing.fragment.VideoRecognitionFragment
-import com.wangyao.opencvprocessing.fragment.RecognitionMenuFragment
-import com.wangyao.opencvprocessing.fragment.WatermarkFragment
-import com.wangyao.opencvprocessing.fragment.WatermarkEmbedFragment
-import com.wangyao.opencvprocessing.fragment.WatermarkAttackFragment
-import com.wangyao.opencvprocessing.fragment.FaceVideoFragment
+import com.wangyao.opencvprocessing.fragment.image.ImageEnhanceFragment
+import com.wangyao.opencvprocessing.fragment.image.ImageGrayTransformFragment
+import com.wangyao.opencvprocessing.fragment.image.ImageHomomorphicFragment
+import com.wangyao.opencvprocessing.fragment.image.ImageRetinexFragment
+import com.wangyao.opencvprocessing.fragment.image.ImageColorEnhanceFragment
+import com.wangyao.opencvprocessing.fragment.image.ImageSharpenFragment
+import com.wangyao.opencvprocessing.fragment.image.ImageSmoothDenoiseFragment
+import com.wangyao.opencvprocessing.fragment.main.MainFragment
+import com.wangyao.opencvprocessing.fragment.image.MorphOpFragment
+import com.wangyao.opencvprocessing.fragment.image.MorphologyFragment
+import com.wangyao.opencvprocessing.fragment.image.SegOpFragment
+import com.wangyao.opencvprocessing.fragment.image.SegmentationFragment
+import com.wangyao.opencvprocessing.fragment.quality.QualityEvalFragment
+import com.wangyao.opencvprocessing.fragment.quality.ImageQualityFragment
+import com.wangyao.opencvprocessing.fragment.quality.VideoQualityFragment
+import com.wangyao.opencvprocessing.fragment.search.ContentSearchFragment
+import com.wangyao.opencvprocessing.fragment.search.ImageSearchFragment
+import com.wangyao.opencvprocessing.fragment.search.VideoSearchFragment
+import com.wangyao.opencvprocessing.fragment.recognition.ImageRecognitionFragment
+import com.wangyao.opencvprocessing.fragment.video.VideoRecognitionFragment
+import com.wangyao.opencvprocessing.fragment.main.RecognitionMenuFragment
+import com.wangyao.opencvprocessing.fragment.watermark.WatermarkFragment
+import com.wangyao.opencvprocessing.fragment.watermark.WatermarkEmbedFragment
+import com.wangyao.opencvprocessing.fragment.watermark.WatermarkAttackFragment
+import com.wangyao.opencvprocessing.fragment.video.FaceVideoFragment
+import com.wangyao.opencvprocessing.fragment.recognition.CameraRecognitionFragment
+import com.wangyao.opencvprocessing.fragment.main.CameraMenuFragment
+import com.wangyao.opencvprocessing.fragment.recognition.ObjectTrackFragment
 
 /**
  * 应用唯一的 Activity，负责：
@@ -117,6 +120,12 @@ class MainActivity : AppCompatActivity() {
                         selectFragment(FFViewModel.FRAGMENT_STATUS.IMAGE_RECOGNITION)
                     is FaceVideoFragment ->
                         selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
+                    is CameraMenuFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.MAIN)
+                    is CameraRecognitionFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.CAMERA_MENU)
+                    is ObjectTrackFragment ->
+                        selectFragment(FFViewModel.FRAGMENT_STATUS.CAMERA_MENU)
                     else -> selectFragment(FFViewModel.FRAGMENT_STATUS.IMAGE_ENHANCE)
                 }
             }
@@ -170,6 +179,9 @@ class MainActivity : AppCompatActivity() {
                 FFViewModel.FRAGMENT_STATUS.IR_IMAGE -> ImageRecognitionFragment()
                 FFViewModel.FRAGMENT_STATUS.IR_VIDEO -> VideoRecognitionFragment()
                 FFViewModel.FRAGMENT_STATUS.VIDEO_RECOGNITION -> FaceVideoFragment()
+                FFViewModel.FRAGMENT_STATUS.CAMERA_MENU -> CameraMenuFragment()
+                FFViewModel.FRAGMENT_STATUS.CAMERA_RECOGNITION -> CameraRecognitionFragment()
+                FFViewModel.FRAGMENT_STATUS.CAMERA_OBJECT_TRACK -> ObjectTrackFragment()
             }
         }
 

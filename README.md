@@ -2,7 +2,7 @@
 
 > GitHub：https://github.com/wangyongyao1989/OpencvProcessing
 
-一个基于 **Kotlin + OpenCV(C++/JNI) + MediaCodec** 的 Android 数字图像与视频处理工程，将《数字图像与视频处理》教材中的经典算法落地为 7 个高内聚、低耦合的 Gradle 模块：从空间域/频率域增强、形态学、分割，到数字水印、质量评价、基于内容的图像/视频检索、模板匹配与视频人脸识别，全部算法均可在真机上交互验证。
+一个基于 **Kotlin + OpenCV(C++/JNI) + MediaCodec + CameraX** 的 Android 数字图像与视频处理工程，将《数字图像与视频处理》教材中的经典算法落地为 8 个高内聚、低耦合的 Gradle 模块：从空间域/频率域增强、形态学、分割，到数字水印、质量评价、基于内容的图像/视频检索、模板匹配与视频人脸识别，再到相机实时人脸检测与框选实物跟踪，全部算法均可在真机上交互验证。
 
 ## 1. 功能总览
 
@@ -14,7 +14,8 @@
 | **contentsearch** | 基于内容的图像检索（CBIR）与视频检索 | HSV 3D 颜色直方图 + 梯度方向纹理直方图、直方图相交 + 余弦相似度的综合相似度（0.6 颜色 + 0.4 纹理）、关键帧均匀抽取与索引 |
 | **imagerecognition** | 模板匹配 / 形状识别 / 视频目标跟踪 | NCC 归一化互相关（金字塔粗到精搜索）、Hu 不变矩最近邻形状分类、逐帧模板跟踪 + 帧差运动检测（跟踪命中率 trackRate） |
 | **videorecognition** | 视频人脸识别 / 关键帧检索 / 跟踪评价 | Haar 级联人脸检测（JNI）、IoU 时间平滑、跟踪命中率统计、关键帧索引与综合相似度检索 |
-| **app** | 主壳工程：卡片式主页 + 27 个功能 Fragment | FFViewModel LiveData 导航、TextureView 播放 + 叠加层实时绘制 |
+| **camerarecognition** | 相机实时识别：人脸检测跟踪 / 框选实物跟踪 | CameraX ImageAnalysis 取帧（YUV→NV21）、多 Haar 级联融合（正脸并集 + 侧脸镜像补扫）+ NMS 聚类 + 眼/鼻/嘴特征验证 + CLAHE、CamShift + 多维特征（64 维灰度直方图 + 18 维 Sobel 方向 + 256 维 LBP）综合相似度验证 + 模板 EMA 在线更新、ANativeWindow 零拷贝渲染 |
+| **app** | 主壳工程：卡片式主页 + 28 个功能页面（25 功能 Fragment + 3 级导航） | FFViewModel LiveData 导航、TextureView 播放 + 叠加层实时绘制、SurfaceView + 手势框选叠加层 |
 
 ## 2. 架构设计
 
@@ -23,16 +24,16 @@
 ```
                     ┌──────────────────────────────┐
                     │              app              │  ← 主壳：导航/UI 编排
-                    └──────┬───────────────────────┘
-        ┌──────┬──────┬───┴──────┬──────────┬──────────┐
-        ▼      ▼      ▼          ▼          ▼          ▼
-  imageCVdeal  digital  quality  content-  image-     video-
-  (JNI/OpenCV) watermark evaluation search  recognition recognition
+                    └──┬────┬────┬────┬────┬────┬──┘
+        ┌──────────┬────┴─┐  │    │    │    │    │
+        ▼          ▼      ▼  ▼    ▼    ▼    ▼    ▼
+  imageCVdeal  digital  quality  content-  image-  video-  camera-
+  (JNI/OpenCV) watermark evaluation search recognition recognition recognition
 ```
 
-- `app` 依赖全部 6 个业务模块，负责页面导航与交互；
+- `app` 依赖全部 7 个业务模块，负责页面导航与交互；
 - `imageCVdeal` 持有 OpenCV 预编译动态库（`opencv_java4`）与自研 C++ 算法库（`opencvdeal_native`），是唯一的算法底座；
-- `videorecognition` 为自包含模块，内置 OpenCV 头文件/so 与 CMake 工程（Haar 检测）；
+- `videorecognition` 与 `camerarecognition` 为自包含模块，各自内置 OpenCV 头文件/so 与 CMake 工程（前者 Haar 视频检测，后者相机实时检测跟踪 + CameraX 采集）；
 - 其余模块以纯 Kotlin 实现算法（MediaCodec/MediaMuxer/数学计算），不依赖 native。
 
 ### 2.2 三层解耦（以 videorecognition 为例）
@@ -103,6 +104,29 @@ VideoFrameSource(MediaCodec 软解, Y 平面)
 - **形状识别**：Hu 不变矩（平移/旋转/尺度不变）+ 最近邻分类，返回类别/距离/置信度/Top-3；
 - **视频跟踪**：逐帧 NCC 模板跟踪 + 帧差运动检测，统计跟踪命中率（trackScore < 0.5 判丢失）。
 
+### 3.6 相机实时识别：多级联人脸检测与框选实物跟踪（camerarecognition）
+
+```
+CameraX ImageAnalysis（YUV_420_888，640×480，KEEP_ONLY_LATEST）
+   → yuv420ToNv21（兼容 planar/semi-planar 与行距对齐）
+   → JNI 句柄式调用（native 全链路处理）
+   ├─ 人脸链路：NV21→RGBA→方向校正→CLAHE
+   │    → 多 Haar 级联并集（正脸 default/alt2 + 侧脸镜像补扫）
+   │    → 贪心 NMS 聚类（IoU>0.30，簇内平均框）
+   │    → 眼/鼻/嘴分区特征验证（眼 OR（鼻 AND 嘴））
+   │    → DetectionBasedTracker 时间平滑 → 红框绘制
+   └─ 实物链路：框选 ROI（显示图像坐标）→ HUE 32 维直方图模板
+        → 反向投影 + CamShift 定位候选
+        → 综合相似度 = 0.4×灰度直方图相交 + 0.3×Sobel 方向余弦 + 0.3×LBP 相交
+        → sim<0.35×15 帧判丢（minMaxLoc 全局重定位）；
+          sim>0.80 每 5 帧 EMA（α=0.2）在线更新模板
+   → ANativeWindow 直写 Surface 上屏（零 Bitmap、不占 UI 线程）
+```
+
+- **双速检测器**：主检测器半分辨率全帧扫描 + 特征验证，跟踪检测器原分辨率邻域重检免验证，分别注入 `DetectionBasedTracker`，兼顾精度与帧率；
+- **坐标系一致性**：「视频中的 / 框选的 / 自动跟踪的」三个 Object 统一到方向校正显示图像坐标系（布局共域 + 实际帧尺寸 + 90°/270° 宽高互换 + 模板/跟踪双缩略图核验）；
+- 详细代码解析见 [camerarecognition/CSDN_BLOG.md](camerarecognition/CSDN_BLOG.md)。
+
 ## 4. 目录结构
 
 ```
@@ -149,4 +173,4 @@ OpencvProcessing/
 
 ## 8. 技术栈
 
-Kotlin · C++ (JNI/CMake) · OpenCV 4.x · MediaCodec/MediaExtractor/MediaMuxer · MediaPlayer/TextureView · AndroidX (ViewModel/LiveData/ViewBinding) · Material Design · JUnit4
+Kotlin · C++ (JNI/CMake) · OpenCV 4.x · CameraX (ImageAnalysis/ProcessCameraProvider) · MediaCodec/MediaExtractor/MediaMuxer · MediaPlayer/TextureView · SurfaceView/ANativeWindow · AndroidX (ViewModel/LiveData/ViewBinding) · Material Design · JUnit4

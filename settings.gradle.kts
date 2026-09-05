@@ -30,4 +30,5 @@ include(":qualityevaluation")
 include(":contentsearch")
 include(":imagerecognition")
 include(":videorecognition")
+include(":camerarecognition")
  

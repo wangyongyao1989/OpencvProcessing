@@ -65,6 +65,7 @@ dependencies {
     implementation(project(":contentsearch"))
     implementation(project(":imagerecognition"))
     implementation(project(":videorecognition"))
+    implementation(project(":camerarecognition"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

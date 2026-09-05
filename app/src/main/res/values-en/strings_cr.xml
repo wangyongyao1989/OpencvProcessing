@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Camera recognition (real-time face detection and tracking) -->
+    <string name="main_card_cr">Camera Recognition</string>
+    <string name="main_card_cr_desc">Real-time camera face recognition entry</string>
+
+    <string name="cr_title">Camera Recognition · Real-time Face Detection &amp; Tracking</string>
+
+    <!-- Left panel: controls -->
+    <string name="cr_btn_open_preview">Open Preview</string>
+    <string name="cr_btn_close_preview">Close Preview</string>
+    <string name="cr_btn_switch_camera">Switch Camera</string>
+    <string name="cr_face_count">Faces: %1$d</string>
+
+    <!-- Right panel: detection status -->
+    <string name="cr_panel_status">Detection Status</string>
+    <string name="cr_status_idle">Preview not started. Tap \"Open Preview\" to start real-time face detection (camera permission required on first use).</string>
+    <string name="cr_status_previewing">Previewing (%1$s): %2$d face(s) detected, tracked in real time by red boxes.</string>
+    <string name="cr_status_stopped">Preview closed, camera released.</string>
+    <string name="cr_status_no_permission">Camera permission denied. Grant it in system settings and try again.</string>
+    <string name="cr_status_init_error">Detector initialization failed (cascade model load error); recognition unavailable.</string>
+    <string name="cr_camera_front">front camera</string>
+    <string name="cr_camera_back">back camera</string>
+    <string name="cr_opencv_version">OpenCV %1$s · 640×480 NV21 preview · Multi-cascade fusion (2 frontal + profile + feature verification, 4.7MB total) · DetectionBasedTracker</string>
+
+    <!-- Right panel: face recognition principles -->
+    <string name="cr_panel_principle">Face Recognition Principles</string>
+    <string name="cr_principle">① Face detection (Viola-Jones framework, Ch. 11): Haar rectangle features (brightness differences) + O(1) integral-image region sums + AdaBoost selecting the most discriminative weak classifiers + a cascade structure that rejects non-face windows stage by stage.\n② Multi-cascade fusion for higher detection rate (Ch. 9 model library of the requirements doc, 4.7MB total &lt; 5MB): union of two frontal models haarcascade_frontalface_default + frontalface_alt2 — trained with different emphases, a hit from either is kept; the profile model haarcascade_profileface scans both the original and horizontally flipped image to cover left/right profile faces — head turns are the main miss cause of a single frontal model; multi-model results are clustered by IoU and averaged per cluster.\n③ Facial-feature verification to cut false positives: a larger candidate must contain eyes (haarcascade_eye) in its upper part, or both nose (haarcascade_nose) and mouth (haarcascade_mouth), to be confirmed as a face; profile candidates skip verification. (Note: the mcs_nose/mcs_mouth models listed in Ch. 9 use the legacy OpenCV 2 format whose feature rectangles overflow the training window — OpenCV 4 throws on load — so verified compatible equivalents are used instead.)\n④ Detection parameters tuned for recall: scaleFactor=1.08 for finer multi-scale scanning, minNeighbors=3, minimum face 48px; the full-frame scan internally downsamples by 0.5 (scan at 320×240, boxes mapped back), so the multi-model union costs about the same as one full-resolution model.\n⑤ Illumination adaptation: CLAHE locally adaptive histogram equalization (clipLimit=2.0), more robust to backlight/side light/shadows than global equalization.\n⑥ Hybrid detection &amp; tracking (DetectionBasedTracker): the main detector periodically scans the full frame with all cascades on a background thread; between full scans, faces are re-detected only in tracked neighborhoods (first frontal + profile models) with weighted position smoothing — real-time performance with stable, continuous tracking boxes.\n⑦ Data pipeline (ported from ManiiuFace): camera NV21 frame → YUV2RGBA_NV21 → rotation/mirror correction (front camera as mirrored selfie) → grayscale → CLAHE → detection &amp; tracking → red box drawing → ANativeWindow row-by-row rendering (stride aligned); detection, drawing and display all run on the preview callback thread.</string>
+
+    <!-- Right panel: operation instructions -->
+    <string name="cr_panel_operation">How to Use</string>
+    <string name="cr_operation">① Tap \"Open Preview\" and grant camera permission on first use (cascade models are copied on first launch, please wait a moment);\n② A red box appears and tracks the face in real time; frontal, left and right profile faces (multi-cascade fusion) are all detectable, evenly lit scenes work best;\n③ Tap \"Switch Camera\" to toggle front/back; tracking resets and re-detects after switching;\n④ Tap \"Close Preview\" or go back to the main screen to release the camera;\n⑤ Note: frontal faces are detected by a union of two models and profile faces by a dedicated model; heavy occlusion or long distances may still cause misses.</string>
+
+    <!-- ============================================================ -->
+    <!-- Secondary menu: camera recognition -->
+    <!-- ============================================================ -->
+    <string name="cr_menu_title">Camera Recognition</string>
+    <string name="cr_card_face">Face Detection &amp; Tracking</string>
+    <string name="cr_card_face_sub">Multi-cascade fusion face detection with real-time tracking</string>
+    <string name="cr_card_object">Box-Select Object Tracking</string>
+    <string name="cr_card_object_sub">Gesture box-select target · retrieval-style real-time tracking</string>
+
+    <!-- ============================================================ -->
+    <!-- Third-level page: box-select object real-time detection &amp; tracking -->
+    <!-- ============================================================ -->
+    <string name="ot_title">Camera Recognition · Box-Select Object Tracking</string>
+    <string name="ot_btn_reset_track">Re-select</string>
+    <string name="ot_sim">Similarity: %1$.0f%%</string>
+    <string name="ot_version_info">OpenCV %1$s · 640×480 NV21 preview · CamShift tracking + comprehensive-similarity verification (same feature space as video retrieval)</string>
+
+    <!-- Right panel: tracking status -->
+    <string name="ot_panel_status">Tracking Status</string>
+    <string name="ot_status_idle">Preview not started yet. Tap \"Open Preview\", then press and drag on the picture to box-select the object to track (camera permission is required on first use).</string>
+    <string name="ot_status_previewing">Previewing (%1$s): press and drag on the picture to box-select the object to track; tracking starts as soon as you release.</string>
+    <string name="ot_status_selecting">Box-selected target captured, building the target template…</string>
+    <string name="ot_status_tracking">Tracking (%1$s): the green box follows the object in real time, comprehensive similarity %2$.0f%% (same metric as video retrieval).</string>
+    <string name="ot_status_lost">Target lost (similarity stayed too low — it may have left the frame or be occluded). Please box-select the object again.</string>
+
+    <!-- Right panel: target consistency verification -->
+    <string name="ot_panel_verify">Target Consistency Verification</string>
+    <string name="ot_thumb_template">Box-selected template (selected object)</string>
+    <string name="ot_thumb_tracked">Live tracking (object in video)</string>
+    <string name="ot_verify_hint">Left: the target template extracted at box-selection. Right: the content inside the green box (auto-tracked object) on the current video frame. Both must always show the same physical object; if the right image drifts to the background or a loss is reported, tracking has drifted (similarity drops accordingly) — tap \"Re-select\" to recover.</string>
+
+    <!-- Right panel: principles (based on the \"search video with current frame\" flow) -->
+    <string name="ot_panel_principle">Box-Select Object Tracking Principles</string>
+    <string name="ot_principle">This feature is based on the \"search video with current frame\" retrieval flow of the video recognition module, turning offline retrieval into real-time camera tracking:\n① Target acquisition (box-select = the retrieval \"query\"): press and drag on the preview to box-select an object; on release, the next frame uses that ROI as the query target for template building — the same idea as capturing the current picture as the query frame in retrieval;\n② Feature extraction (same feature space as video retrieval, Ch. 10): color feature is a 64-bin luma histogram (L1 normalized); texture feature is a Sobel gradient-orientation histogram (18 bins, magnitude-weighted, significant edges only, orientations folded to [0°,180°)); an HSV hue histogram (32 bins, low-saturation/low-value pixels masked) is also extracted for CamShift backprojection;\n③ Candidate generation (CamShift, continuously adaptive mean shift): the template hue histogram backprojects the whole frame into a probability map, and CamShift iterates to the probability-density peak near the previous window, adapting to target position and size changes;\n④ Comprehensive-similarity verification (the retrieval metric): Sim = 0.6·histogram intersection (color) + 0.4·cosine (texture) ∈ [0,1], exactly the same as the keyframe retrieval metric — a passing similarity confirms the same target and shows the green box with live similarity; 15 consecutive frames below 0.35 declare the target lost;\n⑤ Adaptive template: when tracking is stable (similarity &gt; 0.8), every 5 frames the current target features are blended in with a 0.2 weight, adapting to gradual lighting and pose changes;\n⑥ Data pipeline: camera NV21 frame → RGBA → orientation correction (front camera mirrored) → grayscale/HSV → CamShift tracking + feature verification → green box and similarity drawing → ANativeWindow rendering, all on the preview callback thread for real-time performance.</string>
+
+    <!-- Right panel: operation instructions (box-select object) -->
+    <string name="ot_operation">① Tap \"Open Preview\" and grant camera permission on first use;\n② Press and drag on the preview to box-select the object to track (objects with rich color and texture such as books, cups or phones work best); tracking starts immediately on release;\n③ The green box follows the target in real time, with the comprehensive similarity shown above the picture and in the right panel;\n④ If the target leaves the frame or is occluded, a loss is reported — box-select again to resume; tap \"Re-select\" to change the tracked target at any time;\n⑤ After \"Switch Camera\" the target must be box-selected again; tap \"Close Preview\" or go back to release the camera;\n⑥ Note: plain-colored, reflective or texture-poor targets have weak discriminative features and are easy to lose; evenly lit scenes with feature-rich targets work best.</string>
+</resources>

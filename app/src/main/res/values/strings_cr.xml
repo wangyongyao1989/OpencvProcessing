@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 相机识别（实时人脸检测跟踪） -->
+    <string name="main_card_cr">相机识别</string>
+    <string name="main_card_cr_desc">相机识别功能入口（人脸检测跟踪/框选实物跟踪）</string>
+
+    <string name="cr_title">相机识别 · 实时人脸检测跟踪</string>
+
+    <!-- 左栏：控制 -->
+    <string name="cr_btn_open_preview">打开预览</string>
+    <string name="cr_btn_close_preview">关闭预览</string>
+    <string name="cr_btn_switch_camera">切换摄像头</string>
+    <string name="cr_face_count">当前人脸：%1$d</string>
+
+    <!-- 右栏：检测状态 -->
+    <string name="cr_panel_status">检测状态</string>
+    <string name="cr_status_idle">尚未打开预览。点击「打开预览」开始实时人脸检测（首次使用需授权相机权限）。</string>
+    <string name="cr_status_previewing">预览中（%1$s）：检测到 %2$d 张人脸，红色方框实时跟踪移动。</string>
+    <string name="cr_status_stopped">预览已关闭，摄像头已释放。</string>
+    <string name="cr_status_no_permission">相机权限被拒绝，无法打开预览。请到系统设置中授权后重试。</string>
+    <string name="cr_status_init_error">检测器初始化失败（级联模型加载失败），无法开始识别。</string>
+    <string name="cr_camera_front">前置摄像头</string>
+    <string name="cr_camera_back">后置摄像头</string>
+    <string name="cr_opencv_version">OpenCV 版本：%1$s · 预览 640×480 NV21 · 多级联融合检测（正脸×2 + 侧脸 + 特征验证，模型合计 4.7MB）· DetectionBasedTracker 跟踪</string>
+
+
+    <!-- 右栏：人脸识别基本原理 -->
+    <string name="cr_panel_principle">人脸识别基本原理</string>
+    <string name="cr_principle">① 人脸检测（Viola-Jones 框架，教材第 11 章）：Haar 矩形特征（明暗差分）+ 积分图 O(1) 区域求和 + AdaBoost 从海量特征中筛选最具判别力的弱分类器 + 级联结构逐级排除非人脸窗口。\n② 多级联融合提升识别率（需求文档第九章 Haar 级联模型库，模型合计 4.7MB &lt; 5MB）：正脸双模型 haarcascade_frontalface_default + frontalface_alt2 并集检测——两者训练侧重不同，任一命中即保留；侧脸模型 haarcascade_profileface 原图 + 水平镜像各扫一次，覆盖左右侧脸——转头/侧脸是单正脸模型漏检的主因；多模型结果按 IoU 聚类去重、簇内取平均框。\n③ 面部特征验证降误检：较大候选框内检出眼睛（haarcascade_eye），或同时检出鼻子（haarcascade_nose）与嘴巴（haarcascade_mouth）方确认为人脸；侧脸候选跳过验证。（注：第九章的 mcs_nose/mcs_mouth 为 OpenCV 2 时代旧格式，特征矩形超出训练窗口，OpenCV 4 加载即抛异常，故替换为验证兼容的等价模型。）\n④ 检测参数面向识别率优化：scaleFactor=1.08 更细的多尺度扫描、minNeighbors=3、最小人脸 48px；全帧扫描内部降采样 0.5（320×240 扫描后坐标还原），多模型并集的开销与单模型全分辨率相当。\n⑤ 光照适应：CLAHE 局部自适应直方图均衡（clipLimit=2.0），对逆光/侧光/阴影比全局均衡更鲁棒。\n⑥ 检测跟踪混合（DetectionBasedTracker）：主检测器在后台线程周期性做全帧多级联扫描；帧间仅在已跟踪人脸邻域内局部重检测（首个正脸模型 + 侧脸模型）+ 位置加权平滑输出——实时性与跟踪框连续稳定兼得。\n⑦ 数据流水线（移植自 ManiiuFace）：相机 NV21 帧 → YUV2RGBA_NV21 → 旋转镜像校正（前置呈自拍镜像）→ 灰度 → CLAHE → 检测跟踪 → 红框绘制 → ANativeWindow 逐行渲染（stride 对齐），检测/绘制/显示均在预览回调线程内完成。</string>
+
+    <!-- 右栏：操作说明 -->
+    <string name="cr_panel_operation">操作说明</string>
+    <string name="cr_operation">① 点击「打开预览」，首次使用在系统弹窗中允许相机权限（首次启动需拷贝级联模型，稍候片刻）；\n② 人脸出现红色方框并实时跟踪移动；正脸、左右侧脸（多级联融合检测）均可识别，光照均匀时效果最佳；\n③ 点击「切换摄像头」切换前置/后置，切换后跟踪状态自动重置并重新检测；\n④ 点击「关闭预览」或返回主界面释放摄像头；\n⑤ 提示：正脸由双模型并集检测、侧脸由专用人脸模型检测；严重遮挡或距离过远仍可能漏检。</string>
+
+    <!-- ============================================================ -->
+    <!-- 二级菜单：相机识别 -->
+    <!-- ============================================================ -->
+    <string name="cr_menu_title">相机识别</string>
+    <string name="cr_card_face">实时人脸检测跟踪</string>
+    <string name="cr_card_face_sub">多级联融合人脸检测，红框实时跟踪</string>
+    <string name="cr_card_object">框选实物实时检测跟踪</string>
+    <string name="cr_card_object_sub">手势框选目标 · 检索式实时跟踪</string>
+
+    <!-- ============================================================ -->
+    <!-- 三级界面：框选实物实时检测跟踪 -->
+    <!-- ============================================================ -->
+    <string name="ot_title">相机识别 · 框选实物实时检测跟踪</string>
+    <string name="ot_btn_reset_track">重新框选</string>
+    <string name="ot_sim">相似度：%1$.0f%%</string>
+    <string name="ot_version_info">OpenCV 版本：%1$s · 预览 640×480 NV21 · CamShift 跟踪 + 综合相似度验证（与视频检索同一特征空间）</string>
+
+    <!-- 右栏：跟踪状态 -->
+    <string name="ot_panel_status">跟踪状态</string>
+    <string name="ot_status_idle">尚未打开预览。点击「打开预览」后在画面上按住拖动框选要跟踪的实物（首次使用需授权相机权限）。</string>
+    <string name="ot_status_previewing">预览中（%1$s）：在画面上按住拖动框选要跟踪的实物，松手即开始跟踪。</string>
+    <string name="ot_status_selecting">已捕获框选目标，正在建立目标模板…</string>
+    <string name="ot_status_tracking">跟踪中（%1$s）：绿框实时跟随实物，综合相似度 %2$.0f%%（与视频检索同一度量）。</string>
+    <string name="ot_status_lost">框选模版目标丢失</string>
+
+    <!-- 右栏：目标一致性核验 -->
+    <string name="ot_panel_verify">目标一致性核验</string>
+    <string name="ot_thumb_template">框选模板（框选的 Object）</string>
+    <string name="ot_thumb_tracked">实时跟踪（视频中的 Object）</string>
+    <string name="ot_verify_hint">左图为手势框选时提取的目标模板，右图为当前视频帧中绿框（自动跟踪的 Object）内的画面——两者应始终为同一实物；若右图内容漂移到背景或提示丢失，说明跟踪偏移（相似度同步下降），点击「重新框选」即可恢复。</string>
+
+    <!-- 右栏：框选实物跟踪基本原理 -->
+    <string name="ot_panel_principle">框选实物跟踪基本原理</string>
+    <string name="ot_principle">本功能以视频识别模块「以该帧检索视频」的检索代码流程为基础，将离线检索改造为相机实时跟踪：\n① 目标获取（框选 = 检索中的「查询」）：在预览画面按住拖动框选实物 ROI，松手后下一帧即以该 ROI 作为查询目标提取特征建立「目标模板」——与以该帧检索视频中「捕获当前画面作为查询帧」同源；\n② 特征提取（与视频检索同一特征空间，教材第 10 章）：颜色特征为 64 维亮度直方图（L1 归一化）；纹理特征为 Sobel 梯度方向直方图（18 bins、幅值加权、仅统计显著边缘、方向折叠到 [0°,180°)）；另提取 HSV 色调直方图（32 bins，屏蔽低饱和/低亮度像素），供 CamShift 反向投影定位候选区域；\n③ 候选生成（CamShift 连续自适应均值漂移）：以模板色调直方图对整帧做反向投影得到概率图，CamShift 在上一帧窗口邻域迭代收敛到概率密度峰值，自动适应目标位置与尺寸变化；\n④ 综合相似度验证（检索的相似性度量）：Sim = 0.6·直方图相交(颜色) + 0.4·余弦(纹理) ∈ [0,1]，与关键帧检索的综合相似度完全一致——达标确认同一目标并输出绿框与实时相似度；连续 15 帧低于 0.35 判定丢失；\n⑤ 自适应模板：跟踪稳定（相似度 &gt; 0.8）时每 5 帧以 0.2 权重融合当前目标特征更新模板，适应光照渐变与姿态变化；\n⑥ 数据流水线：相机 NV21 帧 → RGBA → 方向校正（前置镜像）→ 灰度/HSV → CamShift 跟踪 + 特征验证 → 绿框与相似度绘制 → ANativeWindow 渲染，全程在预览回调线程完成，保证实时性。</string>
+
+    <!-- 右栏：操作说明（框选实物） -->
+    <string name="ot_operation">① 点击「打开预览」，首次使用在系统弹窗中允许相机权限；\n② 在预览画面按住拖动框选要跟踪的实物（颜色、纹理丰富的目标效果最佳，如书本、水杯、手机），松手立即开始跟踪；\n③ 绿框实时跟随目标，画面上方与右栏同步显示综合相似度；\n④ 目标离开画面或被遮挡时会判定丢失，重新框选即可恢复；点击「重新框选」可随时更换跟踪目标；\n⑤ 「切换摄像头」后需重新框选；点击「关闭预览」或返回释放摄像头；\n⑥ 提示：纯色、反光或纹理贫乏的目标特征判别力弱，易跟丢；光照均匀、特征丰富的目标效果最佳。</string>
+</resources>

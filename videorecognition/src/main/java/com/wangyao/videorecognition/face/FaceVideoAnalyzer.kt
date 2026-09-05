@@ -7,6 +7,13 @@ import com.wangyao.videorecognition.video.VideoFrameSource
 private const val TAG = "VR_Analyzer"
 
 /**
+ * 相似度显示门槛：多级联融合置信度（native 侧已按模型量级校准为
+ * 综合相似度）> 80% 的检测才作为识别结果输出（显示框选），
+ * 弱命中/低置信候选不显示，进一步压低误检。
+ */
+private const val CONF_THRESHOLD = 0.80
+
+/**
  * 视频人脸分析器（《视频识别及物体人脸识别需求文档》F-05：
  * 视频人脸检测与跟踪）。
  *
@@ -60,16 +67,20 @@ class FaceVideoAnalyzer {
     /**
      * 执行全片人脸分析。
      *
-     * @param cascadePath 已释放到本地文件的级联模型路径
+     * @param faceCascadePaths    已释放到本地文件的人脸级联模型路径
+     * @param featureCascadePaths 已释放到本地文件的面部特征模型路径
      * @param onProgress  进度回调 (done, total)
      */
     fun analyze(
         videoPath: String,
-        cascadePath: String,
+        faceCascadePaths: List<String>,
+        featureCascadePaths: List<String>,
         onProgress: (Int, Int) -> Unit
     ): Result {
-        val handle = FaceJni.nativeCreate(cascadePath)
-        check(handle != 0L) { "cascade model load failed: $cascadePath" }
+        val handle = FaceJni.nativeCreate(
+            faceCascadePaths.toTypedArray(), featureCascadePaths.toTypedArray()
+        )
+        check(handle != 0L) { "cascade model load failed: $faceCascadePaths" }
 
         val t0 = System.currentTimeMillis()
         val total = VideoFrameSource.countSamples(videoPath)
@@ -118,9 +129,15 @@ class FaceVideoAnalyzer {
                         )
                     }
 
+                    // ---- 相似度门槛（需求：相似度 > 80% 才显示识别框）----
+                    // 置信度为多级联融合后的综合相似度（native 侧已按
+                    // 模型量级校准），仅保留 > 80% 的高置信结果进入
+                    // 平滑与展示；统计与「该时刻检出人脸」同源一致
+                    val recognized = detected.filter { it.conf > CONF_THRESHOLD }
+
                     // ---- 时间平滑（IoU 关联 + 滑动平均）----
-                    val smoothed = FaceTrackMath.smooth(detected, history)
-                    history.addLast(detected)
+                    val smoothed = FaceTrackMath.smooth(recognized, history)
+                    history.addLast(recognized)
                     if (history.size > smoothWindow) history.removeFirst()
 
                     framesOut.add(
