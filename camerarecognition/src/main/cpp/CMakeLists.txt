@@ -20,7 +20,9 @@ set_target_properties(opencv_java4 PROPERTIES
 
 add_library(${CMAKE_PROJECT_NAME} SHARED
         CameraFaceDetector.cpp
+        FaceTracker.cpp
         ObjectTracker.cpp
+        ObjectTrackerLogic.cpp
 )
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
