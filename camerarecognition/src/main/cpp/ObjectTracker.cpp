@@ -62,14 +62,20 @@ constexpr int GRAY_BINS = 64;
 /** 梯度方向量化级数（KeyframeFeatures.ORI_BINS，每 10° 一 bin）。 */
 constexpr int ORI_BINS = 18;
 
-/** 综合相似度颜色权重 w_c（KeyframeFeatures.WEIGHT_COLOR）。 */
-constexpr float WEIGHT_COLOR = 0.6f;
+/** 综合相似度颜色权重 w_c。 */
+constexpr float WEIGHT_COLOR = 0.4f;
 
-/** 综合相似度纹理权重 w_t（KeyframeFeatures.WEIGHT_TEXTURE）。 */
-constexpr float WEIGHT_TEXTURE = 0.4f;
+/** 综合相似度 Sobel 纹理权重 w_t。 */
+constexpr float WEIGHT_SOBEL = 0.3f;
+
+/** 综合相似度 LBP 纹理权重 w_l（Bug 4：多特征融合提高识别率）。 */
+constexpr float WEIGHT_LBP = 0.3f;
 
 /** CamShift 色调直方图 bins。 */
 constexpr int HUE_BINS = 32;
+
+/** LBP 特征维数。 */
+constexpr int LBP_BINS = 256;
 
 /** 框选 ROI 最小边长（过小的目标特征不稳定）。 */
 constexpr int MIN_ROI_SIZE = 24;
@@ -101,10 +107,11 @@ enum TrackState {
     STATE_LOST = 3,    // 目标丢失，等待重新框选
 };
 
-/** 一帧的综合特征向量（KeyframeFeatures.Feature 的 C++ 移植）。 */
+/** 一帧的综合特征向量（Bug 4：多特征扩展）。 */
 struct Feature {
     float color[GRAY_BINS] = {0};
     float texture[ORI_BINS] = {0};
+    float lbp[LBP_BINS] = {0};
 };
 
 /** 64 维亮度直方图（L1 归一化，和为 1）。 */
@@ -167,6 +174,35 @@ void textureHistogram(const cv::Mat &gray, float *hist) {
     }
 }
 
+/** LBP 特征提取（Bug 4：增加纹理判别力，多特征训练）。 */
+void lbpHistogram(const cv::Mat &gray, float *hist) {
+    std::memset(hist, 0, sizeof(float) * LBP_BINS);
+    if (gray.cols < 3 || gray.rows < 3) return;
+    for (int y = 1; y < gray.rows - 1; y++) {
+        const uint8_t *prev = gray.ptr<uint8_t>(y - 1);
+        const uint8_t *curr = gray.ptr<uint8_t>(y);
+        const uint8_t *next = gray.ptr<uint8_t>(y + 1);
+        for (int x = 1; x < gray.cols - 1; x++) {
+            uint8_t center = curr[x];
+            uint8_t code = 0;
+            if (prev[x - 1] >= center) code |= 1;
+            if (prev[x] >= center) code |= 2;
+            if (prev[x + 1] >= center) code |= 4;
+            if (curr[x + 1] >= center) code |= 8;
+            if (next[x + 1] >= center) code |= 16;
+            if (next[x] >= center) code |= 32;
+            if (next[x - 1] >= center) code |= 64;
+            if (curr[x - 1] >= center) code |= 128;
+            hist[code]++;
+        }
+    }
+    float total = static_cast<float>((gray.cols - 2) * (gray.rows - 2));
+    if (total > 0.f) {
+        float inv = 1.0f / total;
+        for (int i = 0; i < LBP_BINS; i++) hist[i] *= inv;
+    }
+}
+
 /** 直方图相交：Σ min(a(i),b(i)) ∈ [0,1]。 */
 float histogramIntersection(const float *a, const float *b, int n) {
     float s = 0.f;
@@ -186,10 +222,11 @@ float cosine(const float *a, const float *b, int n) {
     return dot / (std::sqrt(na) * std::sqrt(nb));
 }
 
-/** 综合相似度：0.6·直方图相交(颜色) + 0.4·余弦(纹理)。 */
+/** 综合相似度：Bug 4 增加 LBP 纹理维度。 */
 float comprehensiveSimilarity(const Feature &a, const Feature &b) {
     return WEIGHT_COLOR * histogramIntersection(a.color, b.color, GRAY_BINS) +
-           WEIGHT_TEXTURE * cosine(a.texture, b.texture, ORI_BINS);
+           WEIGHT_SOBEL * cosine(a.texture, b.texture, ORI_BINS) +
+           WEIGHT_LBP * histogramIntersection(a.lbp, b.lbp, LBP_BINS);
 }
 
 /**
@@ -416,6 +453,20 @@ private:
         cv::bitwise_and(prob, mask, prob);
 
         const cv::Rect prevWin = trackWindow_; // CamShift 会原地更新窗口
+
+        // Bug 3：LOST 状态下尝试全局找回目标（若检测到疑似区域，重置 CamShift 窗口）
+        if (state_ == STATE_LOST && frameIdx_ % 5 == 0) {
+            double maxVal;
+            cv::Point maxLoc;
+            cv::minMaxLoc(prob, nullptr, &maxVal, nullptr, &maxLoc);
+            if (maxVal > 128) { // 阈值判定疑似目标
+                trackWindow_ = cv::Rect(maxLoc.x - prevWin.width / 2,
+                                        maxLoc.y - prevWin.height / 2,
+                                        prevWin.width, prevWin.height);
+                trackWindow_ &= cv::Rect(0, 0, frame.cols, frame.rows);
+            }
+        }
+
         cv::TermCriteria criteria(
                 cv::TermCriteria::EPS | cv::TermCriteria::COUNT, 10, 1);
         cv::RotatedRect trackBox = cv::CamShift(prob, trackWindow_, criteria);
@@ -430,6 +481,7 @@ private:
         Feature candFeat;
         grayHistogram(gray(cand), candFeat.color);
         textureHistogram(gray(cand), candFeat.texture);
+        lbpHistogram(gray(cand), candFeat.lbp);
         float sim = comprehensiveSimilarity(template_, candFeat);
 
         frameIdx_++;
@@ -437,21 +489,22 @@ private:
         // 显示坐标系——对照「框选的/视频中的/自动跟踪的」三者一致性
         if (frameIdx_ % LOG_INTERVAL == 0) {
             LOGD("camshift #%d: cand=%d,%d %dx%d prevWin=%d,%d %dx%d "
-                 "sim=%.3f lost=%d",
+                 "sim=%.3f lost=%d state=%d",
                  frameIdx_, cand.x, cand.y, cand.width, cand.height,
                  prevWin.x, prevWin.y, prevWin.width, prevWin.height,
-                 sim, lostCount_);
+                 sim, lostCount_, state_);
         }
         if (sim < SIM_LOST) {
             if (++lostCount_ > LOST_FRAMES) {
-                // 连续过低：判定丢失，清除模板等待重新框选
-                hasTemplate_ = false;
+                // 连续过低：判定丢失（Bug 3：保留模板以便再次追踪）
                 state_ = STATE_LOST;
                 *outSim = sim;
                 LOGD("object lost: sim=%.3f lostFrames=%d/%d "
                      "(last cand=%d,%d %dx%d)",
                      sim, lostCount_, LOST_FRAMES,
                      cand.x, cand.y, cand.width, cand.height);
+                // 绘制红框提示丢失
+                cv::rectangle(frame, cand, cv::Scalar(0, 0, 255), 2);
                 std::lock_guard<std::mutex> lock(windowMutex_);
                 if (window_ != nullptr) drawToWindow(frame);
                 return STATE_LOST;
@@ -522,6 +575,7 @@ private:
 
         grayHistogram(gray(roi), template_.color);
         textureHistogram(gray(roi), template_.texture);
+        lbpHistogram(gray(roi), template_.lbp);
     }
 
     /** 自适应模板：特征与色调直方图按小权重融合当前观测。 */
@@ -536,6 +590,11 @@ private:
             template_.texture[i] =
                     (1.f - ADAPT_ALPHA) * template_.texture[i] +
                     ADAPT_ALPHA * candFeat.texture[i];
+        }
+        for (int i = 0; i < LBP_BINS; i++) {
+            template_.lbp[i] =
+                    (1.f - ADAPT_ALPHA) * template_.lbp[i] +
+                    ADAPT_ALPHA * candFeat.lbp[i];
         }
         // 色调直方图同样融合（保持归一化范围）
         cv::Mat cur = cv::Mat();

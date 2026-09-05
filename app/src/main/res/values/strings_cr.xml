@@ -55,7 +55,7 @@
     <string name="ot_status_previewing">预览中（%1$s）：在画面上按住拖动框选要跟踪的实物，松手即开始跟踪。</string>
     <string name="ot_status_selecting">已捕获框选目标，正在建立目标模板…</string>
     <string name="ot_status_tracking">跟踪中（%1$s）：绿框实时跟随实物，综合相似度 %2$.0f%%（与视频检索同一度量）。</string>
-    <string name="ot_status_lost">目标丢失（相似度持续过低，可能离开画面或被遮挡）。请重新框选实物。</string>
+    <string name="ot_status_lost">框选模版目标丢失</string>
 
     <!-- 右栏：目标一致性核验 -->
     <string name="ot_panel_verify">目标一致性核验</string>

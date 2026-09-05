@@ -172,6 +172,7 @@ class ObjectTrackFragment : BaseFragment() {
             if (trackerHandle != 0L) {
                 ObjectTrackJni.nativeResetTracking(trackerHandle)
             }
+            clearVerifyThumbs("reset tracking")
             lastState = -1
             binding.tvOtSim.text = ""
             if (previewing) {
@@ -264,6 +265,7 @@ class ObjectTrackFragment : BaseFragment() {
                 "→ imageRoi=[$x,$y ${w}x$h] img=${imgW}x$imgH " +
                 "rotation=$rotation")
         ObjectTrackJni.nativeSelectObject(trackerHandle, x, y, w, h)
+        clearVerifyThumbs("re-selecting")
         lastState = -1
         binding.tvOtStatus.text = getString(R.string.ot_status_selecting)
     }
