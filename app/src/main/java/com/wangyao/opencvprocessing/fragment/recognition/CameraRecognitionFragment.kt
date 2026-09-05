@@ -4,7 +4,6 @@ import com.wangyao.opencvprocessing.fragment.base.BaseFragment
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.hardware.Camera
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -31,8 +30,8 @@ import java.io.File
  * 相机识别页（移植自 ManiiuFace 工程 + 需求文档第九章多级联扩展）：
  *
  * 打开相机预览后实时人脸检测与跟踪：
- * 1. [CameraHelper]（ManiiuFace CameraHelper 的 Kotlin 版）以 NV21
- *    格式输出 640×480 预览帧（setPreviewCallbackWithBuffer 缓冲区复用）；
+ * 1. [CameraHelper]（CameraX ImageAnalysis 实现）以 NV21 格式输出
+ *    640×480 分析帧（YUV_420_888 转换、缓冲区复用）；
  * 2. 每帧送 native（CameraFaceDetector.cpp）：NV21→RGBA→方向校正→
  *    CLAHE 灰度增强→多级联融合检测（正脸 default/alt2 并集 + 侧脸
  *    profileface 镜像补扫 + 眼/鼻/嘴特征验证）→DetectionBasedTracker
@@ -240,7 +239,7 @@ class CameraRecognitionFragment : BaseFragment() {
 
     private fun startPreviewInternal() {
         if (previewing) return
-        cameraHelper = CameraHelper().apply {
+        cameraHelper = CameraHelper(requireContext(), this).apply {
             previewCallback = { data -> onPreviewFrame(data) }
             startPreview()
         }
@@ -271,10 +270,10 @@ class CameraRecognitionFragment : BaseFragment() {
         if (!previewing || trackerHandle == 0L) return
         val helper = cameraHelper ?: return
 
-        val mirror = helper.facing == Camera.CameraInfo.CAMERA_FACING_FRONT
+        val mirror = helper.facing == CameraHelper.FACING_FRONT
         val faces = CameraFaceJni.nativePostFrame(
             trackerHandle, data,
-            CameraHelper.WIDTH, CameraHelper.HEIGHT,
+            helper.frameWidth, helper.frameHeight,
             frameRotationDegrees(helper), mirror
         )
 
@@ -299,7 +298,7 @@ class CameraRecognitionFragment : BaseFragment() {
             Surface.ROTATION_270 -> 270
             else -> 0
         }
-        return if (helper.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+        return if (helper.facing == CameraHelper.FACING_FRONT) {
             (helper.sensorOrientation - d + 540) % 360
         } else {
             (helper.sensorOrientation - d + 360) % 360
@@ -316,7 +315,7 @@ class CameraRecognitionFragment : BaseFragment() {
     }
 
     private fun updateStatus(faces: Int) {
-        val cameraName = if (cameraHelper?.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+        val cameraName = if (cameraHelper?.facing == CameraHelper.FACING_FRONT) {
             getString(R.string.cr_camera_front)
         } else {
             getString(R.string.cr_camera_back)

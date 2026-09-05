@@ -53,6 +53,10 @@ android {
 
 dependencies {
     implementation(libs.androidx.appcompat)
+    // CameraX：替代 legacy Camera API 的相机实现（core/camera2/lifecycle 三件套）
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

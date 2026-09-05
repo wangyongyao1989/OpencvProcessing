@@ -7,7 +7,6 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.RectF
-import android.hardware.Camera
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -37,7 +36,8 @@ import kotlin.math.roundToInt
  * 相机识别·框选实物实时检测跟踪页（以 videorecognition 模块
  * 「以该帧检索视频」的检索代码流程为基础）：
  *
- * 1. [CameraHelper] 以 NV21 格式输出 640×480 预览帧；
+ * 1. [CameraHelper]（CameraX ImageAnalysis 实现）以 NV21 格式输出
+ *    640×480 分析帧（YUV_420_888 转换，帧为传感器原始方向）；
  * 2. 手势框选：在预览画面按住拖动框选实物（[ObjectSelectView]，
  *    松手回调 View 坐标选框，换算为图像坐标后作为检索的「查询」）；
  * 3. 每帧送 native（ObjectTracker.cpp）：NV21→RGBA→方向校正→
@@ -200,21 +200,30 @@ class ObjectTrackFragment : BaseFragment() {
 
     private fun startPreviewInternal() {
         if (previewing) return
-        cameraHelper = CameraHelper().apply {
+        cameraHelper = CameraHelper(requireContext(), this).apply {
             previewCallback = { data -> onPreviewFrame(data) }
+            onCameraStarted = { onCameraOpened() }
             startPreview()
         }
         previewing = true
         binding.btnTogglePreview.text = getString(R.string.cr_btn_close_preview)
-        // 按当前校正角重算画面比例（横屏后置为 0°：640×480）
-        val rotation = frameRotationDegrees(cameraHelper!!)
+        lastState = -1
+        binding.tvOtStatus.text = getString(R.string.ot_status_previewing, cameraName())
+    }
+
+    /**
+     * CameraX 异步绑定完成（主线程回调）：此时 sensorOrientation/facing
+     * 已就绪，按实际校正角重算预览画面比例（横屏后置为 0°：640×480）。
+     */
+    private fun onCameraOpened() {
+        if (!previewing) return
+        val helper = cameraHelper ?: return
+        val rotation = frameRotationDegrees(helper)
         if (rotation == 90 || rotation == 270) {
             resizePreviewWrapper(CameraHelper.HEIGHT, CameraHelper.WIDTH)
         } else {
             resizePreviewWrapper(CameraHelper.WIDTH, CameraHelper.HEIGHT)
         }
-        lastState = -1
-        binding.tvOtStatus.text = getString(R.string.ot_status_previewing, cameraName())
     }
 
     /** 关闭预览并释放摄像头。 */
@@ -241,14 +250,15 @@ class ObjectTrackFragment : BaseFragment() {
         if (!previewing || trackerHandle == 0L) return
         val helper = cameraHelper ?: return
         val rotation = frameRotationDegrees(helper)
+        // 显示图像尺寸 = 传感器帧实际尺寸按校正角换算（90°/270° 时宽高互换）
         val imgW: Int
         val imgH: Int
         if (rotation == 90 || rotation == 270) {
-            imgW = CameraHelper.HEIGHT
-            imgH = CameraHelper.WIDTH
+            imgW = helper.frameHeight
+            imgH = helper.frameWidth
         } else {
-            imgW = CameraHelper.WIDTH
-            imgH = CameraHelper.HEIGHT
+            imgW = helper.frameWidth
+            imgH = helper.frameHeight
         }
         val vw = binding.objectSelectView.width.toFloat()
         val vh = binding.objectSelectView.height.toFloat()
@@ -278,10 +288,10 @@ class ObjectTrackFragment : BaseFragment() {
         if (!previewing || trackerHandle == 0L) return
         val helper = cameraHelper ?: return
 
-        val mirror = helper.facing == Camera.CameraInfo.CAMERA_FACING_FRONT
+        val mirror = helper.facing == CameraHelper.FACING_FRONT
         val result = ObjectTrackJni.nativePostFrame(
             trackerHandle, data,
-            CameraHelper.WIDTH, CameraHelper.HEIGHT,
+            helper.frameWidth, helper.frameHeight,
             frameRotationDegrees(helper), mirror
         )
         if (result.size < 6) return
@@ -404,7 +414,7 @@ class ObjectTrackFragment : BaseFragment() {
     }
 
     private fun cameraName(): String {
-        return if (cameraHelper?.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+        return if (cameraHelper?.facing == CameraHelper.FACING_FRONT) {
             getString(R.string.cr_camera_front)
         } else {
             getString(R.string.cr_camera_back)
@@ -423,7 +433,7 @@ class ObjectTrackFragment : BaseFragment() {
             Surface.ROTATION_270 -> 270
             else -> 0
         }
-        return if (helper.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+        return if (helper.facing == CameraHelper.FACING_FRONT) {
             (helper.sensorOrientation - d + 540) % 360
         } else {
             (helper.sensorOrientation - d + 360) % 360
