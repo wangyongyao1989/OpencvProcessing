@@ -17,7 +17,6 @@ import com.wangyao.opencvdeal.jni.OpencvDealJni
 import com.wangyao.opencvprocessing.FFViewModel
 import com.wangyao.opencvprocessing.R
 import com.wangyao.opencvprocessing.databinding.FragmentImageHomomorphicLayoutBinding
-import kotlin.concurrent.thread
 
 /**
  * 图像的同态滤波界面（三级页）：
@@ -124,7 +123,8 @@ class ImageHomomorphicFragment : BaseFragment() {
         binding.tvResultTitle.text = getString(transform.titleRes)
         val src = originalBitmap ?: return
 
-        thread(start = true) {
+        val seq = beginWork()
+        submitWork(seq) {
             val result: Bitmap? = runCatching {
                 when (transform) {
                     Transform.ORIGINAL -> src
@@ -139,7 +139,7 @@ class ImageHomomorphicFragment : BaseFragment() {
                 }
             }.getOrElse { it.printStackTrace(); null } ?: src
 
-            activity?.runOnUiThread {
+            runOnUiThreadIfLatest(seq) {
                 binding.ivResult.setImageBitmap(result)
             }
         }

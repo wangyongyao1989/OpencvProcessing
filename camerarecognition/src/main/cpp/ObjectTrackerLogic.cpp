@@ -237,14 +237,16 @@ int ObjectTrackerLogic::trackLocked(const uint8_t *data, int w, int h,
     cv::Mat frame = decodeFrame(data, w, h, rotation, mirror);
     cv::Mat gray;
     cv::cvtColor(frame, gray, cv::COLOR_RGBA2GRAY);
-    cv::Mat rgb;
-    cv::cvtColor(frame, rgb, cv::COLOR_RGBA2RGB);
+    // 每帧省一次全帧拷贝：RGBA 直接转 HSV（OpenCV 对 COLOR_RGB2HSV 注册了
+    // 4 通道内核，按前 3 通道计算、alpha 忽略，与先 RGBA2RGB 再 RGB2HSV
+    // 结果逐位相同）；H 通道用 extractChannel 单独取出，不再 split 出
+    // 用不到的 S/V 两个全帧缓冲。
     cv::Mat hsv;
-    cv::cvtColor(rgb, hsv, cv::COLOR_RGB2HSV);
+    cv::cvtColor(frame, hsv, cv::COLOR_RGB2HSV);
     cv::Mat mask;
     cv::inRange(hsv, cv::Scalar(0, 30, 30), cv::Scalar(180, 255, 255), mask);
-    std::vector<cv::Mat> planes;
-    cv::split(hsv, planes);
+    cv::Mat hue;
+    cv::extractChannel(hsv, hue, 0);
 
     if (armed_) {
         cv::Rect roi = pendingRoi_ & cv::Rect(0, 0, frame.cols, frame.rows);
@@ -254,7 +256,7 @@ int ObjectTrackerLogic::trackLocked(const uint8_t *data, int w, int h,
             if (window_ != nullptr) drawToWindow(frame);
             return STATE_IDLE;
         }
-        buildTemplate(planes[0], mask, gray, roi);
+        buildTemplate(hue, mask, gray, roi);
         armed_ = false; hasTemplate_ = true; state_ = STATE_TRACKING;
         trackWindow_ = roi; lostCount_ = 0; frameIdx_ = 0;
         templateThumb_ = frame(roi).clone();
@@ -269,7 +271,7 @@ int ObjectTrackerLogic::trackLocked(const uint8_t *data, int w, int h,
 
     cv::Mat prob;
     const float *ranges[] = {hueRanges_};
-    cv::calcBackProject(&planes[0], 1, 0, hueHist_, prob, ranges, 1, true);
+    cv::calcBackProject(&hue, 1, 0, hueHist_, prob, ranges, 1, true);
     prob.convertTo(prob, CV_8U);
     cv::bitwise_and(prob, mask, prob);
 
@@ -299,7 +301,9 @@ int ObjectTrackerLogic::trackLocked(const uint8_t *data, int w, int h,
         if (++lostCount_ > LOST_FRAMES) {
             state_ = STATE_LOST;
             *outSim = sim;
-            cv::rectangle(frame, cand, cv::Scalar(0, 0, 255), 2);
+            // frame 是 RGBA（见 decodeFrame 的 COLOR_YUV2RGBA_NV21），
+            // 故红框写作 (255,0,0,255)；旧写法 (0,0,255) 在 RGBA 下是蓝色。
+            cv::rectangle(frame, cand, cv::Scalar(255, 0, 0, 255), 2);
             std::lock_guard<std::mutex> lock(windowMutex_);
             if (window_ != nullptr) drawToWindow(frame);
             return STATE_LOST;
@@ -308,16 +312,17 @@ int ObjectTrackerLogic::trackLocked(const uint8_t *data, int w, int h,
         lostCount_ = 0;
         state_ = STATE_TRACKING;
         if (sim > SIM_ADAPT && frameIdx_ % ADAPT_INTERVAL == 0) {
-            adaptTemplate(candFeat, planes[0], mask, cand);
+            adaptTemplate(candFeat, hue, mask, cand);
         }
         if (frameIdx_ % THUMB_INTERVAL == 0) trackedThumb_ = frame(cand).clone();
     }
 
-    cv::rectangle(frame, cand, cv::Scalar(0, 255, 0), 3);
+    // 绿框与标签：G 通道在 BGR/RGBA 下都是绿色，补上显式 alpha 以免误读。
+    cv::rectangle(frame, cand, cv::Scalar(0, 255, 0, 255), 3);
     char label[32];
     std::snprintf(label, sizeof(label), "sim %.0f%%", sim * 100.f);
     cv::putText(frame, label, cv::Point(cand.x, std::max(14, cand.y - 6)),
-                cv::FONT_HERSHEY_SIMPLEX, 0.55, cv::Scalar(0, 255, 0), 2);
+                cv::FONT_HERSHEY_SIMPLEX, 0.55, cv::Scalar(0, 255, 0, 255), 2);
 
     outBox[0] = static_cast<float>(cand.x);
     outBox[1] = static_cast<float>(cand.y);
@@ -365,16 +370,33 @@ void ObjectTrackerLogic::adaptTemplate(const Feature &candFeat, const cv::Mat &h
 }
 
 void ObjectTrackerLogic::drawToWindow(const cv::Mat &src) {
-    ANativeWindow_setBuffersGeometry(window_, src.cols, src.rows, WINDOW_FORMAT_RGBA_8888);
+    if (window_ == nullptr || src.empty()) return;
+
+    if (ANativeWindow_setBuffersGeometry(window_, src.cols, src.rows,
+                                         WINDOW_FORMAT_RGBA_8888) != 0) {
+        LOGE("drawToWindow: setBuffersGeometry failed, frame skipped");
+        return;
+    }
+
     ANativeWindow_Buffer buffer;
     if (ANativeWindow_lock(window_, &buffer, nullptr) != 0) {
-        ANativeWindow_release(window_); window_ = nullptr; return;
+        // 与 FaceTracker 同样：lock 失败多为瞬时（无可用 buffer / surface 暂不可用），
+        // 旧实现直接 release 掉 window_ 并置空 → 一次失败就永久黑屏，
+        // 而且该引用由 setWindow() 持有，这里再释放属于重复 unref。
+        LOGD("drawToWindow: lock failed, frame skipped");
+        return;
     }
+
+    // 行数与行字节数都取「源」与「目标缓冲」的较小值：
+    // buffer.stride 常按硬件对齐大于 src.cols；buffer.height 也可能大于 src.rows，
+    // 不截断会越界读 src.data / 越界写 buffer.bits。
     const int srcLineSize = src.cols * 4;
     const int dstLineSize = buffer.stride * 4;
+    const int lineBytes = std::min(srcLineSize, dstLineSize);
+    const int rows = std::min(buffer.height, src.rows);
     uint8_t *dstData = static_cast<uint8_t *>(buffer.bits);
-    for (int i = 0; i < buffer.height; ++i) {
-        memcpy(dstData + i * dstLineSize, src.data + i * srcLineSize, srcLineSize);
+    for (int i = 0; i < rows; ++i) {
+        memcpy(dstData + i * dstLineSize, src.data + i * srcLineSize, lineBytes);
     }
     ANativeWindow_unlockAndPost(window_);
 }

@@ -1,4 +1,5 @@
 #include "include/ImageRetinex.h"
+#include "include/JniHelper.h"
 #include <opencv2/imgproc.hpp>
 #include <cmath>
 #include <algorithm>
@@ -18,14 +19,8 @@ namespace ImageRetinex {
         return rgb;
     }
 
-    /** 输入转灰度。 */
-    static cv::Mat toGray(const cv::Mat &src) {
-        cv::Mat gray;
-        if (src.channels() == 4) cv::cvtColor(src, gray, cv::COLOR_RGBA2GRAY);
-        else if (src.channels() == 3) cv::cvtColor(src, gray, cv::COLOR_RGB2GRAY);
-        else gray = src.clone();
-        return gray;
-    }
+       /** 输入转灰度：统一委托 JniHelper::toGray，保证全工程灰度口径一致。 */
+    static cv::Mat toGray(const cv::Mat &src) { return JniHelper::toGray(src); }
 
     /**
      * 高斯环绕卷积 I*G (式 2-92)：大 σ 时降采样加速

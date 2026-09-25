@@ -1,4 +1,5 @@
 #include "include/ImageSegmentation.h"
+#include "include/JniHelper.h"
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
 #include <climits>
@@ -12,14 +13,8 @@ namespace ImageSegmentation {
     // 内部工具
     // -------------------------------------------------------------------------
 
-    /** 输入转灰度（RGBA/RGB 均可）。 */
-    static cv::Mat toGray(const cv::Mat &src) {
-        cv::Mat gray;
-        if (src.channels() == 4) cv::cvtColor(src, gray, cv::COLOR_RGBA2GRAY);
-        else if (src.channels() == 3) cv::cvtColor(src, gray, cv::COLOR_RGB2GRAY);
-        else gray = src.clone();
-        return gray;
-    }
+       /** 输入转灰度：统一委托 JniHelper::toGray，保证全工程灰度口径一致。 */
+    static cv::Mat toGray(const cv::Mat &src) { return JniHelper::toGray(src); }
 
     /** 大图按最长边限制降采样（重计算型算法使用）。 */
     static cv::Mat downscaleMax(const cv::Mat &gray, int maxDim) {

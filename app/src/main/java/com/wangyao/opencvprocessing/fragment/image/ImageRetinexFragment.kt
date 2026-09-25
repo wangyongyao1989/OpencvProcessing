@@ -17,7 +17,6 @@ import com.wangyao.opencvdeal.jni.OpencvDealJni
 import com.wangyao.opencvprocessing.FFViewModel
 import com.wangyao.opencvprocessing.R
 import com.wangyao.opencvprocessing.databinding.FragmentImageRetinexLayoutBinding
-import kotlin.concurrent.thread
 
 /**
  * 基于 Retinex 理论的图像增强界面（三级页）：
@@ -125,7 +124,8 @@ class ImageRetinexFragment : BaseFragment() {
         binding.tvResultTitle.text = getString(transform.titleRes)
         val src = originalBitmap ?: return
 
-        thread(start = true) {
+        val seq = beginWork()
+        submitWork(seq) {
             val result: Bitmap? = runCatching {
                 when (transform) {
                     Transform.ORIGINAL -> src
@@ -142,7 +142,7 @@ class ImageRetinexFragment : BaseFragment() {
                 }
             }.getOrElse { it.printStackTrace(); null } ?: src
 
-            activity?.runOnUiThread {
+            runOnUiThreadIfLatest(seq) {
                 binding.ivResult.setImageBitmap(result)
             }
         }

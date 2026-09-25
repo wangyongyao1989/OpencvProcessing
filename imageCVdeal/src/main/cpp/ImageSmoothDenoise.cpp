@@ -1,4 +1,5 @@
 #include "include/ImageSmoothDenoise.h"
+#include "include/JniHelper.h"
 #include <opencv2/imgproc.hpp>
 #include <opencv2/photo.hpp>
 #include <cmath>
@@ -10,15 +11,8 @@ namespace ImageSmoothDenoise {
     // -------------------------------------------------------------------------
     // 内部工具：转灰度（输入可能是 RGBA）
     // -------------------------------------------------------------------------
-    static cv::Mat toGray(const cv::Mat &src) {
-        cv::Mat gray;
-        if (src.channels() >= 3) {
-            cv::cvtColor(src, gray, cv::COLOR_RGB2GRAY);
-        } else {
-            gray = src.clone();
-        }
-        return gray;
-    }
+    /** 输入转灰度：统一委托 JniHelper::toGray，保证全工程灰度口径一致。 */
+    static cv::Mat toGray(const cv::Mat &src) { return JniHelper::toGray(src); }
 
     // -------------------------------------------------------------------------
     // 4-邻域平均法 (式 2-23, 式 2-24, 模板 H1 式 2-25)

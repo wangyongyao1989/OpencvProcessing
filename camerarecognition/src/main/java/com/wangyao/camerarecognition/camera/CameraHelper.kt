@@ -76,6 +76,10 @@ class CameraHelper(
     /** NV21 复用缓冲区（分析线程独占，避免每帧分配引起 GC 抖动）。 */
     private var nv21 = ByteArray(0)
 
+    /** 色度行暂存（同上：仅在 YUV_420_888 → NV21 转换里按行批量取数用）。 */
+    private var uScratch = ByteArray(0)
+    private var vScratch = ByteArray(0)
+
     private var cameraProvider: ProcessCameraProvider? = null
     private var analysisExecutor: ExecutorService? = null
 
@@ -232,20 +236,53 @@ class CameraHelper(
             }
         }
 
-        // U/V 平面 → NV21 的 VU 交错（绝对索引读取，跳过行距填充）
+        // U/V 平面 → NV21 的 VU 交错。
+        // 旧实现对每个色度像素调一次 ByteBuffer.get(绝对索引)：640×480 每帧约
+        // 15 万次虚调用 + 边界检查，是分析线程最大的单项 CPU 开销。
+        // 这里改为「按行批量拷进复用暂存 + 数组下标交错」，取样坐标与
+        // rowStride/pixelStride 的关系与逐像素版本完全一致，输出逐字节相同。
         val uPlane = image.planes[1]
         val vPlane = image.planes[2]
         val uBuf = uPlane.buffer.duplicate()
         val vBuf = vPlane.buffer.duplicate()
         val halfW = width / 2
-        for (row in 0 until height / 2) {
-            var uIdx = row * uPlane.rowStride
-            var vIdx = row * vPlane.rowStride
-            for (col in 0 until halfW) {
-                nv21[pos++] = vBuf.get(vIdx) // V 在前（NV21）
-                nv21[pos++] = uBuf.get(uIdx) // U 在后
-                uIdx += uPlane.pixelStride
-                vIdx += vPlane.pixelStride
+        val halfH = height / 2
+        val uPix = uPlane.pixelStride
+        val vPix = vPlane.pixelStride
+        val uSpan = (halfW - 1) * uPix + 1
+        val vSpan = (halfW - 1) * vPix + 1
+        val canBulk = halfW > 0 && halfH > 0 &&
+                uPlane.rowStride.toLong() * (halfH - 1) + uSpan <= uBuf.limit() &&
+                vPlane.rowStride.toLong() * (halfH - 1) + vSpan <= vBuf.limit()
+
+        if (canBulk) {
+            if (uScratch.size < uSpan) uScratch = ByteArray(uSpan)
+            if (vScratch.size < vSpan) vScratch = ByteArray(vSpan)
+            for (row in 0 until halfH) {
+                uBuf.position(row * uPlane.rowStride)
+                uBuf.get(uScratch, 0, uSpan)
+                vBuf.position(row * vPlane.rowStride)
+                vBuf.get(vScratch, 0, vSpan)
+                var uIdx = 0
+                var vIdx = 0
+                for (col in 0 until halfW) {
+                    nv21[pos++] = vScratch[vIdx]   // V 在前（NV21）
+                    nv21[pos++] = uScratch[uIdx]   // U 在后
+                    uIdx += uPix
+                    vIdx += vPix
+                }
+            }
+        } else {
+            // 兜底（平面长度不足等异常排布）：沿用绝对索引逐像素读取
+            for (row in 0 until halfH) {
+                var uIdx = row * uPlane.rowStride
+                var vIdx = row * vPlane.rowStride
+                for (col in 0 until halfW) {
+                    nv21[pos++] = vBuf.get(vIdx)
+                    nv21[pos++] = uBuf.get(uIdx)
+                    uIdx += uPix
+                    vIdx += vPix
+                }
             }
         }
         return nv21

@@ -6,6 +6,7 @@ import android.media.MediaCodecInfo
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMuxer
+import android.util.Log
 
 /**
  * 视频水印管线（第 8 章 8.4 节：视频水印嵌入和提取方案）。
@@ -36,6 +37,7 @@ class VideoWatermarkPipeline {
     )
 
     companion object {
+        private const val TAG = "VideoWatermarkPipeline"
         private const val TIMEOUT_US = 10_000L
 
         /** 输出码率：取较高值以减小重编码本身对水印的损伤。 */
@@ -100,6 +102,8 @@ class VideoWatermarkPipeline {
         var decoder: MediaCodec? = null
         var encoder: MediaCodec? = null
         var muxer: MediaMuxer? = null
+        var muxTrack = -1
+        var muxStarted = false
         try {
             extractor.setDataSource(inputPath)
             val trackIdx = selectVideoTrack(extractor)
@@ -149,8 +153,6 @@ class VideoWatermarkPipeline {
             var decoderDone = false      // 解码器输出已到 EOS
             var encoderEosQueued = false // 编码器已收到 EOS
             var encoderDone = false      // 编码器输出已到 EOS
-            var muxTrack = -1
-            var muxStarted = false
 
             // 帧平面缓冲（首次取到输出后分配）
             var y: ByteArray? = null
@@ -258,13 +260,29 @@ class VideoWatermarkPipeline {
                 }
             }
 
-            if (muxStarted) muxer.stop()
             return processed
         } finally {
             runCatching { decoder?.stop() }
             runCatching { decoder?.release() }
             runCatching { encoder?.stop() }
             runCatching { encoder?.release() }
+            // muxer.stop() 必须在 finally 中调用：写入过程中抛异常时，
+            // 若跳过 stop，MP4 不会写出 moov（索引）盒，文件不可解复用，
+            // 后续「提取水印」会拿到坏文件却看不到原因。
+            if (muxStarted) {
+                try {
+                    muxer?.stop()
+                    Log.i(TAG, "transcode: muxer stopped OK, $processed frames written")
+                } catch (e: Exception) {
+                    Log.e(TAG, "transcode: muxer.stop() FAILED, output file invalid", e)
+                    runCatching { muxer?.release() }
+                    runCatching { java.io.File(outputPath).delete() }
+                    runCatching { extractor.release() }
+                    throw IllegalStateException(
+                        "复用器收尾失败，输出文件不可用：${e.message}", e
+                    )
+                }
+            }
             runCatching { muxer?.release() }
             runCatching { extractor.release() }
         }

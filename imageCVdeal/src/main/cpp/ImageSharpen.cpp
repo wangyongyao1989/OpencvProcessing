@@ -1,4 +1,5 @@
 #include "include/ImageSharpen.h"
+#include "include/JniHelper.h"
 #include <opencv2/imgproc.hpp>
 #include <cmath>
 #include <cstdlib>
@@ -8,15 +9,8 @@ namespace ImageSharpen {
     // -------------------------------------------------------------------------
     // 内部工具：转灰度（输入可能是 RGBA）
     // -------------------------------------------------------------------------
-    static cv::Mat toGray(const cv::Mat &src) {
-        cv::Mat gray;
-        if (src.channels() >= 3) {
-            cv::cvtColor(src, gray, cv::COLOR_RGB2GRAY);
-        } else {
-            gray = src.clone();
-        }
-        return gray;
-    }
+    /** 输入转灰度：统一委托 JniHelper::toGray，保证全工程灰度口径一致。 */
+    static cv::Mat toGray(const cv::Mat &src) { return JniHelper::toGray(src); }
 
     // -------------------------------------------------------------------------
     // 水平垂直差分法 (式 2-56, 输出式 2-58)
