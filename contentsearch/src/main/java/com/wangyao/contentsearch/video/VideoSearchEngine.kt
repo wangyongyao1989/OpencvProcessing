@@ -70,7 +70,7 @@ class VideoSearchEngine {
             ((i + 0.5) * info.frameCount / count).toInt().coerceIn(0, info.frameCount - 1)
         }.toSortedSet().toIntArray()
 
-        val keyframes = mutableListOf<Keyframe>()
+        val result = mutableListOf<Keyframe>()
         FrameSource(path).use { src ->
             var frameIdx = -1
             var tPos = 0
@@ -86,13 +86,21 @@ class VideoSearchEngine {
                         height = src.height
                     )
                     index(kf)
-                    keyframes.add(kf)
+                    result.add(kf)
                     tPos++
                 }
             }
         }
-        Log.d(TAG, "extractKeyframes: got ${keyframes.size} keyframes indexed")
-        return keyframes
+        // 【埋雷修复】成员 keyframes 才是 searchByFeature 检索的那份索引，
+        // 而本函数过去只填了一个与属性同名的局部列表就返回，属性从头到尾是空的
+        // ——全靠调用方手工 clear()/addAll() 才碰巧能用，漏一步就检索不到任何结果
+        // （VideoKeyframeIndexer 的同名流程是把结果并回属性的）。
+        // 现在同步属性；返回的仍是这个局部列表（不与属性同一对象，
+        // 调用方再 clear/addAll 也不会把自己清空）。
+        keyframes.clear()
+        keyframes.addAll(result)
+        Log.d(TAG, "extractKeyframes: got ${result.size} keyframes indexed")
+        return result
     }
 
     /** 关键帧提取特征（索引）。 */

@@ -17,7 +17,6 @@ import com.wangyao.opencvdeal.jni.OpencvDealJni
 import com.wangyao.opencvprocessing.FFViewModel
 import com.wangyao.opencvprocessing.R
 import com.wangyao.opencvprocessing.databinding.FragmentImageSmoothDenoiseLayoutBinding
-import kotlin.concurrent.thread
 
 /**
  * 图像平滑与去噪界面（三级页，与「图像灰度变换」同级）：
@@ -139,7 +138,8 @@ class ImageSmoothDenoiseFragment : BaseFragment() {
         binding.tvResultTitle.text = getString(transform.titleRes)
         val src = originalBitmap ?: return
 
-        thread(start = true) {
+        val seq = beginWork()
+        submitWork(seq) {
             val result: Bitmap? = runCatching {
                 when (transform) {
                     Transform.ORIGINAL -> src
@@ -154,7 +154,7 @@ class ImageSmoothDenoiseFragment : BaseFragment() {
                 }
             }.getOrElse { it.printStackTrace(); null } ?: src
 
-            activity?.runOnUiThread {
+            runOnUiThreadIfLatest(seq) {
                 binding.ivResult.setImageBitmap(result)
             }
         }

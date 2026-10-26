@@ -2,6 +2,7 @@
 #define OPENCVDEAL_JNIHELPER_H
 
 #include <jni.h>
+#include <cstdint>
 #include <vector>
 #include <opencv2/core.hpp>
 
@@ -13,9 +14,18 @@ namespace JniHelper {
     jobject grayMatToBitmap(JNIEnv *env, const cv::Mat &gray, int width, int height);
 
     /**
-     * @brief 辅助函数：将 Android Bitmap 转换为 cv::Mat (RGBA)
+     * @brief 辅助函数：将 Android Bitmap 转换为**自持有内存**的 RGBA cv::Mat。
+     *
+     * 返回的 Mat 必须在 unlockPixels 之前完成拷贝，否则像素指针悬垂。
+     * 不支持的 Bitmap 格式（ALPHA_8 / RGBA_F16 等）返回空 Mat。
      */
     cv::Mat bitmapToMat(JNIEnv *env, jobject bitmap);
+
+    /**
+     * @brief 全工程统一的「输入转灰度」：4 通道走 RGBA2GRAY、3 通道走 RGB2GRAY、
+     *        单通道拷贝。各算法文件不得再各自实现，避免灰度口径不一致。
+     */
+    cv::Mat toGray(const cv::Mat &src);
 
     /**
      * @brief 从 rawBuffer 构造 cv::Mat（不拷贝）。

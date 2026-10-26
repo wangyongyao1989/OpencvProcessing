@@ -17,7 +17,6 @@ import com.wangyao.opencvdeal.jni.OpencvDealJni
 import com.wangyao.opencvprocessing.FFViewModel
 import com.wangyao.opencvprocessing.R
 import com.wangyao.opencvprocessing.databinding.FragmentImageColorEnhanceLayoutBinding
-import kotlin.concurrent.thread
 
 /**
  * 彩色增强界面（三级页）：
@@ -125,7 +124,8 @@ class ImageColorEnhanceFragment : BaseFragment() {
         binding.tvResultTitle.text = getString(transform.titleRes)
         val src = originalBitmap ?: return
 
-        thread(start = true) {
+        val seq = beginWork()
+        submitWork(seq) {
             val result: Bitmap? = runCatching {
                 when (transform) {
                     Transform.ORIGINAL -> src
@@ -140,7 +140,7 @@ class ImageColorEnhanceFragment : BaseFragment() {
                 }
             }.getOrElse { it.printStackTrace(); null } ?: src
 
-            activity?.runOnUiThread {
+            runOnUiThreadIfLatest(seq) {
                 binding.ivResult.setImageBitmap(result)
             }
         }

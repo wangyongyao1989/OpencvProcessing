@@ -66,6 +66,12 @@ private:
     ANativeWindow *window_ = nullptr;
     std::mutex windowMutex_;
     cv::Ptr<cv::CLAHE> clahe_;
+
+    // 每帧复用的中间缓冲（尺寸一致时 OpenCV 不重新分配）。
+    // 只允许 postFrame 使用：CameraX 的 ImageAnalysis 逐张串行回调，
+    // 一次只有一张图在处理，因此不存在两帧并发写同一缓冲的情况。
+    cv::Mat frameBuf_;
+    cv::Mat grayBuf_;
 };
 
 } // namespace camerarecognition

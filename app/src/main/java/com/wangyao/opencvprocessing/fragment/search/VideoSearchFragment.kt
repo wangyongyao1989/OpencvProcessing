@@ -128,9 +128,8 @@ class VideoSearchFragment : BaseFragment() {
         thread(start = true) {
             try {
                 // 抽取 12 个关键帧并建立特征索引
+                // （extractKeyframes 现在会同步 engine.keyframes，这里不再手工回填）
                 val kfs = engine.extractKeyframes(videoFile.absolutePath, KEYFRAME_COUNT)
-                engine.keyframes.clear()
-                engine.keyframes.addAll(kfs)
 
                 activity?.runOnUiThread {
                     if (!isAdded) return@runOnUiThread

@@ -16,7 +16,6 @@ import com.wangyao.opencvdeal.jni.OpencvDealJni
 import com.wangyao.opencvprocessing.FFViewModel
 import com.wangyao.opencvprocessing.R
 import com.wangyao.opencvprocessing.databinding.FragmentImageGrayTransformLayoutBinding
-import kotlin.concurrent.thread
 
 /**
  * Fragment responsible for demonstrating various image grayscale transformation techniques.
@@ -159,7 +158,8 @@ class ImageGrayTransformFragment : BaseFragment() {
         binding.tvResultTitle.text = getString(transform.titleRes)
         val src = originalBitmap ?: return
 
-        thread(start = true) {
+        val seq = beginWork()
+        submitWork(seq) {
             val result: Bitmap? = runCatching {
                 when (transform) {
                     Transform.ORIGINAL -> src
@@ -178,7 +178,7 @@ class ImageGrayTransformFragment : BaseFragment() {
                 }
             }.getOrElse { it.printStackTrace(); null } ?: src
 
-            activity?.runOnUiThread {
+            runOnUiThreadIfLatest(seq) {
                 binding.ivResult.setImageBitmap(result)
             }
         }

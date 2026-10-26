@@ -326,19 +326,22 @@ int FaceTracker::postFrame(const uint8_t *data, int w, int h,
                            int rotation, bool mirror) {
     if (tracker_ == nullptr) return 0;
 
-    cv::Mat src(h + h / 2, w, CV_8UC1, const_cast<uint8_t *>(data));
-    cv::cvtColor(src, src, cv::COLOR_YUV2RGBA_NV21);
+    cv::Mat nv21(h + h / 2, w, CV_8UC1, const_cast<uint8_t *>(data));
+    // 中间帧改用成员缓冲复用：原来每帧各 malloc/free 一次全帧 RGBA
+    // （640×480≈1.2MB）与一次灰度帧，尺寸不变时复用即可，写入的像素不变。
+    cv::cvtColor(nv21, frameBuf_, cv::COLOR_YUV2RGBA_NV21);
 
-    if (mirror) cv::flip(src, src, 1);
+    if (mirror) cv::flip(frameBuf_, frameBuf_, 1);
 
     switch (rotation) {
-        case 90:  cv::rotate(src, src, cv::ROTATE_90_CLOCKWISE); break;
-        case 180: cv::rotate(src, src, cv::ROTATE_180); break;
-        case 270: cv::rotate(src, src, cv::ROTATE_90_COUNTERCLOCKWISE); break;
+        case 90:  cv::rotate(frameBuf_, frameBuf_, cv::ROTATE_90_CLOCKWISE); break;
+        case 180: cv::rotate(frameBuf_, frameBuf_, cv::ROTATE_180); break;
+        case 270: cv::rotate(frameBuf_, frameBuf_, cv::ROTATE_90_COUNTERCLOCKWISE); break;
         default: break;
     }
 
-    cv::Mat gray;
+    cv::Mat &src = frameBuf_;
+    cv::Mat &gray = grayBuf_;
     cv::cvtColor(src, gray, cv::COLOR_RGBA2GRAY);
     clahe_->apply(gray, gray);
 
@@ -347,7 +350,12 @@ int FaceTracker::postFrame(const uint8_t *data, int w, int h,
     tracker_->getObjects(faces);
 
     for (const cv::Rect &face : faces) {
-        cv::rectangle(src, face, cv::Scalar(0, 0, 255), 3);
+        // 注意通道序：src 由 COLOR_YUV2RGBA_NV21 得到，是 **RGBA**，
+        // 而 cv::Scalar 按 (ch0,ch1,ch2,ch3) 逐通道赋值 —— 旧写法
+        // Scalar(0,0,255) 是给 BGR Mat 画红框的，画进 RGBA 里 ch2=蓝，
+        // 真机实测预览画面里的人脸框是蓝色（整帧 0 个红色像素），
+        // 与界面文案「红色方框实时跟踪移动」矛盾。这里按 RGBA 写红。
+        cv::rectangle(src, face, cv::Scalar(255, 0, 0, 255), 3);
     }
 
     {
@@ -358,20 +366,36 @@ int FaceTracker::postFrame(const uint8_t *data, int w, int h,
 }
 
 void FaceTracker::drawToWindow(const cv::Mat &src) {
-    ANativeWindow_setBuffersGeometry(window_, src.cols, src.rows, WINDOW_FORMAT_RGBA_8888);
+    if (window_ == nullptr || src.empty()) return;
 
-    ANativeWindow_Buffer buffer;
-    if (ANativeWindow_lock(window_, &buffer, nullptr) != 0) {
-        ANativeWindow_release(window_);
-        window_ = nullptr;
+    if (ANativeWindow_setBuffersGeometry(window_, src.cols, src.rows,
+                                         WINDOW_FORMAT_RGBA_8888) != 0) {
+        // 尺寸协商失败只影响这一帧：跳过即可，绝不能释放 window_。
+        LOGE("drawToWindow: setBuffersGeometry failed, frame skipped");
         return;
     }
 
-    int srcLineSize = src.cols * 4;
-    int dstLineSize = buffer.stride * 4;
+    ANativeWindow_Buffer buffer;
+    if (ANativeWindow_lock(window_, &buffer, nullptr) != 0) {
+        // lock 失败通常是瞬时的（生产者暂无可用 buffer：-ETIMEDOUT/-EBUSY、
+        // surface 短暂不可用）。旧实现在这里 ANativeWindow_release(window_)
+        // 并置空：一次瞬时失败就永久失去绘制能力，且与 setWindow() 对
+        // window 引用的所有权重复释放。改为只跳过当前帧。
+        LOGD("drawToWindow: lock failed, frame skipped");
+        return;
+    }
+
+    // 行字节数与行数都必须按「源」和「目标缓冲」两者的较小值截断：
+    // buffer.stride 可能大于 src.cols（硬件对齐补齐），此时按 srcLineSize 拷
+    // 没问题；但 buffer.height 可能大于 src.rows（协商失败/尺寸不一致时），
+    // 不限行数会越界读 src.data 并越界写 buffer.bits。
+    const int srcLineSize = src.cols * 4;
+    const int dstLineSize = buffer.stride * 4;
+    const int lineBytes = std::min(srcLineSize, dstLineSize);
+    const int rows = std::min(buffer.height, src.rows);
     uint8_t *dstData = static_cast<uint8_t *>(buffer.bits);
-    for (int i = 0; i < buffer.height; ++i) {
-        memcpy(dstData + i * dstLineSize, src.data + i * srcLineSize, srcLineSize);
+    for (int i = 0; i < rows; ++i) {
+        memcpy(dstData + i * dstLineSize, src.data + i * srcLineSize, lineBytes);
     }
     ANativeWindow_unlockAndPost(window_);
 }

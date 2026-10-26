@@ -1,4 +1,5 @@
 #include "include/GrayTransform.h"
+#include "include/JniHelper.h"
 #include <opencv2/imgproc.hpp>
 #include <cmath>
 
@@ -11,12 +12,7 @@ namespace GrayTransform {
     // -------------------------------------------------------------------------
     cv::Mat linearTransform(const cv::Mat &src, double a, double b, double c, double d) {
         if (src.empty()) return src;
-        cv::Mat gray;
-        if (src.channels() >= 3) {
-            cv::cvtColor(src, gray, cv::COLOR_RGB2GRAY);
-        } else {
-            gray = src.clone();
-        }
+        cv::Mat gray = JniHelper::toGray(src);
 
         double denom = (b - a);
         if (std::abs(denom) < 1e-6) denom = 1e-6;
@@ -34,12 +30,7 @@ namespace GrayTransform {
     // -------------------------------------------------------------------------
     cv::Mat invertTransform(const cv::Mat &src) {
         if (src.empty()) return src;
-        cv::Mat gray;
-        if (src.channels() >= 3) {
-            cv::cvtColor(src, gray, cv::COLOR_RGB2GRAY);
-        } else {
-            gray = src.clone();
-        }
+        cv::Mat gray = JniHelper::toGray(src);
         cv::Mat dst;
         cv::bitwise_not(gray, dst);
         return dst;
@@ -61,12 +52,7 @@ namespace GrayTransform {
     cv::Mat piecewiseLinearTransform(const cv::Mat &src, double a, double b,
                                      double c, double d) {
         if (src.empty()) return src;
-        cv::Mat gray;
-        if (src.channels() >= 3) {
-            cv::cvtColor(src, gray, cv::COLOR_RGB2GRAY);
-        } else {
-            gray = src.clone();
-        }
+        cv::Mat gray = JniHelper::toGray(src);
 
         // 构建 256 项 LUT
         cv::Mat lut(1, 256, CV_8U);
@@ -120,12 +106,7 @@ namespace GrayTransform {
     // -------------------------------------------------------------------------
     cv::Mat thresholdTransform(const cv::Mat &src, double threshold) {
         if (src.empty()) return src;
-        cv::Mat gray;
-        if (src.channels() >= 3) {
-            cv::cvtColor(src, gray, cv::COLOR_RGB2GRAY);
-        } else {
-            gray = src.clone();
-        }
+        cv::Mat gray = JniHelper::toGray(src);
         cv::Mat dst;
         cv::threshold(gray, dst, threshold, 255, cv::THRESH_BINARY);
         return dst;
@@ -140,12 +121,7 @@ namespace GrayTransform {
     // -------------------------------------------------------------------------
     cv::Mat logTransform(const cv::Mat &src, double c) {
         if (src.empty()) return src;
-        cv::Mat gray;
-        if (src.channels() >= 3) {
-            cv::cvtColor(src, gray, cv::COLOR_RGB2GRAY);
-        } else {
-            gray = src.clone();
-        }
+        cv::Mat gray = JniHelper::toGray(src);
 
         // 转为 float，计算 log(1+f)，再缩放回 8U
         cv::Mat f32;
@@ -173,12 +149,7 @@ namespace GrayTransform {
     // -------------------------------------------------------------------------
     cv::Mat gammaTransform(const cv::Mat &src, double c, double gamma) {
         if (src.empty()) return src;
-        cv::Mat gray;
-        if (src.channels() >= 3) {
-            cv::cvtColor(src, gray, cv::COLOR_RGB2GRAY);
-        } else {
-            gray = src.clone();
-        }
+        cv::Mat gray = JniHelper::toGray(src);
 
         // 归一化到 [0,1]，做幂运算，再映射回 [0,255]
         cv::Mat norm;
@@ -201,12 +172,7 @@ namespace GrayTransform {
     // -------------------------------------------------------------------------
     cv::Mat histogramEqualize(const cv::Mat &src) {
         if (src.empty()) return src;
-        cv::Mat gray;
-        if (src.channels() >= 3) {
-            cv::cvtColor(src, gray, cv::COLOR_RGB2GRAY);
-        } else {
-            gray = src.clone();
-        }
+        cv::Mat gray = JniHelper::toGray(src);
         cv::Mat dst;
         cv::equalizeHist(gray, dst);
         return dst;

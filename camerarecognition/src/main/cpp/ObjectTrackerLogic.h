@@ -67,10 +67,16 @@ private:
     cv::Mat templateThumb_;
     cv::Mat trackedThumb_;
 
-    int lastSrcW_ = -1;
-    int lastSrcH_ = -1;
-    int lastRot_ = -1;
-    bool lastMirror_ = false;
+    // 每帧复用的中间缓冲（OpenCV 在尺寸/类型一致时不会重新分配）：
+    // 相机热路径原本每帧 new/free 5 个全帧 Mat（640×480 RGBA ≈ 1.2 MB 一个），
+    // 只在这些缓冲的使用期内存活即可复用。全部只在 stateMutex_ 保护下访问。
+    cv::Mat frameBuf_;
+    cv::Mat grayBuf_;
+    cv::Mat hsvBuf_;
+    cv::Mat maskBuf_;
+    cv::Mat hueBuf_;
+    cv::Mat probBuf_;
+
     const float hueRanges_[2] = {0.f, 180.f};
 
     std::mutex stateMutex_;

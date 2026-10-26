@@ -87,36 +87,20 @@ object ImageFeatures {
      */
     fun textureHistogram(luma: ByteArray, width: Int, height: Int): FloatArray {
         val hist = FloatArray(ORI_BINS)
-        // 先统计梯度
+        // 只保留幅值数组，方向改为第二趟现算（理由见 KeyframeFeatures 同名注释：
+        // oris 是与整幅同尺寸的 FloatArray，而它的值只有在显著边缘像素上才被用到，
+        // 边界像素 mags 恒为 0 两版都进不了累加分支 ⇒ 遍历子集与累加次序不变，
+        // 重算 gx/gy 用的还是同一串整数运算 ⇒ atan2 入参逐位相同）。
         val mags = FloatArray(luma.size)
-        val oris = FloatArray(luma.size)
         var sumMag = 0.0
         var cnt = 0
         for (y in 1 until height - 1) {
             for (x in 1 until width - 1) {
                 val idx = y * width + x
-                // Sobel 算子
-                val gx = (
-                    (luma[idx - width + 1].toInt() and 0xFF) +
-                        2 * (luma[idx + 1].toInt() and 0xFF) +
-                        (luma[idx + width + 1].toInt() and 0xFF)
-                    ) - (
-                    (luma[idx - width - 1].toInt() and 0xFF) +
-                        2 * (luma[idx - 1].toInt() and 0xFF) +
-                        (luma[idx + width - 1].toInt() and 0xFF)
-                    )
-                val gy = (
-                    (luma[idx + width - 1].toInt() and 0xFF) +
-                        2 * (luma[idx + width].toInt() and 0xFF) +
-                        (luma[idx + width + 1].toInt() and 0xFF)
-                    ) - (
-                    (luma[idx - width - 1].toInt() and 0xFF) +
-                        2 * (luma[idx - width].toInt() and 0xFF) +
-                        (luma[idx - width + 1].toInt() and 0xFF)
-                    )
+                val gx = sobelX(luma, idx, width)
+                val gy = sobelY(luma, idx, width)
                 val mag = sqrt((gx * gx + gy * gy).toDouble()).toFloat()
                 mags[idx] = mag
-                oris[idx] = kotlin.math.atan2(gy.toFloat(), gx.toFloat())
                 sumMag += mag
                 cnt++
             }
@@ -124,19 +108,52 @@ object ImageFeatures {
         val meanMag = if (cnt > 0) sumMag / cnt else 0.0
         // 只统计显著边缘（幅值大于均值），按幅值加权
         var total = 0.0f
-        for (i in mags.indices) {
-            val m = mags[i]
-            if (m > meanMag && m > 0f) {
-                var deg = Math.toDegrees(oris[i].toDouble())
-                if (deg < 0) deg += 180.0 // 方向无极性，折叠到 [0,180°)
-                val bin = (deg / 180.0 * ORI_BINS).toInt().coerceIn(0, ORI_BINS - 1)
-                hist[bin] += m
-                total += m
+        for (y in 1 until height - 1) {
+            val row = y * width
+            for (x in 1 until width - 1) {
+                val idx = row + x
+                val m = mags[idx]
+                if (m > meanMag && m > 0f) {
+                    var deg = Math.toDegrees(
+                        kotlin.math.atan2(
+                            sobelY(luma, idx, width).toFloat(),
+                            sobelX(luma, idx, width).toFloat()
+                        ).toDouble()
+                    )
+                    if (deg < 0) deg += 180.0 // 方向无极性，折叠到 [0,180°)
+                    val bin = (deg / 180.0 * ORI_BINS).toInt().coerceIn(0, ORI_BINS - 1)
+                    hist[bin] += m
+                    total += m
+                }
             }
         }
         if (total > 0f) for (i in hist.indices) hist[i] /= total
         return hist
     }
+
+    /** Sobel 水平梯度（与原内联写法逐字一致）。 */
+    private fun sobelX(luma: ByteArray, idx: Int, width: Int): Int =
+        (
+            (luma[idx - width + 1].toInt() and 0xFF) +
+                2 * (luma[idx + 1].toInt() and 0xFF) +
+                (luma[idx + width + 1].toInt() and 0xFF)
+            ) - (
+            (luma[idx - width - 1].toInt() and 0xFF) +
+                2 * (luma[idx - 1].toInt() and 0xFF) +
+                (luma[idx + width - 1].toInt() and 0xFF)
+            )
+
+    /** Sobel 垂直梯度（与原内联写法逐字一致）。 */
+    private fun sobelY(luma: ByteArray, idx: Int, width: Int): Int =
+        (
+            (luma[idx + width - 1].toInt() and 0xFF) +
+                2 * (luma[idx + width].toInt() and 0xFF) +
+                (luma[idx + width + 1].toInt() and 0xFF)
+            ) - (
+            (luma[idx - width - 1].toInt() and 0xFF) +
+                2 * (luma[idx - width].toInt() and 0xFF) +
+                (luma[idx - width + 1].toInt() and 0xFF)
+            )
 
     // -------------------------------------------------------------------------
     // 综合特征与相似性度量

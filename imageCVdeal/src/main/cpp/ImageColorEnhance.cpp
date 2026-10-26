@@ -1,22 +1,21 @@
 #include "include/ImageColorEnhance.h"
+#include "include/PerfTimer.h"
+#include "include/JniHelper.h"
 #include <opencv2/imgproc.hpp>
 #include <cmath>
 #include <algorithm>
 
 namespace ImageColorEnhance {
 
+// 耗时打点用（PerfTimer.h 的 ScopedLogTimer 需要 tag 参数）
+#define TAG "ImageColorEnhance"
+
     // -------------------------------------------------------------------------
     // 内部工具
     // -------------------------------------------------------------------------
 
-    /** 输入转灰度（RGBA/RGB 均可）。 */
-    static cv::Mat toGray(const cv::Mat &src) {
-        cv::Mat gray;
-        if (src.channels() == 4) cv::cvtColor(src, gray, cv::COLOR_RGBA2GRAY);
-        else if (src.channels() == 3) cv::cvtColor(src, gray, cv::COLOR_RGB2GRAY);
-        else gray = src.clone();
-        return gray;
-    }
+       /** 输入转灰度：统一委托 JniHelper::toGray，保证全工程灰度口径一致。 */
+    static cv::Mat toGray(const cv::Mat &src) { return JniHelper::toGray(src); }
 
     /** 输入转 RGB 三通道。 */
     static cv::Mat toRgb(const cv::Mat &src) {
@@ -135,6 +134,7 @@ namespace ImageColorEnhance {
     // 频率域滤波法伪彩色 (图 2-50)：低通/带通/高通 → R/G/B
     // -------------------------------------------------------------------------
     cv::Mat frequencyPseudoColor(const cv::Mat &src) {
+        ScopedLogTimer timer(TAG, "frequencyPseudoColor");
         if (src.empty()) return src;
         cv::Mat gray = toGray(src);
 
@@ -194,7 +194,10 @@ namespace ImageColorEnhance {
             cv::idft(filtered, filtered, cv::DFT_SCALE);
             cv::Mat outPlanes[2];
             cv::split(filtered, outPlanes);
-            cv::Mat real = outPlanes[0](cv::Rect(0, 0, gray.cols, gray.rows)).clone();
+            // 不 clone：real 的所有使用（取负 → normalize → convertTo）都在
+            // 本次循环内、outPlanes 还活着的时候完成，父缓冲此后无读者，
+            // 三个通道各自独立 ⇒ 逐通道结果与像素逐位相同。
+            cv::Mat real = outPlanes[0](cv::Rect(0, 0, gray.cols, gray.rows));
             // 去 (-1)^(x+y) 中心化
             for (int y = 0; y < real.rows; ++y) {
                 float *row = real.ptr<float>(y);

@@ -253,7 +253,11 @@ class ImageSearchEngine {
         val out = src.copy(Bitmap.Config.ARGB_8888, true)
         val px = IntArray(w * h)
         src.getPixels(px, 0, w, 0, 0, w, h)
-        val dst = IntArray(w * h)
+        // 【正确性修复】原来 dst 从全 0 开始，只有 1..h-2 × 1..w-2 的内区被写入，
+        // 却整幅 setPixels 回去 ⇒ 「模糊」这张图的四周 1 像素变成 0x00000000
+        // （全透明黑），它的颜色/纹理直方图和检索名次都被这条边框污染。
+        // 3×3 均值滤波本来的约定就是「边框保留原值」，所以以源像素为初值。
+        val dst = px.clone()
         for (y in 1 until h - 1) {
             for (x in 1 until w - 1) {
                 var rr = 0; var gg = 0; var bb = 0

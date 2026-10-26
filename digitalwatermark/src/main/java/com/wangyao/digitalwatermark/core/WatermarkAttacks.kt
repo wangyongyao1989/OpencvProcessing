@@ -35,15 +35,29 @@ object WatermarkAttacks {
         DoubleArray(8) { x -> c * cos((2 * x + 1) * u * PI / 16.0) }
     }
 
+    /** B 的转置拷贝（仅换索引，不改数值）：IDCT 内层按 v 连续取 B[v][y] 用。 */
+    private val BT = Array(8) { y -> DoubleArray(8) { v -> B[v][y] } }
+
     /**
      * JPEG 压缩攻击：模拟有损压缩的核心环节（第 5 章式 5-19）——
      * 8×8 分块 DCT → 按质量缩放的亮度量化表量化 → IDCT。
      * @param quality JPEG 质量（1~100，越低攻击越强）
+     *
+     * 实现说明（逐位等价的前提下做的三处省算）：
+     *  1. 量化步长表只按 quality 算一次，不再每个 8×8 块重复 64 次整数除法；
+     *  2. 行引用（f 行、B 行、BT 行）提到内层循环外，去掉
+     *     `Array<DoubleArray>` 的双重间接寻址与边界检查；
+     *  3. 累加顺序与三项相乘的结合顺序 (`(p·B[u][x])·B[v][y]`) 与原实现
+     *     完全一致，因此输出逐位相同，A/B 像素比对零差异。
      */
     fun jpeg(luma: ByteArray, width: Int, height: Int, quality: Int) {
         val q = quality.coerceIn(1, 100)
         // libjpeg 质量缩放：quality<50 时 scale = 5000/q，否则 scale = 200 − 2q
         val scale = (if (q < 50) 5000 / q else 200 - 2 * q).coerceIn(1, 255)
+        // 式 5-19 的量化步长：与块无关，提到块循环外
+        val steps = IntArray(64) { uv ->
+            ((DctWatermark.LUMA_QUANT_TABLE[uv] * scale + 50) / 100).coerceAtLeast(1)
+        }
         val f = Array(8) { DoubleArray(8) }
         val F = Array(8) { DoubleArray(8) }
         for (by in 0 until height / 8) for (bx in 0 until width / 8) {
@@ -52,24 +66,37 @@ object WatermarkAttacks {
                 f[y][x] = (luma[base + y * width + x].toInt() and 0xFF).toDouble()
 
             // DCT
-            for (u in 0 until 8) for (v in 0 until 8) {
-                var s = 0.0
-                for (yy in 0 until 8) for (xx in 0 until 8)
-                    s += f[yy][xx] * B[u][xx] * B[v][yy]
-                F[u][v] = s
+            for (u in 0 until 8) {
+                val bu = B[u]
+                for (v in 0 until 8) {
+                    val bv = B[v]
+                    var s = 0.0
+                    for (yy in 0 until 8) {
+                        val fry = f[yy]
+                        val bvy = bv[yy]
+                        for (xx in 0 until 8) s += fry[xx] * bu[xx] * bvy
+                    }
+                    F[u][v] = s
+                }
             }
             // 量化（信息损失根源）
             for (u in 0 until 8) for (v in 0 until 8) {
-                val step = ((DctWatermark.LUMA_QUANT_TABLE[u * 8 + v] * scale + 50) / 100)
-                    .coerceAtLeast(1)
+                val step = steps[u * 8 + v]
                 F[u][v] = (F[u][v] / step).roundToInt() * step.toDouble()
             }
             // IDCT
-            for (y in 0 until 8) for (x in 0 until 8) {
-                var s = 0.0
-                for (u in 0 until 8) for (v in 0 until 8)
-                    s += F[u][v] * B[u][x] * B[v][y]
-                luma[base + y * width + x] = s.roundToInt().coerceIn(0, 255).toByte()
+            for (y in 0 until 8) {
+                val bty = BT[y]
+                for (x in 0 until 8) {
+                    var s = 0.0
+                    for (u in 0 until 8) {
+                        val bu = B[u]
+                        val frow = F[u]
+                        val bux = bu[x]
+                        for (v in 0 until 8) s += frow[v] * bux * bty[v]
+                    }
+                    luma[base + y * width + x] = s.roundToInt().coerceIn(0, 255).toByte()
+                }
             }
         }
     }
@@ -77,17 +104,17 @@ object WatermarkAttacks {
     /** 高斯噪声攻击：加性 N(0, sigma) 白噪声（简单攻击，削弱水印幅度）。 */
     fun gaussianNoise(luma: ByteArray, sigma: Double, seed: Long = 42L) {
         val rnd = java.util.Random(seed)
-        var spare: Double? = null
+        val twoPi = 2.0 * PI
         for (i in luma.indices) {
-            // Box-Muller 生成正态分布
-            val z = spare ?: run {
-                val u1 = rnd.nextDouble().coerceAtLeast(1e-12)
-                val u2 = rnd.nextDouble()
-                val r = kotlin.math.sqrt(-2.0 * kotlin.math.ln(u1))
-                spare = r * sin(2.0 * PI * u2)
-                r * cos(2.0 * PI * u2)
-            }
-            spare = null
+            // Box-Muller 生成正态分布。
+            // 说明：旧实现把配对样本写进可空变量 spare，却在下一行无条件
+            // `spare = null`，第二个样本从未被复用——因此下面的写法与旧实现
+            // 的随机数消耗、逐像素取值完全一致（噪声序列不变），
+            // 同时省去每个像素一次 Double 装箱（30 万像素/帧）。
+            val u1 = rnd.nextDouble().coerceAtLeast(1e-12)
+            val u2 = rnd.nextDouble()
+            val r = kotlin.math.sqrt(-2.0 * kotlin.math.ln(u1))
+            val z = r * cos(twoPi * u2)
             val v = (luma[i].toInt() and 0xFF) + sigma * z
             luma[i] = v.roundToInt().coerceIn(0, 255).toByte()
         }

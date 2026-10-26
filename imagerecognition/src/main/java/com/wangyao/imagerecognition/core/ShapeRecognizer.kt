@@ -44,30 +44,39 @@ object HuMoments {
         val cy = m01 / m00
 
         // ---- 中心矩（3 阶以内）----
-        val mu = HashMap<String, Double>()
-        for (p in 0..3) {
-            for (q in 0..3) {
-                if (p + q > 3 || p + q == 0) continue
-                var s = 0.0
-                for (y in 0 until height) {
-                    val row = y * width
-                    val dy = y - cy
-                    for (x in 0 until width) {
-                        val v = (mask[row + x].toInt() and 0xFF) / 255.0
-                        if (v > 0.0) {
-                            s += (x - cx).let { it.pow(p) } * dy.pow(q) * v
-                        }
+        // 式 11-3：μ_pq = ΣΣ (x-x̄)^p·(y-ȳ)^q·I(x,y)，p+q ≤ 3 且 p+q > 0。
+        // 旧实现对 10 个 (p,q) 各扫一遍全图，并在每个像素上算两次 pow()，
+        // 1080p 掩膜约 1.2×10^7 次 pow —— 这里改为单趟扫描 + 幂次预表：
+        //   · (x-x̄)^p 按列预算 4 张表、(y-ȳ)^q 每行算 4 次；
+        //   · 10 个累加器各自仍是「y 升序、x 升序」，求和次序与旧实现逐位相同；
+        //   · 相乘结合次序仍是 ((x^p · y^q) · v)，与旧写法一致。
+        // 因此 7 个 Hu 矩的输出逐位不变，只是快了一个数量级。
+        val mu = DoubleArray(16)                    // 下标 p*4+q
+        val xPow = Array(4) { DoubleArray(width) }
+        for (p in 1..3) {
+            val col = xPow[p]
+            for (x in 0 until width) col[x] = (x - cx).pow(p)
+        }
+        for (y in 0 until height) {
+            val row = y * width
+            val dy = y - cy
+            val yPow = DoubleArray(4) { q -> dy.pow(q) }
+            for (x in 0 until width) {
+                val v = (mask[row + x].toInt() and 0xFF) / 255.0
+                if (v <= 0.0) continue
+                for (p in 0..3) {
+                    val xp = if (p == 0) 1.0 else xPow[p][x]
+                    for (q in 0..3) {
+                        if (p + q > 3 || p + q == 0) continue
+                        mu[p * 4 + q] += xp * yPow[q] * v
                     }
                 }
-                mu["${p}${q}"] = s
             }
         }
 
         // ---- 归一化中心矩 ----
-        fun eta(p: Int, q: Int): Double {
-            val m = mu["${p}${q}"] ?: 0.0
-            return m / m00.pow(1.0 + (p + q) / 2.0)
-        }
+        fun eta(p: Int, q: Int): Double =
+            mu[p * 4 + q] / m00.pow(1.0 + (p + q) / 2.0)
         val e20 = eta(2, 0)
         val e02 = eta(0, 2)
         val e11 = eta(1, 1)
@@ -205,6 +214,10 @@ class ShapeRecognizer {
         /** 渲染画布尺寸。 */
         const val SIZE = 96
 
+        /** 非五角星形状不构造顶点表，复用它（避免每帧分配空数组）。 */
+        private val emptyStarVerts: Pair<DoubleArray, DoubleArray> =
+            DoubleArray(0) to DoubleArray(0)
+
         /**
          * 渲染指定形状的二值图（0/255）：
          * 对画布逐像素做形状内外判定（旋转/缩放后逆变换回形状
@@ -221,6 +234,35 @@ class ShapeRecognizer {
             val rad = rotDeg * PI / 180.0
             val cosA = kotlin.math.cos(rad)
             val sinA = kotlin.math.sin(rad)
+            // 五角星的 10 个顶点只与 r 有关（与像素坐标无关）：旧实现写在像素
+            // 循环里，等于每像素重建两张数组 + 20 次三角函数（96×96 共 9216 次）。
+            // 提到循环外后顶点数值与调用次序不变 → 内外判定结果逐像素一致。
+            val starVerts: Pair<DoubleArray, DoubleArray> = if (shape == Shape.STAR) {
+                val bigR = r * 1.1
+                val smallR = bigR * 0.382
+                val sxs = DoubleArray(10)
+                val sys = DoubleArray(10)
+                for (k in 0 until 10) {
+                    val a = -PI / 2 + k * PI / 5
+                    val rr = if (k % 2 == 0) bigR else smallR
+                    sxs[k] = rr * kotlin.math.cos(a)
+                    sys[k] = rr * kotlin.math.sin(a)
+                }
+                sxs to sys
+            } else emptyStarVerts
+            // 其余形状判定式里同样有一批「只与 r 有关」的量，原来都在像素循环内
+            // 逐像素重算（96×96 就是 9216 次）。提到循环外后算式与求值次序不变，
+            // 每个像素比较的结果一致 ⇒ 生成的掩膜逐字节相同。
+            // TRIANGLE 保留原来的 `(1.0 - t) * h / √3` 除法形式，只把 sqrt(3.0)
+            // 换成提前算好的同一个常量，避免每像素一次开方。
+            val r2 = r * r
+            val rectHalfW = r * 0.85
+            val rectHalfH = r * 0.6
+            val ellipseB = r * 0.55
+            val ellipseB2 = ellipseB * ellipseB
+            val triH = r * 1.5
+            val triTopY = -triH / 3.0 * 2.0
+            val sqrt3 = kotlin.math.sqrt(3.0)
             for (y in 0 until size) {
                 for (x in 0 until size) {
                     // 旋转逆变换到形状局部坐标
@@ -229,20 +271,15 @@ class ShapeRecognizer {
                     val lx = dx * cosA + dy * sinA
                     val ly = -dx * sinA + dy * cosA
                     val inside = when (shape) {
-                        Shape.CIRCLE -> lx * lx + ly * ly <= r * r
-                        Shape.ELLIPSE -> {
-                            val a = r
-                            val b = r * 0.55
-                            (lx * lx) / (a * a) + (ly * ly) / (b * b) <= 1.0
-                        }
-                        Shape.RECT -> abs(lx) <= r * 0.85 && abs(ly) <= r * 0.6
+                        Shape.CIRCLE -> lx * lx + ly * ly <= r2
+                        Shape.ELLIPSE ->
+                            (lx * lx) / r2 + (ly * ly) / ellipseB2 <= 1.0
+                        Shape.RECT -> abs(lx) <= rectHalfW && abs(ly) <= rectHalfH
                         Shape.TRIANGLE -> {
                             // 等边三角形（顶点朝上，重心在原点）
-                            val h = r * 1.5
-                            val topY = -h / 3.0 * 2.0
-                            if (ly >= topY && ly <= topY + h) {
-                                val t = (ly - topY) / h
-                                abs(lx) <= (1.0 - t) * h / kotlin.math.sqrt(3.0)
+                            if (ly >= triTopY && ly <= triTopY + triH) {
+                                val t = (ly - triTopY) / triH
+                                abs(lx) <= (1.0 - t) * triH / sqrt3
                             } else false
                         }
                         Shape.STAR -> {
@@ -250,16 +287,7 @@ class ShapeRecognizer {
                             // 直线边 + 射线法（ray casting）内点判定。
                             // 相比极坐标锯齿星，直线边像素化更规整，
                             // Hu 矩对旋转/缩放更稳定。
-                            val bigR = r * 1.1
-                            val smallR = bigR * 0.382
-                            val xs = DoubleArray(10)
-                            val ys = DoubleArray(10)
-                            for (k in 0 until 10) {
-                                val a = -PI / 2 + k * PI / 5
-                                val rr = if (k % 2 == 0) bigR else smallR
-                                xs[k] = rr * kotlin.math.cos(a)
-                                ys[k] = rr * kotlin.math.sin(a)
-                            }
+                            val (xs, ys) = starVerts
                             var insideFlag = false
                             var prev = 9
                             for (i in 0 until 10) {

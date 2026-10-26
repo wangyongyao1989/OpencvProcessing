@@ -61,10 +61,23 @@ object DctWatermark {
         return DoubleArray(CHIPS) { if (rnd.nextBoolean()) 1.0 else -1.0 }
     }
 
-    /** 8×8 二维 DCT（可分离实现）。 */
-    private fun forwardDct(f: Array<DoubleArray>): Array<DoubleArray> {
-        val tmp = Array(8) { DoubleArray(8) }
-        val out = Array(8) { DoubleArray(8) }
+    // 中频坐标按 u/v 拆成两个 IntArray：内层循环里 `val (u,v) = MID_FREQ[j]`
+    // 每个 chip 都要装箱出一个 Pair（4096 块 × 8 = 3.2 万对象/帧），
+    // 查表值与原解构完全一致。
+    private val MID_U = IntArray(CHIPS) { MID_FREQ[it][0] }
+    private val MID_V = IntArray(CHIPS) { MID_FREQ[it][1] }
+
+    /**
+     * 8×8 二维 DCT（可分离实现）。
+     *
+     * [tmp]/[out] 由调用方提供并逐块复用：原来每次调用都在函数内 new 两个
+     * 8×8 数组（18 个对象），而全帧要跑 4096 块、每块正逆变换各一次
+     * ≈ 14.7 万对象/帧，是水印页耗时与 GC 抖动的主要来源之一。
+     * 这里只改「缓冲区从哪来」，两处三重循环的乘加次序一字未动 ⇒ 结果逐位相同。
+     * 要求 out 与 f 不是同一对象（tmp 可与调用方的其他 tmp 复用，因为
+     * 第一趟会先把 tmp 全部 64 项写完，第二趟才开始读）。
+     */
+    private fun forwardDct(f: Array<DoubleArray>, tmp: Array<DoubleArray>, out: Array<DoubleArray>) {
         // 行方向：tmp[x][v] = Σy f[x][y]·B[v][y]
         for (x in 0 until 8) for (v in 0 until 8) {
             var s = 0.0
@@ -77,13 +90,10 @@ object DctWatermark {
             for (x in 0 until 8) s += tmp[x][v] * B[u][x]
             out[u][v] = s
         }
-        return out
     }
 
-    /** 8×8 二维 IDCT（正交基对称性：f = Bᵀ·F·B）。 */
-    private fun inverseDct(F: Array<DoubleArray>): Array<DoubleArray> {
-        val tmp = Array(8) { DoubleArray(8) }
-        val out = Array(8) { DoubleArray(8) }
+    /** 8×8 二维 IDCT（正交基对称性：f = Bᵀ·F·B），缓冲区同样由调用方复用。 */
+    private fun inverseDct(F: Array<DoubleArray>, tmp: Array<DoubleArray>, out: Array<DoubleArray>) {
         // tmp[u][y] = Σv F[u][v]·B[v][y]
         for (u in 0 until 8) for (y in 0 until 8) {
             var s = 0.0
@@ -96,7 +106,6 @@ object DctWatermark {
             for (u in 0 until 8) s += tmp[u][y] * B[u][x]
             out[x][y] = s
         }
-        return out
     }
 
     /**
@@ -112,6 +121,9 @@ object DctWatermark {
         val step = maxOf(1, totalBlocks / bits.size)
 
         val f = Array(8) { DoubleArray(8) }
+        val tmp = Array(8) { DoubleArray(8) }
+        val F = Array(8) { DoubleArray(8) }
+        val g = Array(8) { DoubleArray(8) }
         for (i in bits.indices) {
             val bi = i * step
             if (bi >= totalBlocks) break
@@ -122,17 +134,16 @@ object DctWatermark {
             // 取块 → DCT
             for (y in 0 until 8) for (x in 0 until 8)
                 f[y][x] = (luma[base + y * width + x].toInt() and 0xFF).toDouble()
-            val F = forwardDct(f)
+            forwardDct(f, tmp, F)
 
             // 中频系数加性嵌入：cj' = cj + k·pnj·m
             val m = if (bits[i]) 1.0 else -1.0
             for (j in 0 until CHIPS) {
-                val (u, v) = MID_FREQ[j]
-                F[u][v] += STRENGTH * pn[j] * m
+                F[MID_U[j]][MID_V[j]] += STRENGTH * pn[j] * m
             }
 
             // IDCT → 写回
-            val g = inverseDct(F)
+            inverseDct(F, tmp, g)
             for (y in 0 until 8) for (x in 0 until 8) {
                 val v = g[y][x].toInt().coerceIn(0, 255)
                 luma[base + y * width + x] = v.toByte()
@@ -156,6 +167,8 @@ object DctWatermark {
         val step = maxOf(1, totalBlocks / n)
 
         val f = Array(8) { DoubleArray(8) }
+        val tmp = Array(8) { DoubleArray(8) }
+        val F = Array(8) { DoubleArray(8) }
         for (i in 0 until n) {
             val bi = i * step
             if (bi >= totalBlocks) break
@@ -165,12 +178,11 @@ object DctWatermark {
 
             for (y in 0 until 8) for (x in 0 until 8)
                 f[y][x] = (luma[base + y * width + x].toInt() and 0xFF).toDouble()
-            val F = forwardDct(f)
+            forwardDct(f, tmp, F)
 
             var corr = 0.0
             for (j in 0 until CHIPS) {
-                val (u, v) = MID_FREQ[j]
-                corr += F[u][v] * pn[j]
+                corr += F[MID_U[j]][MID_V[j]] * pn[j]
             }
             votes[i] = if (corr > 0) 1 else -1
         }

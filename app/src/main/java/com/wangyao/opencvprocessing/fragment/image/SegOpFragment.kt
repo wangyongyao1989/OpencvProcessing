@@ -15,7 +15,6 @@ import com.wangyao.opencvdeal.jni.OpencvDealJni
 import com.wangyao.opencvprocessing.FFViewModel
 import com.wangyao.opencvprocessing.R
 import com.wangyao.opencvprocessing.databinding.FragmentMorphOpLayoutBinding
-import kotlin.concurrent.thread
 
 /**
  * 图像分割通用三级页（《数字图像与视频处理》第 4 章）。
@@ -282,11 +281,12 @@ class SegOpFragment : BaseFragment() {
         binding.tvResultTitle.text = op.title
         val src = originalBitmap ?: return
 
-        thread(start = true) {
+        val seq = beginWork()
+        submitWork(seq) {
             val result: Bitmap? = runCatching { op.compute(src) }
                 .getOrElse { it.printStackTrace(); null } ?: src
 
-            activity?.runOnUiThread {
+            runOnUiThreadIfLatest(seq) {
                 binding.ivResult.setImageBitmap(result)
             }
         }

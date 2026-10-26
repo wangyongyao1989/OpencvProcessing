@@ -37,18 +37,17 @@ object ImageDistortions {
     /** 加性高斯白噪声：g = f + n，n~N(0,σ²)，就地修改。 */
     fun gaussianNoise(luma: ByteArray, sigma: Double, seed: Long = 42L) {
         val rnd = Random(seed)
-        var spare: Double? = null
+        // 原实现把 Box-Muller 的 sin 分支暂存进 `spare` 想让下一像素复用，
+        // 但循环末尾无条件 `spare = null`，那个值从未被读走：结果是
+        // 「每像素消耗两个随机数、只用 cos 分支」。这里按同一事实直写，
+        // 随机数消耗次序与每像素的 z 完全不变（逐位相同），
+        // 省掉每像素一次 Double 装箱、一次 sin 与一次 elvis 判空。
         for (i in luma.indices) {
-            // Box-Muller 变换生成正态分布
-            val z = spare ?: run {
-                val u1 = maxOf(rnd.nextDouble(), 1e-12)
-                val u2 = rnd.nextDouble()
-                val r = sqrt(-2.0 * kotlin.math.ln(u1))
-                val t = 2.0 * PI * u2
-                spare = r * kotlin.math.sin(t)
-                r * cos(t)
-            } ?: 0.0
-            spare = null
+            val u1 = maxOf(rnd.nextDouble(), 1e-12)
+            val u2 = rnd.nextDouble()
+            val r = sqrt(-2.0 * kotlin.math.ln(u1))
+            val t = 2.0 * PI * u2
+            val z = r * cos(t)
             val v = (luma[i].toInt() and 0xFF) + z * sigma
             luma[i] = v.toInt().coerceIn(0, 255).toByte()
         }
