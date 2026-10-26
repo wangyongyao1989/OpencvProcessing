@@ -189,7 +189,13 @@ class VideoWatermarkPipeline {
                     val outIdx = decoder.dequeueOutputBuffer(info, TIMEOUT_US)
                     if (outIdx >= 0) {
                         val eos = info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
-                        if (info.size > 0 && !eos) {
+                        // EOS 标志与「这一帧有数据」是两件独立的事：多数解码器给一个
+                        // size=0 的纯 EOS 缓冲，但把最后一帧连同 EOS 一起下发的实现
+                        // 并不少见。原来的 `&& !eos` 会把那最后一帧整帧丢掉，
+                        // 少一帧就少一份逐帧投票、转码输出也少一帧。
+                        // 本机若走的是 size=0 的 EOS，这个改动不会改变任何结果
+                        // （可用面板「输出帧数」是否与改前一致来判定）。
+                        if (info.size > 0) {
                             val image = decoder.getOutputImage(outIdx)
                             if (image != null) {
                                 try {
@@ -352,7 +358,8 @@ class VideoWatermarkPipeline {
                 val outIdx = decoder.dequeueOutputBuffer(info, TIMEOUT_US)
                 if (outIdx >= 0) {
                     val eos = info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
-                    if (info.size > 0 && !eos) {
+                    // 同上：EOS 缓冲可以携带最后一帧，不能用 !eos 把它排除掉。
+                    if (info.size > 0) {
                         val image = decoder.getOutputImage(outIdx)
                         if (image != null) {
                             try {
@@ -447,13 +454,24 @@ class VideoWatermarkPipeline {
                 pos += w
             }
         } else {
+            // 交错布局（半平面 pixelStride=2 等）：原来逐像素 `buf.get(colIdx)`
+            // 绝对索引，每字节一次虚调用 + 边界检查（1920×1080 的 U/V 平面
+            // 各约 52 万次/帧，与相机预览那处同样的坑）。改成「整行批量读进
+            // 暂存 + 纯数组下标抽取」：抽取的字节偏移仍是 col*pixelStride，
+            // 且 n 同时受 rowStride 行首与 buf.remaining() 约束，
+            // 与原先逐像素 `colIdx < capacity` 的取舍完全一致 ⇒ dst 逐字节相同。
+            val span = (w - 1) * pixelStride + 1
+            val rowBuf = ByteArray(span.coerceAtMost(buf.capacity()))
             for (row in 0 until h) {
-                var colIdx = row * rowStride
+                val offset = row * rowStride
+                if (offset >= buf.capacity()) break
+                buf.position(offset)
+                val n = span.coerceAtMost(buf.remaining()).coerceAtMost(rowBuf.size)
+                buf.get(rowBuf, 0, n)
+                var s = 0
                 for (col in 0 until w) {
-                    if (colIdx < buf.capacity()) {
-                        dst[pos++] = buf.get(colIdx)
-                    }
-                    colIdx += pixelStride
+                    if (s < n) dst[pos++] = rowBuf[s]
+                    s += pixelStride
                 }
             }
         }
@@ -491,14 +509,26 @@ class VideoWatermarkPipeline {
                 pos += w
             }
         } else {
+            // 交错布局的写入路径：与读取路径同样改成整行批量。
+            // 关键点是先把整行原样读出、只覆盖 col*pixelStride 那几个字节、
+            // 再整行写回——采样点之间的填充字节被写回的是它们原有的值，
+            // 因此平面内容与原先「逐字节 put(colIdx)」完全相同；
+            // n 受 buf.remaining() 限制，超界的尾部一并跳过，与原逻辑一致。
+            val span = (w - 1) * pixelStride + 1
+            val rowBuf = ByteArray(span.coerceAtMost(buf.capacity()))
             for (row in 0 until h) {
-                var colIdx = row * rowStride
+                val offset = row * rowStride
+                if (offset >= buf.capacity()) break
+                buf.position(offset)
+                val n = span.coerceAtMost(buf.remaining()).coerceAtMost(rowBuf.size)
+                buf.get(rowBuf, 0, n)
+                var s = 0
                 for (col in 0 until w) {
-                    if (colIdx < buf.capacity()) {
-                        buf.put(colIdx, src[pos++])
-                    }
-                    colIdx += pixelStride
+                    if (s < n) rowBuf[s] = src[pos++]
+                    s += pixelStride
                 }
+                buf.position(offset)
+                buf.put(rowBuf, 0, n)
             }
         }
     }
