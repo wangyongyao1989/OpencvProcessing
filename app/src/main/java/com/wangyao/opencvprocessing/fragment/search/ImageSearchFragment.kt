@@ -177,7 +177,11 @@ class ImageSearchFragment : BaseFragment() {
             m.entry.bitmap.let { bmp ->
                 // 缩略图统一宽度
                 setImageBitmap(
-                    Bitmap.createScaledBitmap(bmp, 96, 96 * bmp.height / bmp.width, true)
+                    // 极端宽高比（宽 > 96×高）时整除会得到 0，
+                    // createScaledBitmap 对 0 高度直接抛异常 → 兜到 1
+                    Bitmap.createScaledBitmap(
+                        bmp, 96, (96 * bmp.height / bmp.width).coerceAtLeast(1), true
+                    )
                 )
             }
             adjustViewBounds = false
