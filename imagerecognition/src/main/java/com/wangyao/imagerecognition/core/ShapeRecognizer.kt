@@ -250,6 +250,19 @@ class ShapeRecognizer {
                 }
                 sxs to sys
             } else emptyStarVerts
+            // 其余形状判定式里同样有一批「只与 r 有关」的量，原来都在像素循环内
+            // 逐像素重算（96×96 就是 9216 次）。提到循环外后算式与求值次序不变，
+            // 每个像素比较的结果一致 ⇒ 生成的掩膜逐字节相同。
+            // TRIANGLE 保留原来的 `(1.0 - t) * h / √3` 除法形式，只把 sqrt(3.0)
+            // 换成提前算好的同一个常量，避免每像素一次开方。
+            val r2 = r * r
+            val rectHalfW = r * 0.85
+            val rectHalfH = r * 0.6
+            val ellipseB = r * 0.55
+            val ellipseB2 = ellipseB * ellipseB
+            val triH = r * 1.5
+            val triTopY = -triH / 3.0 * 2.0
+            val sqrt3 = kotlin.math.sqrt(3.0)
             for (y in 0 until size) {
                 for (x in 0 until size) {
                     // 旋转逆变换到形状局部坐标
@@ -258,20 +271,15 @@ class ShapeRecognizer {
                     val lx = dx * cosA + dy * sinA
                     val ly = -dx * sinA + dy * cosA
                     val inside = when (shape) {
-                        Shape.CIRCLE -> lx * lx + ly * ly <= r * r
-                        Shape.ELLIPSE -> {
-                            val a = r
-                            val b = r * 0.55
-                            (lx * lx) / (a * a) + (ly * ly) / (b * b) <= 1.0
-                        }
-                        Shape.RECT -> abs(lx) <= r * 0.85 && abs(ly) <= r * 0.6
+                        Shape.CIRCLE -> lx * lx + ly * ly <= r2
+                        Shape.ELLIPSE ->
+                            (lx * lx) / r2 + (ly * ly) / ellipseB2 <= 1.0
+                        Shape.RECT -> abs(lx) <= rectHalfW && abs(ly) <= rectHalfH
                         Shape.TRIANGLE -> {
                             // 等边三角形（顶点朝上，重心在原点）
-                            val h = r * 1.5
-                            val topY = -h / 3.0 * 2.0
-                            if (ly >= topY && ly <= topY + h) {
-                                val t = (ly - topY) / h
-                                abs(lx) <= (1.0 - t) * h / kotlin.math.sqrt(3.0)
+                            if (ly >= triTopY && ly <= triTopY + triH) {
+                                val t = (ly - triTopY) / triH
+                                abs(lx) <= (1.0 - t) * triH / sqrt3
                             } else false
                         }
                         Shape.STAR -> {
