@@ -130,15 +130,43 @@ object NccMatcher {
         var bestScore = -2.0
         val xs = x0.coerceAtLeast(0)..x1.coerceAtMost(width - tw)
         val ys = y0.coerceAtLeast(0)..y1.coerceAtMost(height - th)
+        // 搜索区间为空时不能把初值 -2.0 当成 NCC 返回：-2 不在 NCC 的值域
+        // [-1,1] 内，调用方（如逐帧识别的「丢失帧」统计）会把它当真实分数计入。
+        // 与上面 varSum<=0 的分支保持同一约定，返回 0.0。
+        if (xs.isEmpty() || ys.isEmpty()) return doubleArrayOf(x0.toDouble(), y0.toDouble(), 0.0)
+
+        // 窗口和 fSum 改由「高度带列和 + 行前缀」滑动维护。
+        // 等价性：fSum 是像素值（0..255）的整数和，用 Long 累加精确无溢出，
+        // 整数加法与求和次序无关 ⇒ 每个位置的 fSum 与原来「逐像素从 0.0 累加」
+        // 的 double 结果（该量级下 double 累加同样精确）逐位相同，
+        // 因此 fMean = fSum / tpl.size 的浮点值不变。
+        // 代价从「每个位置 O(tw·th)」降为「每行 O(width)」；互相关/方差那一趟
+        // 逐像素的浮点乘加次序完全没动。
+        val band = LongArray(width)
+        val prefix = LongArray(width + 1)
+        val yFirst = ys.first
+        for (j in 0 until th) {
+            val row = (yFirst + j) * width
+            for (x in 0 until width) band[x] += (gray[row + x].toInt() and 0xFF).toLong()
+        }
         for (y in ys) {
-            for (x in xs) {
-                // 积分图像思路：窗口和用行增量维护太复杂，直接算
-                var fSum = 0.0
-                for (j in 0 until th) {
-                    val row = (y + j) * width + x
-                    for (i in 0 until tw) fSum += gray[row + i].toInt() and 0xFF
+            if (y != yFirst) {
+                // 高度带向下滚动一行：加进新行、减去离开的那一行
+                val addRow = (y + th - 1) * width
+                val subRow = (y - 1) * width
+                for (x in 0 until width) {
+                    band[x] += (gray[addRow + x].toInt() and 0xFF) -
+                        (gray[subRow + x].toInt() and 0xFF)
                 }
-                val fMean = fSum / tpl.size
+            }
+            var acc = 0L
+            prefix[0] = 0L
+            for (x in 0 until width) {
+                acc += band[x]
+                prefix[x + 1] = acc
+            }
+            for (x in xs) {
+                val fMean = (prefix[x + tw] - prefix[x]).toDouble() / tpl.size
                 var cross = 0.0
                 var fVar = 0.0
                 for (j in 0 until th) {
