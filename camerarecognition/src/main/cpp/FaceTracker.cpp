@@ -326,19 +326,22 @@ int FaceTracker::postFrame(const uint8_t *data, int w, int h,
                            int rotation, bool mirror) {
     if (tracker_ == nullptr) return 0;
 
-    cv::Mat src(h + h / 2, w, CV_8UC1, const_cast<uint8_t *>(data));
-    cv::cvtColor(src, src, cv::COLOR_YUV2RGBA_NV21);
+    cv::Mat nv21(h + h / 2, w, CV_8UC1, const_cast<uint8_t *>(data));
+    // 中间帧改用成员缓冲复用：原来每帧各 malloc/free 一次全帧 RGBA
+    // （640×480≈1.2MB）与一次灰度帧，尺寸不变时复用即可，写入的像素不变。
+    cv::cvtColor(nv21, frameBuf_, cv::COLOR_YUV2RGBA_NV21);
 
-    if (mirror) cv::flip(src, src, 1);
+    if (mirror) cv::flip(frameBuf_, frameBuf_, 1);
 
     switch (rotation) {
-        case 90:  cv::rotate(src, src, cv::ROTATE_90_CLOCKWISE); break;
-        case 180: cv::rotate(src, src, cv::ROTATE_180); break;
-        case 270: cv::rotate(src, src, cv::ROTATE_90_COUNTERCLOCKWISE); break;
+        case 90:  cv::rotate(frameBuf_, frameBuf_, cv::ROTATE_90_CLOCKWISE); break;
+        case 180: cv::rotate(frameBuf_, frameBuf_, cv::ROTATE_180); break;
+        case 270: cv::rotate(frameBuf_, frameBuf_, cv::ROTATE_90_COUNTERCLOCKWISE); break;
         default: break;
     }
 
-    cv::Mat gray;
+    cv::Mat &src = frameBuf_;
+    cv::Mat &gray = grayBuf_;
     cv::cvtColor(src, gray, cv::COLOR_RGBA2GRAY);
     clahe_->apply(gray, gray);
 
