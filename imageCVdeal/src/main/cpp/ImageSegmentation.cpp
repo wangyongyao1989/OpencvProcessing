@@ -1,4 +1,5 @@
 #include "include/ImageSegmentation.h"
+#include "include/PerfTimer.h"
 #include "include/JniHelper.h"
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
@@ -8,6 +9,9 @@
 #include <vector>
 
 namespace ImageSegmentation {
+
+// 耗时打点用（PerfTimer.h 的 ScopedLogTimer 需要 tag 参数）
+#define TAG "ImageSegmentation"
 
     // -------------------------------------------------------------------------
     // 内部工具
@@ -19,7 +23,11 @@ namespace ImageSegmentation {
     /** 大图按最长边限制降采样（重计算型算法使用）。 */
     static cv::Mat downscaleMax(const cv::Mat &gray, int maxDim) {
         double scale = std::min(1.0, (double) maxDim / std::max(gray.cols, gray.rows));
-        if (scale >= 1.0) return gray.clone();
+        // 不需要缩放时直接返回头部引用：两处调用者（segSplitMerge / segWatershed）
+        // 之后都只读 small（threshold / cvtColor 的输出都是新 Mat），
+        // 而 gray 本身就是本函数栈上的新灰度图，生命周期覆盖 small 的全部使用期，
+        // 因此省掉一次全图深拷贝且不改变任何像素。
+        if (scale >= 1.0) return gray;
         cv::Mat small;
         cv::resize(gray, small, cv::Size(), scale, scale, cv::INTER_AREA);
         return small;
@@ -351,6 +359,7 @@ namespace ImageSegmentation {
 
     // --- 区域生长：直方图峰值自动选种 (4.4.1 种子原则 1)) ---
     cv::Mat segRegionGrowAutoSeed(const cv::Mat &src, int th) {
+        ScopedLogTimer timer(TAG, "segRegionGrowAutoSeed");
         if (src.empty()) return src;
         cv::Mat gray = toGray(src);
 
@@ -431,6 +440,7 @@ namespace ImageSegmentation {
     } // namespace
 
     cv::Mat segSplitMerge(const cv::Mat &src) {
+        ScopedLogTimer timer(TAG, "segSplitMerge");
         if (src.empty()) return src;
         cv::Mat gray = toGray(src);
 
@@ -472,7 +482,10 @@ namespace ImageSegmentation {
         // 输出：每个合并区域填充其平均灰度（分段常数的分割表达）
         cv::Mat dstSmall = cv::Mat::zeros(small.size(), CV_8U);
         for (size_t i = 0; i < leaves.size(); ++i) {
-            double m = sum[find((int) i)] / area[find((int) i)];
+            // find 带路径压缩，同一次里调两遍只是多走一遍链表；缓存后
+            // 根节点取值与 sum/area 读取完全不变。
+            const int root = find((int) i);
+            double m = sum[root] / area[root];
             cv::Rect roi(leaves[i].x, leaves[i].y, leaves[i].w, leaves[i].h);
             dstSmall(roi).setTo(cv::saturate_cast<uchar>(m));
         }
@@ -509,6 +522,7 @@ namespace ImageSegmentation {
 
     // --- 标记控制的分水岭 ---
     cv::Mat segWatershed(const cv::Mat &src) {
+        ScopedLogTimer timer(TAG, "segWatershed");
         if (src.empty()) return src;
         cv::Mat gray = toGray(src);
         cv::Mat small = downscaleMax(gray, 768);   // Vincent-Soille 全像素排序，降采样保速度
@@ -621,6 +635,14 @@ namespace ImageSegmentation {
             const int rows = grad.rows, cols = grad.cols;
             const int W = 2;                            // 候选窗口 ±2 像素
 
+            std::vector<cv::Point2f> cand;
+            std::vector<double> eCont, eCurv, eImg, eBal;
+            cand.reserve((2 * W + 1) * (2 * W + 1));
+            eCont.reserve(cand.capacity());
+            eCurv.reserve(cand.capacity());
+            eImg.reserve(cand.capacity());
+            eBal.reserve(cand.capacity());
+
             for (int it = 0; it < iterations; ++it) {
                 // 平均点距（归一化连续项的参考间距）
                 double dbar = 0;
@@ -648,8 +670,14 @@ namespace ImageSegmentation {
                         normal = cv::Point2f(-normal.x, -normal.y);
 
                     // 1) 收集 5×5 候选的各能量项
-                    std::vector<cv::Point2f> cand;
-                    std::vector<double> eCont, eCurv, eImg, eBal;
+                    // 缓冲区提到逐点循环外复用（原来每个点、每轮迭代都要
+                    // new 5 个 vector）：clear() 后 push_back 的顺序与容量
+                    // 增长无关，各项数值与 normalizeTerm 的入参逐位相同。
+                    cand.clear();
+                    eCont.clear();
+                    eCurv.clear();
+                    eImg.clear();
+                    eBal.clear();
                     for (int dy = -W; dy <= W; ++dy) {
                         for (int dx = -W; dx <= W; ++dx) {
                             cv::Point2f c(cur.x + dx, cur.y + dy);
@@ -732,6 +760,7 @@ namespace ImageSegmentation {
 
     // --- 基本贪心 Snake (式 4-40, 4-42 ~ 4-45) ---
     cv::Mat segSnake(const cv::Mat &src, int iterations) {
+        ScopedLogTimer timer(TAG, "segSnake");
         if (src.empty()) return src;
         cv::Mat gray = toGray(src);
         cv::Mat grad = makeGradField(gray, 2.0);       // 式 4-45：高斯平滑后梯度
@@ -773,6 +802,7 @@ namespace ImageSegmentation {
 
     // --- 气球力 Snake ---
     cv::Mat segBalloonSnake(const cv::Mat &src, int iterations) {
+        ScopedLogTimer timer(TAG, "segBalloonSnake");
         if (src.empty()) return src;
         cv::Mat gray = toGray(src);
         cv::Mat grad = makeGradField(gray, 2.0);
@@ -786,6 +816,7 @@ namespace ImageSegmentation {
 
     // --- 测地线主动轮廓离散近似 (式 4-46) ---
     cv::Mat segGeodesicContour(const cv::Mat &src, int iterations) {
+        ScopedLogTimer timer(TAG, "segGeodesicContour");
         if (src.empty()) return src;
         cv::Mat gray = toGray(src);
         cv::Mat grad = makeGradField(gray, 2.5);
@@ -800,6 +831,7 @@ namespace ImageSegmentation {
 
     // --- 区域型主动轮廓 Chan-Vese 简化 (式 4-47) ---
     cv::Mat segChanVese(const cv::Mat &src, int iterations) {
+        ScopedLogTimer timer(TAG, "segChanVese");
         if (src.empty()) return src;
         cv::Mat gray = toGray(src);
 
