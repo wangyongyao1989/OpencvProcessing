@@ -30,12 +30,20 @@ constexpr int LOG_INTERVAL = 15;
 
 void grayHistogram(const cv::Mat &gray, float *hist) {
     std::memset(hist, 0, sizeof(float) * Feature::GRAY_BINS);
-    const int n = gray.rows * gray.cols;
-    if (n <= 0) return;
-    const uint8_t *p = gray.data;
-    for (int i = 0; i < n; i++) {
-        hist[p[i] * Feature::GRAY_BINS / 256]++;
+    if (gray.empty()) return;
+    // 【正确性修复】调用方传进来的几乎都是 gray(roi) 这种子视图，其 step 等于
+    // 整帧宽度而不等于 ROI 宽度。原写法 `const uint8_t *p = gray.data;` 后线性读
+    // rows*cols 个字节，统计到的其实是「从 ROI 左上角起的一维内存段」：
+    // 每行行尾把 ROI 之外的像素算了进来，而 ROI 最后几行的右侧像素被漏掉，
+    // 只有 ROI 恰好贴满整行时才碰巧正确。改为逐行取 ptr，直方图才真正对应
+    // 这块矩形区域（读的范围仍在父缓冲内，不会越界，是「值错」不是「崩」）。
+    for (int y = 0; y < gray.rows; y++) {
+        const uint8_t *row = gray.ptr<uint8_t>(y);
+        for (int x = 0; x < gray.cols; x++) {
+            hist[row[x] * Feature::GRAY_BINS / 256]++;
+        }
     }
+    const int n = gray.rows * gray.cols;
     const float inv = 1.0f / static_cast<float>(n);
     for (int i = 0; i < Feature::GRAY_BINS; i++) hist[i] *= inv;
 }
@@ -45,6 +53,12 @@ void textureHistogram(const cv::Mat &gray, float *hist) {
     if (gray.cols < 3 || gray.rows < 3) return;
     const int w = gray.cols;
     const int h = gray.rows;
+    // 【正确性修复】同上：`row[x ± w]` 把「上一行/下一行」当成了 ±w 字节，
+    // 但子视图的行间距是 step（= 整帧宽），不是 ROI 宽。原实现在非贴边 ROI 上
+    // 取到的是错误位置的邻域。用 stride 索引后，ptr(y) 本身按 step 定位行首，
+    // 邻居偏移改为 ±stride ⇒ 统计的是真正的 3×3 邻域。
+    // mag/ori 两个暂存数组仍按 w 行优先存放，第二趟的累加次序不变。
+    const int stride = static_cast<int>(gray.step);
     std::vector<float> mag(static_cast<size_t>(w) * h, 0.f);
     std::vector<float> ori(static_cast<size_t>(w) * h, 0.f);
     double sumMag = 0.0;
@@ -53,10 +67,10 @@ void textureHistogram(const cv::Mat &gray, float *hist) {
         const uint8_t *row = gray.ptr<uint8_t>(y);
         for (int x = 1; x < w - 1; x++) {
             const int idx = y * w + x;
-            const float gx = (row[x - w + 1] + 2 * row[x + 1] + row[x + w + 1]) -
-                             (row[x - w - 1] + 2 * row[x - 1] + row[x + w - 1]);
-            const float gy = (row[x + w - 1] + 2 * row[x + w] + row[x + w + 1]) -
-                             (row[x - w - 1] + 2 * row[x - w] + row[x - w + 1]);
+            const float gx = (row[x - stride + 1] + 2 * row[x + 1] + row[x + stride + 1]) -
+                             (row[x - stride - 1] + 2 * row[x - 1] + row[x + stride - 1]);
+            const float gy = (row[x + stride - 1] + 2 * row[x + stride] + row[x + stride + 1]) -
+                             (row[x - stride - 1] + 2 * row[x - stride] + row[x - stride + 1]);
             const float m = std::sqrt(gx * gx + gy * gy);
             mag[idx] = m;
             ori[idx] = std::atan2(gy, gx);
@@ -210,18 +224,18 @@ bool ObjectTrackerLogic::getTrackedThumb(std::vector<uint8_t> &out) {
 cv::Mat ObjectTrackerLogic::decodeFrame(const uint8_t *data, int w, int h,
                                         int rotation, bool mirror) {
     cv::Mat src(h + h / 2, w, CV_8UC1, const_cast<uint8_t *>(data));
-    cv::cvtColor(src, src, cv::COLOR_YUV2RGBA_NV21);
-    if (mirror) cv::flip(src, src, 1);
+    // 输出改用成员缓冲：原来 cvtColor/flip/rotate 都写在一个局部 Mat 上，
+    // 每帧都要 malloc+free 一次全帧 RGBA（640×480≈1.2 MB），
+    // 尺寸一致时复用成员缓冲即可，写入的像素值完全不变。
+    cv::cvtColor(src, frameBuf_, cv::COLOR_YUV2RGBA_NV21);
+    if (mirror) cv::flip(frameBuf_, frameBuf_, 1);
     switch (rotation) {
-        case 90:  cv::rotate(src, src, cv::ROTATE_90_CLOCKWISE); break;
-        case 180: cv::rotate(src, src, cv::ROTATE_180); break;
-        case 270: cv::rotate(src, src, cv::ROTATE_90_COUNTERCLOCKWISE); break;
+        case 90:  cv::rotate(frameBuf_, frameBuf_, cv::ROTATE_90_CLOCKWISE); break;
+        case 180: cv::rotate(frameBuf_, frameBuf_, cv::ROTATE_180); break;
+        case 270: cv::rotate(frameBuf_, frameBuf_, cv::ROTATE_90_COUNTERCLOCKWISE); break;
         default: break;
     }
-    if (w != lastSrcW_ || h != lastSrcH_ || rotation != lastRot_ || mirror != lastMirror_) {
-        lastSrcW_ = w; lastSrcH_ = h; lastRot_ = rotation; lastMirror_ = mirror;
-    }
-    return src;
+    return frameBuf_;   // 头部引用；调用方与本次调用同处 stateMutex_ 临界区
 }
 
 void ObjectTrackerLogic::renderPlain(const uint8_t *data, int w, int h,
@@ -235,17 +249,19 @@ int ObjectTrackerLogic::trackLocked(const uint8_t *data, int w, int h,
                                     int rotation, bool mirror,
                                     float outBox[4], float *outSim) {
     cv::Mat frame = decodeFrame(data, w, h, rotation, mirror);
-    cv::Mat gray;
+    // 中间量一律用成员缓冲（尺寸不变时 OpenCV 不再重新分配），
+    // 每帧少 4 次全帧 malloc/free；写入的像素值与原实现逐位相同。
+    cv::Mat &gray = grayBuf_;
     cv::cvtColor(frame, gray, cv::COLOR_RGBA2GRAY);
     // 每帧省一次全帧拷贝：RGBA 直接转 HSV（OpenCV 对 COLOR_RGB2HSV 注册了
     // 4 通道内核，按前 3 通道计算、alpha 忽略，与先 RGBA2RGB 再 RGB2HSV
     // 结果逐位相同）；H 通道用 extractChannel 单独取出，不再 split 出
     // 用不到的 S/V 两个全帧缓冲。
-    cv::Mat hsv;
+    cv::Mat &hsv = hsvBuf_;
     cv::cvtColor(frame, hsv, cv::COLOR_RGB2HSV);
-    cv::Mat mask;
+    cv::Mat &mask = maskBuf_;
     cv::inRange(hsv, cv::Scalar(0, 30, 30), cv::Scalar(180, 255, 255), mask);
-    cv::Mat hue;
+    cv::Mat &hue = hueBuf_;
     cv::extractChannel(hsv, hue, 0);
 
     if (armed_) {
@@ -269,7 +285,7 @@ int ObjectTrackerLogic::trackLocked(const uint8_t *data, int w, int h,
         return state_;
     }
 
-    cv::Mat prob;
+    cv::Mat &prob = probBuf_;
     const float *ranges[] = {hueRanges_};
     cv::calcBackProject(&hue, 1, 0, hueHist_, prob, ranges, 1, true);
     prob.convertTo(prob, CV_8U);
