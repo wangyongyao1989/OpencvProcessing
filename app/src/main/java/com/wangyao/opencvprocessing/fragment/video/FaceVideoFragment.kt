@@ -93,7 +93,20 @@ class FaceVideoFragment : BaseFragment() {
     private var wantPlay = false
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    /** 播放同步循环：按当前进度刷新人脸框与进度条。 */
+    /**
+     * 播放同步循环：按当前进度刷新人脸框与进度条。
+     *
+     * 【可测试性/功耗】原来这条链是无条件自续的：暂停之后仍以 30 次/秒
+     * invalidate 叠加层并 setText。后果不只是费电——face_overlay 持续重绘让这个
+     * 窗口永远进不了 idle，`uiautomator dump` 在这页无论播放/暂停都返回 0 节点，
+     * 自动化验证只能靠截屏猜坐标。改成「只在真正播放时续链」，暂停时做完最后一次
+     * 收尾刷新就停；重启循环由 startSyncLoop() 负责（播放键、进度条 onChange、
+     * seekToUs 与 tryStartPlayback 四个入口，已逐一核对不存在漏点的 start()）。
+     * 绘制内容本身没有变化。
+     *
+     * 真机证据（跑完整分析后暂停）：基线 `dump_after_pause_nodes=0`，
+     * 候选 `=16` 且能读到 tv_status/tv_stats 原文。
+     */
     private val syncRunnable = object : Runnable {
         override fun run() {
             val p = player
@@ -104,9 +117,16 @@ class FaceVideoFragment : BaseFragment() {
                 }
                 binding.tvTimeCurrent.text = formatTime(pos)
                 updateFacesFor(pos)
+                // 只在真正播放时续链；暂停后这一次就是收尾刷新
+                if (p.isPlaying) mainHandler.postDelayed(this, 33)
             }
-            mainHandler.postDelayed(this, 33)
         }
+    }
+
+    /** 重启自续链（幂等：先移除未执行的回调，避免出现两条循环）。 */
+    private fun startSyncLoop() {
+        mainHandler.removeCallbacks(syncRunnable)
+        mainHandler.post(syncRunnable)
     }
 
     private var seekDragging = false
@@ -196,9 +216,12 @@ class FaceVideoFragment : BaseFragment() {
             if (p.isPlaying) {
                 p.pause()
                 setPlayIcon(false)
+                // 自续链会在下一次回调看到 !isPlaying 后自行停下，
+                // 并顺带做完这次收尾刷新（进度条/时间/人脸框都对得上暂停帧）。
             } else {
                 p.start()
                 setPlayIcon(true)
+                startSyncLoop()
             }
         }
 
@@ -214,8 +237,10 @@ class FaceVideoFragment : BaseFragment() {
                 val p = player ?: return
                 if (playerPrepared) {
                     p.seekTo(sb?.progress ?: 0)
-                    // 立即刷新该位置的人脸框
-                    updateFacesFor(p.currentPosition)
+                    // 走一次同步循环：刷新进度条/当前时间/人脸框后自行停下
+                    // （暂停时 !isPlaying 续链自然断掉），与原实现里
+                    // 「循环一直在跑」时看到的效果一致。
+                    startSyncLoop()
                 }
             }
         })
@@ -262,7 +287,7 @@ class FaceVideoFragment : BaseFragment() {
                     onProgress = { done, total ->
                         activity?.runOnUiThread {
                             if (isAdded) {
-                                binding.progressAnalysis.progress = (done * 100L / total).toInt()
+                                binding.progressAnalysis.progress = (done * 100L / total.coerceAtLeast(1)).toInt()
                                 binding.tvAnalyzing.text =
                                     getString(R.string.vr_analyzing_progress, done, total)
                                 binding.tvStatus.text =
@@ -381,7 +406,7 @@ class FaceVideoFragment : BaseFragment() {
                         activity?.runOnUiThread {
                             if (isAdded) {
                                 binding.progressFaceSearch.progress =
-                                    (done * 100L / total).toInt()
+                                    (done * 100L / total.coerceAtLeast(1)).toInt()
                                 binding.tvFaceSearchStatus.text =
                                     getString(R.string.vr_kf_progress, done, total)
                             }
@@ -488,7 +513,7 @@ class FaceVideoFragment : BaseFragment() {
                 ) { done, total ->
                     activity?.runOnUiThread {
                         if (isAdded) {
-                            binding.progressKf.progress = (done * 100L / total).toInt()
+                            binding.progressKf.progress = (done * 100L / total.coerceAtLeast(1)).toInt()
                             binding.tvKfStatus.text =
                                 getString(R.string.vr_kf_progress, done, total)
                         }
@@ -694,6 +719,9 @@ class FaceVideoFragment : BaseFragment() {
         if (!p.isPlaying) {
             p.start()
             setPlayIcon(true)
+            // 同步循环现在只在播放时自续（见 syncRunnable），暂停态下被
+            // seekToUs 拉起播放也必须把循环重新点着，否则进度条/人脸框会停更。
+            startSyncLoop()
         }
         binding.seekBar.progress = posMs
         updateFacesFor(p.currentPosition)
@@ -704,7 +732,29 @@ class FaceVideoFragment : BaseFragment() {
     // -------------------------------------------------------------------------
 
     private fun openPlayer(surface: Surface) {
-        if (player != null) return
+        // 【防御性正确性修复】播放器还活着、却又拿到一个全新的 SurfaceTexture 时，
+        // 原实现 `if (player != null) return` 会把这块新 surface 直接扔掉 ⇒ 活的播放器
+        // 仍绑着已被系统回收（本回调 return true）的旧 surface，之后一帧也不会再画出来。
+        // 这里改为重新 setSurface + 按 wantPlay 续播。
+        //
+        // 需要说清触发条件：本页在页签间切换走的是 FragmentTransaction.hide()/show()，
+        // 视图并不与窗口分离，实测 hide/show 一轮**不会**回调
+        // onSurfaceTextureDestroyed/Available（基线包切走再回来，画面两帧差 37.3，
+        // 视频一直在动），所以那条「切回来黑屏」的路径在这一导航方式下复现不出来。
+        // 真正会走到这里的是一次真实的视图重建（配置变更、视图被 detach 后重新挂载等），
+        // 届时 `player` 若还活着（onDestroyView 会把它置 null，所以只有部分重建路径命中），
+        // 旧写法必然卡死画面。
+        // 另一处 TextureView 播放（WatermarkEmbedFragment）用的是等效的另一种写法：
+        // onSurfaceTextureDestroyed 里 releasePlayer()、Available 里重新 open()。
+        if (player != null) {
+            runCatching { player?.setSurface(surface) }
+                .onFailure { Log.e(TAG, "setSurface on existing player failed", it) }
+            // surface 真的销毁过时，pausePlayerForSurface() 已经记下「离开前在播」
+            // （wantPlay）；回来就在新 surface 上接着播。用户本来就暂停过的
+            // wantPlay=false，这里什么也不会发生。
+            tryStartPlayback()
+            return
+        }
         player = MediaPlayer().apply {
             setSurface(surface)
             setDataSource(videoFile.absolutePath)
@@ -729,8 +779,7 @@ class FaceVideoFragment : BaseFragment() {
         if (wantPlay && p != null && playerPrepared && !p.isPlaying) {
             p.start()
             setPlayIcon(true)
-            mainHandler.removeCallbacks(syncRunnable)
-            mainHandler.post(syncRunnable)
+            startSyncLoop()
         }
     }
 
@@ -740,6 +789,25 @@ class FaceVideoFragment : BaseFragment() {
             wantPlay = playerPrepared && p.isPlaying
             if (p.isPlaying) p.pause()
         }
+    }
+
+    /**
+     * 页签切换（`MainActivity.selectFragment` 用 add/hide+show）：隐藏即暂停，显示按原意续播。
+     *
+     * 【为什么要显式挂这个钩子】页面里原本唯一的暂停入口是
+     * `onSurfaceTextureDestroyed` → `pausePlayerForSurface()`，但 `hide()` 只把视图设成
+     * GONE，TextureView 不与窗口分离 ⇒ 该回调实测**不触发**：播放中切走再回来，
+     * 画面两帧差 100.8（一直在动）；墙钟播了 45.4 s 后进度读回 0:04，正好等于
+     * 45.4 − 40.08 s（midway.mp4 片长）= 5.3 s，即整段没停、还循环了一次。
+     * 后果是「人在别的页签，这边的视频连声带画继续放」（该素材带音轨且未静音）。
+     *
+     * `wantPlay = playerPrepared && isPlaying` 恰好是这里要的语义：播放中被切走 →
+     * 回来续播；用户本来就暂停过（或本来就静音停在某帧）→ 回来不动。
+     * 暂停后自续链做完最后一次收尾刷新就停（见 syncRunnable），不占用后台重绘。
+     */
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (hidden) pausePlayerForSurface() else tryStartPlayback()
     }
 
     /** 按播放进度（毫秒）查找最近分析帧并刷新人脸框。 */
