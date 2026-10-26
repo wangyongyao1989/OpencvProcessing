@@ -1,5 +1,6 @@
 #include "include/ImageMorphology.h"
 #include "include/JniHelper.h"
+#include "include/PerfTimer.h"
 #include <opencv2/imgproc.hpp>
 #include <android/log.h>
 #include <chrono>
@@ -11,27 +12,10 @@ namespace ImageMorphology {
     // 内部工具
     // -------------------------------------------------------------------------
 
-/** 迭代类算法的耗时打点：这两处的收敛轮数随图像内容变化，
- *  没有日志就无法从 UI 判断「慢是算法本身还是 JNI 往返」。 */
+// 迭代类算法的耗时打点：这两处的收敛轮数随图像内容变化，没有日志就无法从 UI
+// 判断「慢是算法本身还是 JNI 往返」。ScopedLogTimer 已提到 include/PerfTimer.h，
+// 其余昂贵算子（分割/Retinex/同态/频域滤波）共用，日志格式保持 `%s: ksize=%d cost=%lldms` 不变。
 #define TAG "ImageMorphology"
-    class ScopedLogTimer {
-    public:
-        ScopedLogTimer(const char *what, int ksize)
-                : what_(what), ksize_(ksize),
-                  t0_(std::chrono::steady_clock::now()) {}
-
-        ~ScopedLogTimer() {
-            const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - t0_).count();
-            __android_log_print(ANDROID_LOG_INFO, TAG, "%s: ksize=%d cost=%lldms",
-                                what_, ksize_, static_cast<long long>(ms));
-        }
-
-    private:
-        const char *what_;
-        int ksize_;
-        std::chrono::steady_clock::time_point t0_;
-    };
 
        /** 输入转灰度：统一委托 JniHelper::toGray，保证全工程灰度口径一致。 */
     static cv::Mat toGray(const cv::Mat &src) { return JniHelper::toGray(src); }
@@ -144,7 +128,7 @@ namespace ImageMorphology {
     // --- 区域填充 (式 3-23)：Xk = (X(k-1)⊕B) ∩ Aᶜ 迭代 ---
     cv::Mat binaryFillHoles(const cv::Mat &src, int ksize) {
         if (src.empty()) return src;
-        ScopedLogTimer timer("binaryFillHoles", ksize);
+        ScopedLogTimer timer(TAG, "binaryFillHoles", ksize);
         cv::Mat A = binarize(src);
         cv::Mat Ac;
         cv::bitwise_not(A, Ac);
@@ -241,7 +225,7 @@ namespace ImageMorphology {
     // --- 细化 (式 3-29 ~ 3-31)：Zhang-Suen 串行实现 ---
     cv::Mat binaryThinning(const cv::Mat &src) {
         if (src.empty()) return src;
-        ScopedLogTimer timer("binaryThinning", -1);
+        ScopedLogTimer timer(TAG, "binaryThinning");
         cv::Mat img = binarize(src);
 
         // 8 邻域编号：

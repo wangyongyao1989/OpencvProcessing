@@ -1,10 +1,14 @@
 #include "include/ImageRetinex.h"
+#include "include/PerfTimer.h"
 #include "include/JniHelper.h"
 #include <opencv2/imgproc.hpp>
 #include <cmath>
 #include <algorithm>
 
 namespace ImageRetinex {
+
+// 耗时打点用（PerfTimer.h 的 ScopedLogTimer 需要 tag 参数）
+#define TAG "ImageRetinex"
 
     // -------------------------------------------------------------------------
     // 内部工具
@@ -132,6 +136,7 @@ namespace ImageRetinex {
     // MSR (式 2-93, 式 2-94)：R = Σk ωk(ln I − ln(I*Gk))，ωk = 1/N
     // -------------------------------------------------------------------------
     cv::Mat msr(const cv::Mat &src, const std::vector<double> &sigmas) {
+        ScopedLogTimer timer(TAG, "msr");
         if (src.empty() || sigmas.empty()) return src;
         cv::Mat rgb = toRgb(src);
         const double w = 1.0 / (double) sigmas.size();   // 式 2-94：等权
@@ -161,6 +166,7 @@ namespace ImageRetinex {
     // MSRCR (式 2-95, 式 2-96)：R = Σk Ci·ωk·(ln Ii − ln(Ii*Gk))
     // -------------------------------------------------------------------------
     cv::Mat msrcr(const cv::Mat &src, const std::vector<double> &sigmas) {
+        ScopedLogTimer timer(TAG, "msrcr");
         if (src.empty() || sigmas.empty()) return src;
         cv::Mat rgb = toRgb(src);
         const double w = 1.0 / (double) sigmas.size();   // 式 2-94：等权
