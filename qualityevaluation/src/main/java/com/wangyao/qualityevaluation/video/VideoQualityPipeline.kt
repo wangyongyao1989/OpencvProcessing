@@ -187,7 +187,10 @@ class VideoQualityPipeline {
                     if (outIdx >= 0) {
                         val eos = bufferInfo.flags and
                                 MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
-                        if (bufferInfo.size > 0 && !eos) {
+                        // EOS 与「这帧有数据」互相独立：连同 EOS 一起下发的最后一帧
+                        // 不能丢（本文件 decodeOnly 分支 :562 就是这个写法）。
+                        // 若本机解码器的 EOS 缓冲 size=0，此处改动不改变任何输出帧。
+                        if (bufferInfo.size > 0) {
                             val image = decoder.getOutputImage(outIdx)!!
                             if (ptsBaseUs < 0) ptsBaseUs = bufferInfo.presentationTimeUs
                             lastPtsUs = bufferInfo.presentationTimeUs - ptsBaseUs
