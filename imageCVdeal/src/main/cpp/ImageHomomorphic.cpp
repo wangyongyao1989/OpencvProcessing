@@ -1,9 +1,13 @@
 #include "include/ImageHomomorphic.h"
+#include "include/PerfTimer.h"
 #include "include/JniHelper.h"
 #include <opencv2/imgproc.hpp>
 #include <cmath>
 
 namespace ImageHomomorphic {
+
+// 耗时打点用（PerfTimer.h 的 ScopedLogTimer 需要 tag 参数）
+#define TAG "ImageHomomorphic"
 
     // -------------------------------------------------------------------------
     // 内部工具
@@ -96,7 +100,9 @@ namespace ImageHomomorphic {
         // 式 2-86：s(x,y) = F⁻¹[S]
         cv::idft(complexI, complexI, cv::DFT_SCALE);
         cv::split(complexI, planes);
-        cv::Mat s = planes[0](cv::Rect(0, 0, z.cols, z.rows)).clone();
+        // s 就地取负后只被 cv::exp 读走，planes[0]（split 的独立缓冲）之后
+        // 再无读者 ⇒ 不 clone，省一次 padded 尺寸 float 拷贝，结果逐位相同。
+        cv::Mat s = planes[0](cv::Rect(0, 0, z.cols, z.rows));
 
         // 再乘 (-1)^(x+y) 去中心化
         for (int y = 0; y < s.rows; ++y) {
@@ -138,6 +144,7 @@ namespace ImageHomomorphic {
     // -------------------------------------------------------------------------
     cv::Mat homomorphicFilter(const cv::Mat &src, double d0, double c,
                               double hl, double hh) {
+        ScopedLogTimer timer(TAG, "homomorphicFilter");
         if (src.empty()) return src;
         cv::Mat rgb = toRgb(src);
 
@@ -171,6 +178,7 @@ namespace ImageHomomorphic {
     // 照度分量估计（低频，σ=60 高斯）
     // -------------------------------------------------------------------------
     cv::Mat illuminationComponent(const cv::Mat &src) {
+        ScopedLogTimer timer(TAG, "illuminationComponent");
         if (src.empty()) return src;
         cv::Mat gray = toGray(src);
 
@@ -186,6 +194,7 @@ namespace ImageHomomorphic {
     // 反射分量估计 r = f / (i + ε)（高频细节）
     // -------------------------------------------------------------------------
     cv::Mat reflectanceComponent(const cv::Mat &src) {
+        ScopedLogTimer timer(TAG, "reflectanceComponent");
         if (src.empty()) return src;
         cv::Mat gray = toGray(src);
 

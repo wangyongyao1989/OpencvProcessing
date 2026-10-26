@@ -1,4 +1,5 @@
 #include "include/ImageSmoothDenoise.h"
+#include "include/PerfTimer.h"
 #include "include/JniHelper.h"
 #include <opencv2/imgproc.hpp>
 #include <opencv2/photo.hpp>
@@ -7,6 +8,9 @@
 #include <vector>
 
 namespace ImageSmoothDenoise {
+
+// 耗时打点用（PerfTimer.h 的 ScopedLogTimer 需要 tag 参数）
+#define TAG "ImageSmoothDenoise"
 
     // -------------------------------------------------------------------------
     // 内部工具：转灰度（输入可能是 RGBA）
@@ -189,7 +193,11 @@ namespace ImageSmoothDenoise {
         cv::Mat real = outPlanes[0];
 
         // 7. 再乘 (-1)^(x+y) 复原、裁剪到原始尺寸、饱和截断到 [0,255]
-        cv::Mat result = real(cv::Rect(0, 0, gray.cols, gray.rows)).clone();
+        // 不再 clone：result 就地取负之后只被 convertTo 读走，父缓冲
+        // outPlanes[0]（split 出来的独立缓冲）此后没有任何读者，
+        // 且 outPlanes 的生命周期覆盖 result 的全部使用期 ⇒ 像素逐位相同，
+        // 省掉一次 padded 尺寸的 float 全图拷贝。
+        cv::Mat result = real(cv::Rect(0, 0, gray.cols, gray.rows));
         for (int y = 0; y < result.rows; ++y) {
             float *row = result.ptr<float>(y);
             for (int x = 0; x < result.cols; ++x) {
@@ -226,6 +234,7 @@ namespace ImageSmoothDenoise {
     // 采用 OpenCV fastNlMeansDenoising 实现（模板窗口 7×7，搜索窗口 21×21）。
     // -------------------------------------------------------------------------
     cv::Mat nlmDenoise(const cv::Mat &src, double h) {
+        ScopedLogTimer timer(TAG, "nlmDenoise");
         if (src.empty()) return src;
         cv::Mat gray = toGray(src);
         cv::Mat dst;
