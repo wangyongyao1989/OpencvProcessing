@@ -59,8 +59,20 @@ object FaceTrackMath {
             var sx = 0.0; var sy = 0.0; var sw = 0.0; var sh = 0.0
             var cnt = 0
             for (hf in history) {
-                val best = hf.maxByOrNull { iou(box, it) }
-                if (best != null && iou(box, best) > 0.3) {
+                // maxByOrNull 取的是「第一个达到最大值的元素」，下面的手写循环
+                // 用严格 `>` 保留同一取舍规则；顺带不再为已选出的 best 重算一次
+                // IoU（原来每帧每框都要多算一遍）。
+                var bestIdx = -1
+                var bestIou = Double.NEGATIVE_INFINITY
+                for (k in hf.indices) {
+                    val v = iou(box, hf[k])
+                    if (v > bestIou) {
+                        bestIou = v
+                        bestIdx = k
+                    }
+                }
+                if (bestIdx >= 0 && bestIou > 0.3) {
+                    val best = hf[bestIdx]
                     sx += best.x; sy += best.y
                     sw += best.w; sh += best.h
                     cnt++
