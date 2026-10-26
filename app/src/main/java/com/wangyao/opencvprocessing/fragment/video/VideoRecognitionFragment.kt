@@ -97,7 +97,7 @@ class VideoRecognitionFragment : BaseFragment() {
                     onProgress = { done, total ->
                         activity?.runOnUiThread {
                             if (isAdded) {
-                                binding.progress.progress = (done * 100L / total).toInt()
+                                binding.progress.progress = (done * 100L / total.coerceAtLeast(1)).toInt()
                                 binding.tvStatus.text =
                                     getString(R.string.ir_video_status_progress, done, total)
                             }
