@@ -100,7 +100,8 @@ class VideoFrameSource(path: String) : AutoCloseable {
             if (!inputDone) {
                 val inIdx = decoder.dequeueInputBuffer(10_000)
                 if (inIdx >= 0) {
-                    val buf = decoder.getInputBuffer(inIdx)!!
+                    val buf = decoder.getInputBuffer(inIdx)
+                        ?: throw IllegalStateException("decoder.getInputBuffer($inIdx) = null")
                     val size = extractor.readSampleData(buf, 0)
                     if (size < 0) {
                         decoder.queueInputBuffer(
@@ -150,28 +151,48 @@ class VideoFrameSource(path: String) : AutoCloseable {
         return null
     }
 
-    /** 提取紧凑 Y 平面（适配 rowStride/pixelStride）。 */
+    /**
+     * 提取紧凑 Y 平面（适配 rowStride/pixelStride）。
+     *
+     * 边界加固（与 VideoQualityPipeline 同名实现的口径对齐）：部分设备给出的
+     * 输出 buffer 末行不足 rowStride，或 Image 尺寸与初始化 width/height 不一致，
+     * 原写法在这两种情况下抛 BufferUnderflowException / IllegalArgumentException
+     * 直接打断解码线程。这里逐行夹紧读取长度：数据充足时读到的字节与原实现逐位
+     * 相同（快路径条件多加了一个 remaining 判断，原本能走快路径的仍然走快路径），
+     * 不足时缺失的像素保持 0 而不是崩。
+     */
     private fun extractY(image: android.media.Image): ByteArray {
         val plane = image.planes[0]
-        val buf = plane.buffer
+        val buf = plane.buffer.duplicate()   // 不改原 Image buffer 的 position
         val rowStride = plane.rowStride
         val pixelStride = plane.pixelStride
         val out = ByteArray(width * height)
-        if (pixelStride == 1) {
-            if (rowStride == width) {
-                buf.get(out, 0, out.size)
-            } else {
-                for (y in 0 until height) {
-                    buf.position(y * rowStride)
-                    buf.get(out, y * width, width)
-                }
+        val base = buf.position()
+        val limit = buf.limit()
+        val copyW = minOf(width, image.width)
+        val copyH = minOf(height, image.height)
+
+        if (pixelStride == 1 && rowStride == width && limit - base >= out.size) {
+            buf.get(out, 0, out.size)
+        } else if (pixelStride == 1) {
+            for (y in 0 until copyH) {
+                val lineStart = base + y * rowStride
+                if (lineStart >= limit) break
+                buf.position(lineStart)
+                val n = minOf(copyW, limit - lineStart)
+                if (n > 0) buf.get(out, y * width, n)
             }
         } else {
-            for (y in 0 until height) {
-                buf.position(y * rowStride)
-                for (x in 0 until width) {
+            for (y in 0 until copyH) {
+                val lineStart = base + y * rowStride
+                if (lineStart >= limit) break
+                buf.position(lineStart)
+                for (x in 0 until copyW) {
+                    if (buf.position() >= limit) break
                     out[y * width + x] = buf.get()
-                    buf.position(buf.position() + pixelStride - 1)
+                    val next = buf.position() + pixelStride - 1
+                    if (next > limit) break            // position(>limit) 会抛，先挡住
+                    buf.position(next)
                 }
             }
         }
