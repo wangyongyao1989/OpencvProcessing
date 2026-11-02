@@ -11,6 +11,19 @@ namespace JniHelper {
 jobject grayMatToBitmap(JNIEnv *env, const cv::Mat &gray, int width, int height) {
     if (gray.empty()) return nullptr;
 
+    // 尺寸自校验：调用方从 native-lib 里那个「不检查返回值」的
+    // AndroidBitmap_getInfo 拿宽高，info 失败时是未初始化/为 0 的值。
+    // 结果 Mat 的尺寸就是我们要画的尺寸，两者不一致时以 Mat 为准
+    // ——正常路径 info.width==gray.cols，行为完全不变；异常路径由
+    // 「createBitmap(垃圾尺寸) + cvtColor 尺寸不匹配抛 cv::Exception
+    // 穿透 JNI 直接 abort」变成一张尺寸正确的图。
+    if (width != gray.cols || height != gray.rows || width <= 0 || height <= 0) {
+        LOGE("grayMatToBitmap: requested %dx%d != result %dx%d, use result size",
+             width, height, gray.cols, gray.rows);
+        width = gray.cols;
+        height = gray.rows;
+    }
+
     jclass bitmapClass = env->FindClass("android/graphics/Bitmap");
     jmethodID createBitmapMethodID = env->GetStaticMethodID(bitmapClass, "createBitmap",
                                                             "(IILandroid/graphics/Bitmap$Config;)Landroid/graphics/Bitmap;");
@@ -22,17 +35,31 @@ jobject grayMatToBitmap(JNIEnv *env, const cv::Mat &gray, int width, int height)
     jobject newBitmap = env->CallStaticObjectMethod(bitmapClass, createBitmapMethodID,
                                                     width, height,
                                                     argb8888Config);
-    void *newPixels;
-    if (AndroidBitmap_lockPixels(env, newBitmap, &newPixels) < 0) return nullptr;
-
-    cv::Mat dst(height, width, CV_8UC4, newPixels);
-    if (gray.channels() == 1) {
-        cv::cvtColor(gray, dst, cv::COLOR_GRAY2RGBA);
-    } else if (gray.channels() == 3) {
-        cv::cvtColor(gray, dst, cv::COLOR_RGB2RGBA);
-    } else if (gray.channels() == 4) {
-        gray.copyTo(dst);
+    // createBitmap 对非法尺寸抛 IllegalArgumentException 并返回 null；
+    // 此时必须清掉挂起的异常，否则它会在下一次 JNI 调用处随机引爆。
+    if (newBitmap == nullptr) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        LOGE("grayMatToBitmap: createBitmap(%d,%d) failed", width, height);
+        return nullptr;
     }
+    void *newPixels;
+    if (AndroidBitmap_lockPixels(env, newBitmap, &newPixels) < 0) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        LOGE("grayMatToBitmap: lockPixels failed");
+        env->DeleteLocalRef(newBitmap);
+        return nullptr;
+    }
+
+    {
+        cv::Mat dst(height, width, CV_8UC4, newPixels);
+        if (gray.channels() == 1) {
+            cv::cvtColor(gray, dst, cv::COLOR_GRAY2RGBA);
+        } else if (gray.channels() == 3) {
+            cv::cvtColor(gray, dst, cv::COLOR_RGB2RGBA);
+        } else if (gray.channels() == 4) {
+            gray.copyTo(dst);
+        }
+    }   // 先析构 dst，确保 unlock 之后不再有任何 Mat 视图指向锁定的像素
 
     AndroidBitmap_unlockPixels(env, newBitmap);
     return newBitmap;
