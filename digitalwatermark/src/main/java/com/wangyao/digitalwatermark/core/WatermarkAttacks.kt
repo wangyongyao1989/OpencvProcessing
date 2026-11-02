@@ -13,6 +13,11 @@ import kotlin.math.sin
  *   （削弱水印幅度，对策：增大嵌入强度、冗余嵌入 + 多数投票、纠错编码）
  * - 同步攻击：缩放 / 旋转 / 裁剪（破坏水印与载体的同步性，相关检测失效，
  *   对策：嵌入同步模板/参照物、有源提取反转、低频过滤）
+ *   注意：本演示为保持帧尺寸可重编码，这三个攻击都在「原尺寸原坐标系」里
+ *   做几何失真（详见各函数的说明）。它们真正打掉的是内容/能量，坐标网格
+ *   并没有移位，因此严格说更接近简单攻击；完整的同步攻击要改尺寸或平移，
+ *   而那会让提取端的分块位置整体错位、直接输出乱码，不适合放在同一
+ *   「正确率」曲线里比较。
  * - 帧丢失攻击（视频特有）：丢弃奇数帧（对策：帧间冗余嵌入）
  */
 object WatermarkAttacks {
@@ -160,7 +165,12 @@ object WatermarkAttacks {
         }
     }
 
-    /** 缩放攻击：0.5 倍双线性缩小再放大回原尺寸（破坏像素与水印的同步性）。 */
+    /**
+     * 缩放攻击：0.5 倍双线性缩小再放大回原尺寸。
+     *
+     * 尺寸最终复原，因此 8×8 分块网格与水印位置仍对齐——它打掉的是中频能量
+     * （缩小即低通，教材图 8-5 里嵌入带被直接压掉），而不是坐标位移失步。
+     */
     fun scale(luma: ByteArray, width: Int, height: Int) {
         val smallW = width / 2
         val smallH = height / 2
@@ -169,7 +179,13 @@ object WatermarkAttacks {
         bilinear(small, smallW, smallH, luma, width, height)
     }
 
-    /** 旋转攻击：旋转 angle 度（双线性插值，出界区域补黑）。 */
+    /**
+     * 旋转攻击：旋转 angle 度（双线性插值，出界区域补黑）。
+     *
+     * 三个几何攻击里最接近真同步攻击的一个：离中心越远、像素位移越大
+     * （r·sin θ），固定网格的相关检测因此部分失准；但因为帧尺寸没变、
+     * 中心区域几乎不移位，仍不是「整幅平移/重采样」级别的失步。
+     */
     fun rotate(luma: ByteArray, width: Int, height: Int, angleDeg: Double) {
         val src = luma.copyOf()
         val rad = Math.toRadians(angleDeg)
@@ -192,10 +208,21 @@ object WatermarkAttacks {
         }
     }
 
-    /** 裁剪攻击：四周裁掉 [ratio] 比例后以黑边补齐（水印随裁剪区域丢失）。 */
+    /**
+     * 裁剪攻击：四周裁掉 [ratio] 比例后以黑边补齐（水印随裁剪区域丢失）。
+     *
+     * 实现上是「同尺寸遮罩」：中心保留区仍在原来的坐标上，帧不缩小也不平移，
+     * 所以提取端的 blocksX/step 完全不变——被打掉的是落在被裁框里的那部分
+     * 水印比特（边缘 10% 的块变成黑块，相关值趋 0），属于局部擦除而非真失步。
+     * 真正的同步攻击要裁后改尺寸：`blocksX = width/8` 一变，全帧的比特↔块
+     * 对应关系整体错位，输出就是随机猜测（正确率≈50%），无法与本页其他攻击
+     * 放在同一条曲线上比较，故这里不采用。
+     */
     fun crop(luma: ByteArray, width: Int, height: Int, ratio: Double) {
-        val mx = (width * ratio).toInt()
-        val my = (height * ratio).toInt()
+        // 钳到 [(dim-1)/2] 以内：ratio 越界（>0.5 或负数）时原来会算出负的
+        // arraycopy 长度直接抛异常。UI 固定 0.1，合法区间内取值不变。
+        val mx = (width * ratio).toInt().coerceIn(0, (width - 1) / 2)
+        val my = (height * ratio).toInt().coerceIn(0, (height - 1) / 2)
         val src = luma.copyOf()
         java.util.Arrays.fill(luma, 0)
         for (y in my until height - my) {
