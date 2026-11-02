@@ -392,14 +392,14 @@ class FaceVideoFragment : BaseFragment() {
         binding.ivFaceQuery.setImageBitmap(frame)
         binding.ivFaceQuery.visibility = View.VISIBLE
         binding.tvFaceSearchStatus.text = getString(
-            if (indexer.keyframes.isEmpty()) R.string.vr_face_search_extracting
+            if (indexer.keyframeSnapshot().isEmpty()) R.string.vr_face_search_extracting
             else R.string.vr_kf_searching
         )
 
         thread(start = true, name = "face-frame-search") {
             try {
                 // 索引未建立：先抽取关键帧并建立索引（后台）
-                if (indexer.keyframes.isEmpty()) {
+                if (indexer.keyframeSnapshot().isEmpty()) {
                     val kfs = indexer.extractKeyframes(
                         videoFile.absolutePath, KEYFRAME_COUNT
                     ) { done, total ->
@@ -449,7 +449,7 @@ class FaceVideoFragment : BaseFragment() {
                         )
                     } else {
                         getString(
-                            R.string.vr_kf_status_extracted, indexer.keyframes.size
+                            R.string.vr_kf_status_extracted, indexer.keyframeSnapshot().size
                         )
                     }
                 }
@@ -597,7 +597,7 @@ class FaceVideoFragment : BaseFragment() {
 
     /** 第二步：以选中的关键帧为查询帧检索视频（综合相似度）。 */
     private fun runKeyframeSearch() {
-        val kfs = indexer.keyframes
+        val kfs = indexer.keyframeSnapshot()   // 快照：抽取线程可能正在改内部列表
         if (selectedKfIndex < 0 || selectedKfIndex >= kfs.size) {
             binding.tvKfStatus.text = getString(R.string.vr_kf_hint_select)
             return
