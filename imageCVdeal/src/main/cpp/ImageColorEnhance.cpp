@@ -52,11 +52,14 @@ namespace ImageColorEnhance {
         cv::Mat gray = toGray(src);
 
         cv::Mat dst(gray.size(), CV_8UC3);
+        // 阈值原来直接 (uchar)l1 截断：越界值会回绕（如 300→44）切出与界面标签
+        // 完全相反的区域。钳到 [0,256]，合法区间内比较结果逐位不变。
+        const int level = std::max(0, std::min(256, l1));
         for (int y = 0; y < gray.rows; ++y) {
             const uchar *gRow = gray.ptr<uchar>(y);
             uchar *dRow = dst.ptr<uchar>(y);
             for (int x = 0; x < gray.cols; ++x) {
-                if (gRow[x] < (uchar) l1) {
+                if (gRow[x] < level) {
                     dRow[3 * x] = 0;      // 蓝色
                     dRow[3 * x + 1] = 0;
                     dRow[3 * x + 2] = 255;
@@ -77,7 +80,10 @@ namespace ImageColorEnhance {
         if (src.empty()) return src;
         cv::Mat gray = toGray(src);
 
-        const int regions = m + 1;                       // M+1 个区域
+        // M 由 UI 传入，非正值会让 regions<=0：lut 尺寸变成 0/负数、
+        // idx = min(regions-1, floor(...)) 直接是负下标越界读。钳到最小 2 个区域
+        // （即 m>=1），UI 默认值 m=2/m=8 时 regions 不变 ⇒ 像素逐位相同。
+        const int regions = std::max(2, m + 1);          // M+1 个区域
         std::vector<uchar> lut(regions * 3);             // 每区域一种光谱色
         for (int i = 0; i < regions; ++i) {
             uchar rgb[3];
