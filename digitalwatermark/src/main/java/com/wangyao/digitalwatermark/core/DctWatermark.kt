@@ -1,6 +1,7 @@
 package com.wangyao.digitalwatermark.core
 
 import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
@@ -145,7 +146,10 @@ object DctWatermark {
             // IDCT → 写回
             inverseDct(F, tmp, g)
             for (y in 0 until 8) for (x in 0 until 8) {
-                val v = g[y][x].toInt().coerceIn(0, 255)
+                // 四舍五入而不是截断取整：g[y][x] 是 IDCT 还原的浮点值，
+                // toInt() 向零截断等于系统性地抹掉小数部分（平均 −0.5），
+                // 给整帧叠了一层低频偏置，既压低 PSNR 又给相关检测加了噪声。
+                val v = g[y][x].roundToInt().coerceIn(0, 255)
                 luma[base + y * width + x] = v.toByte()
             }
         }
