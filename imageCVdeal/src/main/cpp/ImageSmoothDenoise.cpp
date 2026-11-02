@@ -109,27 +109,44 @@ namespace ImageSmoothDenoise {
     cv::Mat medianFilterCross5x5(const cv::Mat &src) {
         if (src.empty()) return src;
         cv::Mat gray = toGray(src);
-        cv::Mat dst = gray.clone();
+        // dst 的每个像素都会在下面被写入一次，无需先 clone 一份 gray 作为初值
+        cv::Mat dst;
+        dst.create(gray.size(), gray.type());
 
         const int rows = gray.rows, cols = gray.cols;
-        // 十字窗口偏移：(0,0),(±1,0),(±2,0),(0,±1),(0,±2)
-        const int dx[9] = {0, -1, 1, -2, 2, 0, 0, 0, 0};
-        const int dy[9] = {0, 0, 0, 0, 0, -1, 1, -2, 2};
 
-        std::vector<uchar> vals(9);
-        for (int y = 0; y < rows; ++y) {
-            for (int x = 0; x < cols; ++x) {
-                for (int k = 0; k < 9; ++k) {
-                    int yy = y + dy[k];
-                    if (yy < 0) yy = 0; else if (yy >= rows) yy = rows - 1;
-                    int xx = x + dx[k];
-                    if (xx < 0) xx = 0; else if (xx >= cols) xx = cols - 1;
-                    vals[k] = gray.at<uchar>(yy, xx);
+        // 逐行并行：每个输出像素只读原始 gray、只写自己的 dst 像素，行间无依赖；
+        // 9 个取样点的顺序（k=0..8 的固定偏移 + replicate 夹紧）与串行版逐位一致，
+        // 排序入参序列相同 ⇒ 中值逐像素相同。灰度访问改行指针，省掉 gray.at 的 step 计算。
+        cv::parallel_for_(cv::Range(0, rows), [&](const cv::Range &rg) {
+            std::vector<uchar> vals(9);
+            for (int y = rg.start; y < rg.end; ++y) {
+                // 十字窗口 5 个行号：k=0..4 都在中心行，k=5..8 分别是 y−1/y+1/y−2/y+2
+                const uchar *rc = gray.ptr<uchar>(y);
+                const uchar *rm1 = gray.ptr<uchar>(std::max(y - 1, 0));
+                const uchar *rp1 = gray.ptr<uchar>(std::min(y + 1, rows - 1));
+                const uchar *rm2 = gray.ptr<uchar>(std::max(y - 2, 0));
+                const uchar *rp2 = gray.ptr<uchar>(std::min(y + 2, rows - 1));
+                uchar *dRow = dst.ptr<uchar>(y);
+                for (int x = 0; x < cols; ++x) {
+                    const int a1 = std::max(x - 1, 0);          // 夹紧后的 x−1
+                    const int p1 = std::min(x + 1, cols - 1);   // 夹紧后的 x+1
+                    const int a2 = std::max(x - 2, 0);          // 夹紧后的 x−2
+                    const int p2 = std::min(x + 2, cols - 1);   // 夹紧后的 x+2
+                    vals[0] = rc[x];      // (0,0)
+                    vals[1] = rc[a1];     // (−1,0)
+                    vals[2] = rc[p1];     // (+1,0)
+                    vals[3] = rc[a2];     // (−2,0)
+                    vals[4] = rc[p2];     // (+2,0)
+                    vals[5] = rm1[x];     // (0,−1)
+                    vals[6] = rp1[x];     // (0,+1)
+                    vals[7] = rm2[x];     // (0,−2)
+                    vals[8] = rp2[x];     // (0,+2)
+                    std::sort(vals.begin(), vals.end());
+                    dRow[x] = vals[4];   // 9 个数的中值为第 5 个
                 }
-                std::sort(vals.begin(), vals.end());
-                dst.at<uchar>(y, x) = vals[4];   // 9 个数的中值为第 5 个
             }
-        }
+        });
         return dst;
     }
 
@@ -167,18 +184,22 @@ namespace ImageSmoothDenoise {
         // 4. 构造传递函数 H(u,v)，中心位于 (m/2, n/2)，式 2-42：D(u,v)=√(u²+v²)
         cv::Mat H(m, n, CV_32F);
         const int cu = m / 2, cvn = n / 2;
-        for (int u = 0; u < m; ++u) {
-            float *hRow = H.ptr<float>(u);
-            for (int v = 0; v < n; ++v) {
-                double D = std::sqrt(static_cast<double>(
-                        (u - cu) * (u - cu) + (v - cvn) * (v - cvn)));
-                // 式 2-41：理想低通 H=1 (D≤D0) / 0 (D>D0)
-                // 式 2-46：高斯低通 H=exp(-D²/(2D0²))
-                hRow[v] = gaussian
-                          ? static_cast<float>(std::exp(-D * D / (2.0 * D0 * D0)))
-                          : static_cast<float>(D <= D0 ? 1.0 : 0.0);
+        // 逐行并行（每个 hRow[v] 只依赖自身坐标）；保留先 sqrt 再平方的写法，
+        // 不做 sqrt↔D² 的代数化简，高斯路径的浮点末位与串行版逐位相同。
+        cv::parallel_for_(cv::Range(0, m), [&](const cv::Range &rg) {
+            for (int u = rg.start; u < rg.end; ++u) {
+                float *hRow = H.ptr<float>(u);
+                for (int v = 0; v < n; ++v) {
+                    double D = std::sqrt(static_cast<double>(
+                            (u - cu) * (u - cu) + (v - cvn) * (v - cvn)));
+                    // 式 2-41：理想低通 H=1 (D≤D0) / 0 (D>D0)
+                    // 式 2-46：高斯低通 H=exp(-D²/(2D0²))
+                    hRow[v] = gaussian
+                              ? static_cast<float>(std::exp(-D * D / (2.0 * D0 * D0)))
+                              : static_cast<float>(D <= D0 ? 1.0 : 0.0);
+                }
             }
-        }
+        });
 
         // 5. 频域相乘 G(u,v) = H(u,v)·F(u,v)（式 2-40）
         cv::split(complexI, planes);
