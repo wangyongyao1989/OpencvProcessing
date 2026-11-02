@@ -73,11 +73,17 @@ class CameraRecognitionFragment : BaseFragment() {
         "haarcascade_mcs_mouth.xml"
     )
 
-    /** native 检测跟踪器句柄（onDestroy 释放）。 */
-    private var trackerHandle = 0L
+    /**
+     * native 检测跟踪器句柄（onDestroy 释放）。
+     * 分析线程每帧读它进 nativePostFrame，主线程在 onDestroy 里写 0，
+     * 必须 @Volatile，否则「写 0」对分析线程不保证可见（无 happens-before）。
+     */
+    @Volatile private var trackerHandle = 0L
 
     private var cameraHelper: CameraHelper? = null
-    private var previewing = false
+
+    /** 预览开关：主线程写、相机分析线程每帧读（同上，必须 @Volatile）。 */
+    @Volatile private var previewing = false
     private var surfaceReady = false
 
     /** 离开页面时是否正在预览（返回本页自动恢复）。 */
