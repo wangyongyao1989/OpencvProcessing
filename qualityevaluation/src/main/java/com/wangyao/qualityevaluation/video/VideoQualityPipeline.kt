@@ -165,7 +165,8 @@ class VideoQualityPipeline {
                 if (!inputDone) {
                     val inIdx = decoder.dequeueInputBuffer(10_000)
                     if (inIdx >= 0) {
-                        val buf = decoder.getInputBuffer(inIdx)!!
+                        val buf = decoder.getInputBuffer(inIdx)
+                            ?: throw IllegalStateException("decoder.getInputBuffer($inIdx) = null")
                         val size = extractor.readSampleData(buf, 0)
                         if (size < 0) {
                             decoder.queueInputBuffer(
@@ -191,13 +192,24 @@ class VideoQualityPipeline {
                         // 不能丢（本文件 decodeOnly 分支 :562 就是这个写法）。
                         // 若本机解码器的 EOS 缓冲 size=0，此处改动不改变任何输出帧。
                         if (bufferInfo.size > 0) {
-                            val image = decoder.getOutputImage(outIdx)!!
-                            if (ptsBaseUs < 0) ptsBaseUs = bufferInfo.presentationTimeUs
-                            lastPtsUs = bufferInfo.presentationTimeUs - ptsBaseUs
-                            feedEncoder(encoder, image, lastPtsUs)
-                            image.close()
-                            processed++
-                            onProgress(processed, info.frameCount)
+                            // getOutputImage 允许返回 null（格式不被支持/解码器异常），
+                            // 原来的 !! 会让整条评价流水线在后一条线程上直接崩；
+                            // 现在跳过该帧并继续。image 用 try/finally 关，
+                            // feedEncoder 抛异常也不会漏掉这个 codec 输出缓冲。
+                            val image = decoder.getOutputImage(outIdx)
+                            if (image == null) {
+                                Log.w(TAG, "getOutputImage($outIdx) = null, frame skipped")
+                            } else {
+                                try {
+                                    if (ptsBaseUs < 0) ptsBaseUs = bufferInfo.presentationTimeUs
+                                    lastPtsUs = bufferInfo.presentationTimeUs - ptsBaseUs
+                                    feedEncoder(encoder, image, lastPtsUs)
+                                    processed++
+                                    onProgress(processed, info.frameCount)
+                                } finally {
+                                    image.close()
+                                }
+                            }
                         }
                         decoder.releaseOutputBuffer(outIdx, false)
                         if (eos) decodeDone = true
@@ -229,7 +241,8 @@ class VideoQualityPipeline {
                             muxerStarted = true
                         }
                         encIdx >= 0 -> {
-                            val encBuf = encoder.getOutputBuffer(encIdx)!!
+                            val encBuf = encoder.getOutputBuffer(encIdx)
+                                ?: throw IllegalStateException("encoder.getOutputBuffer($encIdx) = null")
                             if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
                                 bufferInfo.size = 0
                             }
@@ -540,7 +553,8 @@ class VideoQualityPipeline {
                 if (!inputDone) {
                     val inIdx = decoder.dequeueInputBuffer(10_000)
                     if (inIdx >= 0) {
-                        val buf = decoder.getInputBuffer(inIdx)!!
+                        val buf = decoder.getInputBuffer(inIdx)
+                            ?: throw IllegalStateException("decoder.getInputBuffer($inIdx) = null")
                         val size = extractor.readSampleData(buf, 0)
                         if (size < 0) {
                             Log.d(TAG, "nextFrame[${decoder.name}]: input EOS queued")
