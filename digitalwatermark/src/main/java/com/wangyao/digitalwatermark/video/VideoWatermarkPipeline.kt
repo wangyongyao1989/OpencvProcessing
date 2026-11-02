@@ -45,6 +45,9 @@ class VideoWatermarkPipeline {
 
         /** 关键帧间隔（秒）。 */
         const val I_FRAME_INTERVAL = 1
+
+        /** 停滞判定：连续这么久没有帧推进就抛错退出，不让按钮永久转圈。 */
+        private const val STALL_TIMEOUT_MS = 15_000L
     }
 
     /** 探测源视频：宽高 / 时长 / 帧率 / 估计帧数。 */
@@ -98,6 +101,15 @@ class VideoWatermarkPipeline {
         val total = probe(inputPath).frameCount
         var processed = 0
 
+        // 输出先写 .tmp，全流程跑完才改名提交（与 VideoQualityPipeline.transcode 同一做法）：
+        // 中途被杀进程/抛异常时，磁盘上不会留下一份「看着完整、实则缺 moov」的 MP4
+        // 给下一步（提取水印、跑攻击）当输入——那类文件 setDataSource 能过、解码才崩。
+        val tmpFile = java.io.File("$outputPath.tmp")
+        val outFile = java.io.File(outputPath)
+        if (tmpFile.exists()) tmpFile.delete()
+        if (outFile.exists()) outFile.delete()
+        var completed = false
+
         val extractor = MediaExtractor()
         var decoder: MediaCodec? = null
         var encoder: MediaCodec? = null
@@ -146,7 +158,7 @@ class VideoWatermarkPipeline {
             encoder.start()
 
             // ---- 复用器 ----
-            muxer = MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+            muxer = MediaMuxer(tmpFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
 
             val info = MediaCodec.BufferInfo()
             var inputDone = false        // 解码器输入（源数据）已送完
@@ -164,12 +176,29 @@ class VideoWatermarkPipeline {
             // 起播点不为 0，部分播放器（MediaPlayer）会长时间黑屏。
             var ptsBaseUs = -1L
 
+            // 停滞保护：编解码器一旦不再产出（EOS 永不到达），这个循环会每轮
+            // 只花 20ms 空转、页面进度永远卡在同一帧、按钮永久置灰。
+            // 按「processed 是否推进」计时而不是按轮数计，慢但仍在推进的
+            // 长视频不会被误杀（实测逐帧耗时远低于此阈值）。
+            var lastProcessed = -1
+            var lastProgressMs = System.currentTimeMillis()
+
             while (!encoderDone) {
+                if (processed != lastProcessed) {
+                    lastProcessed = processed
+                    lastProgressMs = System.currentTimeMillis()
+                } else if (System.currentTimeMillis() - lastProgressMs > STALL_TIMEOUT_MS) {
+                    throw IllegalStateException(
+                        "transcode stalled: no frame advanced for $STALL_TIMEOUT_MS ms " +
+                            "at frame $processed/$total"
+                    )
+                }
                 // ---- 1. 送入解码器 ----
                 if (!inputDone) {
                     val inIdx = decoder.dequeueInputBuffer(TIMEOUT_US)
                     if (inIdx >= 0) {
-                        val buf = decoder.getInputBuffer(inIdx)!!
+                        val buf = decoder.getInputBuffer(inIdx)
+                            ?: throw IllegalStateException("decoder.getInputBuffer($inIdx) = null")
                         buf.clear()
                         val size = extractor.readSampleData(buf, 0)
                         if (size < 0) {
@@ -247,7 +276,8 @@ class VideoWatermarkPipeline {
                         muxer.start()
                         muxStarted = true
                     } else {
-                        val buf = encoder.getOutputBuffer(encOut)!!
+                        val buf = encoder.getOutputBuffer(encOut)
+                            ?: throw IllegalStateException("encoder.getOutputBuffer($encOut) = null")
                         if (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
                             info.size = 0
                         }
@@ -266,6 +296,7 @@ class VideoWatermarkPipeline {
                 }
             }
 
+            completed = true
             return processed
         } finally {
             runCatching { decoder?.stop() }
@@ -283,6 +314,7 @@ class VideoWatermarkPipeline {
                     Log.e(TAG, "transcode: muxer.stop() FAILED, output file invalid", e)
                     runCatching { muxer?.release() }
                     runCatching { java.io.File(outputPath).delete() }
+                    runCatching { tmpFile.delete() }
                     runCatching { extractor.release() }
                     throw IllegalStateException(
                         "复用器收尾失败，输出文件不可用：${e.message}", e
@@ -291,6 +323,16 @@ class VideoWatermarkPipeline {
             }
             runCatching { muxer?.release() }
             runCatching { extractor.release() }
+            // 提交输出：全流程成功且复用器确实写过轨道，才把 .tmp 改名成正式文件；
+            // 其余情况（异常退出、一帧没写）只留下 .tmp 被删掉，正式路径保持不存在。
+            if (completed && muxStarted) {
+                if (!tmpFile.renameTo(outFile)) {
+                    runCatching { tmpFile.copyTo(outFile, overwrite = true) }
+                    runCatching { tmpFile.delete() }
+                }
+            } else {
+                runCatching { tmpFile.delete() }
+            }
         }
     }
 
@@ -336,11 +378,26 @@ class VideoWatermarkPipeline {
             var u: ByteArray? = null
             var v: ByteArray? = null
 
+            // 停滞保护：与 transcode 同理——解码器不再产出时按「帧是否推进」计时退出，
+            // 而不是让提取按钮永久转圈。
+            var lastProcessed = -1
+            var lastProgressMs = System.currentTimeMillis()
+
             while (!decoderDone) {
+                if (processed != lastProcessed) {
+                    lastProcessed = processed
+                    lastProgressMs = System.currentTimeMillis()
+                } else if (System.currentTimeMillis() - lastProgressMs > STALL_TIMEOUT_MS) {
+                    throw IllegalStateException(
+                        "decodeOnly stalled: no frame advanced for $STALL_TIMEOUT_MS ms " +
+                            "at frame $processed/$total"
+                    )
+                }
                 if (!inputDone) {
                     val inIdx = decoder.dequeueInputBuffer(TIMEOUT_US)
                     if (inIdx >= 0) {
-                        val buf = decoder.getInputBuffer(inIdx)!!
+                        val buf = decoder.getInputBuffer(inIdx)
+                            ?: throw IllegalStateException("decoder.getInputBuffer($inIdx) = null")
                         buf.clear()
                         val size = extractor.readSampleData(buf, 0)
                         if (size < 0) {
