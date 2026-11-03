@@ -56,8 +56,25 @@ class VideoKeyframeIndexer {
         val height: Int
     )
 
-    /** 已索引的关键帧（时间升序）。 */
+    /** 已索引的关键帧（时间升序）。
+     *
+     *  外部不要直接遍历这个列表：抽取会在另一线程 clear()/addAll()，
+     *  遍历期间被改结构就抛 ConcurrentModificationException（后台线程抛出即崩应用）。
+     *  需要遍历时用 [keyframeSnapshot]。
+     */
     val keyframes = mutableListOf<Keyframe>()
+
+    /**
+     * 保护 [keyframes] 结构变更的短锁。
+     *
+     * 之所以单独一把锁而不是整个方法 @Synchronized：抽取要解码整段视频（十几秒），
+     * 若把它和 UI 线程要调的快照放在同一把锁上，UI 会直接卡住甚至 ANR。
+     * 这里只锁住 clear/addAll/toList 这三个瞬间，解码过程不持锁。
+     */
+    private val listLock = Any()
+
+    /** 关键帧列表的只读快照（与正在进行的抽取互不干扰，可在主线程调用）。 */
+    fun keyframeSnapshot(): List<Keyframe> = synchronized(listLock) { keyframes.toList() }
 
     /** 关键帧工作分辨率宽度。 */
     private val workWidth = 320
@@ -65,14 +82,20 @@ class VideoKeyframeIndexer {
     /**
      * 抽取 [count] 个均匀分布的关键帧并建立特征索引。
      * 例如 459 帧抽 12 帧 → 每隔 ~38 帧取一帧。
+     *
+     * 与 [search] 互斥（方法级锁）：视频识别页的两个页签各起一条后台线程，
+     * 「人脸检索」在索引为空时会自己补一次抽取，而「关键帧提取」按钮在此期间
+     * 仍可点——不加锁就是同一实例上两条抽取/检索并发。锁只加在方法上，
+     * 对 [keyframes] 的写入另用 [listLock]，所以主线程的快照不会被这里卡住。
      */
+    @Synchronized
     fun extractKeyframes(
         path: String,
         count: Int,
         onProgress: (Int, Int) -> Unit = { _, _ -> }
     ): List<Keyframe> {
         require(count > 0) { "keyframe count must be > 0" }
-        keyframes.clear()
+        synchronized(listLock) { keyframes.clear() }
 
         val total = VideoFrameSource.countSamples(path)
         Log.d(TAG, "extractKeyframes: $path, $total frames -> $count keyframes")
@@ -112,7 +135,7 @@ class VideoKeyframeIndexer {
                 onProgress(frameIdx + 1, total)
             }
         }
-        keyframes.addAll(result)
+        synchronized(listLock) { keyframes.addAll(result) }
         Log.d(TAG, "extractKeyframes: ${result.size} keyframes indexed")
         return result
     }
@@ -120,9 +143,13 @@ class VideoKeyframeIndexer {
     /**
      * 以查询帧（亮度平面）检索最相似的 [k] 个关键帧。
      *
+     * 与 [extractKeyframes] 互斥（同一实例上的方法锁），并且遍历的是快照，
+     * 这样抽取线程的 clear/addAll 不会让这里抛 ConcurrentModificationException。
+     *
      * @param exclude 需要从结果中排除的关键帧（如查询帧本身），
      *                便于展示「视频中最相似的其他内容」
      */
+    @Synchronized
     fun search(
         queryLuma: ByteArray,
         width: Int,
@@ -131,7 +158,7 @@ class VideoKeyframeIndexer {
         exclude: Keyframe? = null
     ): List<Match> {
         val qf = KeyframeFeatures.extract(queryLuma, width, height)
-        return keyframes
+        return keyframeSnapshot()
             .filter { it !== exclude }
             .mapNotNull { kf ->
                 kf.feature?.let { f ->

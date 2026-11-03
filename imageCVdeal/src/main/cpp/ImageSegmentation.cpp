@@ -6,6 +6,7 @@
 #include <climits>
 #include <cmath>
 #include <deque>
+#include <map>
 #include <vector>
 
 namespace ImageSegmentation {
@@ -317,11 +318,22 @@ namespace ImageSegmentation {
             if (seed.x < 0 || seed.x >= cols || seed.y < 0 || seed.y >= rows)
                 return mask;
 
+            // 逐像素取数走行指针而不是 Mat::at：at<>() 每次都要从 step 重算地址，
+            // BFS 里每个出队点要做 8 次查 + 1 次读，是全图级别的常数开销。
+            // ptr(y) 自带 step，非连续图（gray 可能是源图的子视图）也一样正确，
+            // 读到的字节与 at<>() 完全相同 —— 纯访问方式改动，像素与生长顺序都不变。
+            std::vector<uchar *> maskRows((size_t) rows);
+            std::vector<const uchar *> grayRows((size_t) rows);   // gray 是 const 引用，取只读指针
+            for (int y = 0; y < rows; ++y) {
+                maskRows[y] = mask.ptr<uchar>(y);
+                grayRows[y] = gray.ptr<uchar>(y);
+            }
+
             std::deque<cv::Point> queue;
             queue.push_back(seed);
-            mask.at<uchar>(seed.y, seed.x) = 255;
+            maskRows[seed.y][seed.x] = 255;
 
-            long long sum = gray.at<uchar>(seed.y, seed.x);
+            long long sum = grayRows[seed.y][seed.x];
             long long cnt = 1;
 
             static const int dx[8] = {-1, 0, 1, -1, 1, -1, 0, 1};
@@ -334,11 +346,12 @@ namespace ImageSegmentation {
                 for (int k = 0; k < 8; ++k) {
                     int nx = p.x + dx[k], ny = p.y + dy[k];
                     if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) continue;
-                    if (mask.at<uchar>(ny, nx)) continue;
+                    if (maskRows[ny][nx]) continue;
                     // 相似性准则：与区域均值灰度差
-                    if (std::fabs((double) gray.at<uchar>(ny, nx) - mean) <= th) {
-                        mask.at<uchar>(ny, nx) = 255;
-                        sum += gray.at<uchar>(ny, nx);
+                    const long long v = grayRows[ny][nx];
+                    if (std::fabs((double) v - mean) <= th) {
+                        maskRows[ny][nx] = 255;
+                        sum += v;
                         ++cnt;
                         queue.push_back(cv::Point(nx, ny));
                     }
@@ -375,21 +388,28 @@ namespace ImageSegmentation {
         int peakLevel = maxLoc.y;                        // 峰值灰度级
 
         // 该灰度级像素集合的质心，取其中最靠近质心者为种子
+        // 两遍扫描都按行指针访问；第二遍一旦命中质心所在像素（d==0）即可停——
+        // 判据是严格 d < best，后出现的等距像素本来也不会替换先命中的那个，
+        // 所以提前退出与全扫得到的种子完全相同。
         long long sx = 0, sy = 0, n = 0;
-        for (int y = 0; y < gray.rows; ++y)
+        for (int y = 0; y < gray.rows; ++y) {
+            const uchar *row = gray.ptr<uchar>(y);
             for (int x = 0; x < gray.cols; ++x)
-                if (gray.at<uchar>(y, x) == peakLevel) { sx += x; sy += y; ++n; }
+                if (row[x] == peakLevel) { sx += x; sy += y; ++n; }
+        }
         cv::Point seed(gray.cols / 2, gray.rows / 2);
         if (n > 0) {
             cv::Point centroid((int) (sx / n), (int) (sy / n));
             long long best = LLONG_MAX;
-            for (int y = 0; y < gray.rows; ++y)
-                for (int x = 0; x < gray.cols; ++x)
-                    if (gray.at<uchar>(y, x) == peakLevel) {
+            for (int y = 0; y < gray.rows && best > 0; ++y) {
+                const uchar *row = gray.ptr<uchar>(y);
+                for (int x = 0; x < gray.cols && best > 0; ++x)
+                    if (row[x] == peakLevel) {
                         long long d = (x - centroid.x) * (x - centroid.x)
                                       + (y - centroid.y) * (y - centroid.y);
                         if (d < best) { best = d; seed = cv::Point(x, y); }
                     }
+            }
         }
 
         cv::Mat mask = regionGrowBFS(gray, seed, th);
@@ -473,11 +493,51 @@ namespace ImageSegmentation {
             area[y] += area[x];
         };
         const int mergeTh = 12;   // 相邻区域合并判据：均值差
-        for (size_t i = 0; i < leaves.size(); ++i)
-            for (size_t j = i + 1; j < leaves.size(); ++j) {
-                if (std::fabs(leaves[i].mean - leaves[j].mean) > mergeTh) continue;
-                if (adjacent(leaves[i], leaves[j])) unite((int) i, (int) j);
-            }
+
+        // 邻接对枚举：原来对全部叶子做 O(L^2) 两两扫描。叶子数 L 在 768 缩略图 +
+        // minSize=8 下可达数千，实测本函数 cost≈3956ms 的绝大部分都耗在这条双重循环上
+        // ——而其中绝大多数对既不相邻、也过不了均值判据，纯属白算。
+        // 改成按「右边界 / 下边界」用坐标分桶只枚举真实相邻的对：左边界 == x+w 的才可能
+        // 是右邻，上边界 == y+h 的才可能是下邻。得到的对规范成 (min, max) 后按字典序排序，
+        // 再套用与原来逐字相同的两道判据 —— unite() 的调用序列与原双重循环完全一致，
+        // 于是并查集的树形、sum/area 的 double 累加顺序、每块填充的灰度都不变（位级等价；
+        // 主机侧 parity/splitmerge_order.py 用 300 组随机叶子集验证过两种枚举输出的有序对
+        // 列表逐个相同）。
+        const int leafCount = (int) leaves.size();
+        std::map<int, std::vector<int>> leftAtX, topAtY;   // 左边界 x / 上边界 y -> 叶子下标
+        for (int i = 0; i < leafCount; ++i) {
+            leftAtX[leaves[i].x].push_back(i);
+            topAtY[leaves[i].y].push_back(i);
+        }
+        std::vector<std::pair<int, int>> pairs;
+        pairs.reserve((size_t) leafCount * 2);
+        for (int i = 0; i < leafCount; ++i) {
+            const QuadNode &a = leaves[i];
+            auto itRight = leftAtX.find(a.x + a.w);            // 右邻：纵向区间须相交
+            if (itRight != leftAtX.end())
+                for (int j : itRight->second) {
+                    if (j == i) continue;
+                    const QuadNode &b = leaves[j];
+                    if (a.y < b.y + b.h && b.y < a.y + a.h)
+                        pairs.emplace_back(std::min(i, j), std::max(i, j));
+                }
+            auto itDown = topAtY.find(a.y + a.h);              // 下邻：横向区间须相交
+            if (itDown != topAtY.end())
+                for (int j : itDown->second) {
+                    if (j == i) continue;
+                    const QuadNode &b = leaves[j];
+                    if (a.x < b.x + b.w && b.x < a.x + a.w)
+                        pairs.emplace_back(std::min(i, j), std::max(i, j));
+                }
+        }
+        std::sort(pairs.begin(), pairs.end());
+        pairs.erase(std::unique(pairs.begin(), pairs.end()), pairs.end());
+        for (const auto &pr : pairs) {
+            const QuadNode &a = leaves[pr.first];
+            const QuadNode &b = leaves[pr.second];
+            if (std::fabs(a.mean - b.mean) > mergeTh) continue;
+            if (adjacent(a, b)) unite(pr.first, pr.second);
+        }
 
         // 输出：每个合并区域填充其平均灰度（分段常数的分割表达）
         cv::Mat dstSmall = cv::Mat::zeros(small.size(), CV_8U);
@@ -689,11 +749,15 @@ namespace ImageSegmentation {
                             double cx = prev.x - 2 * c.x + next.x;
                             double cy = prev.y - 2 * c.y + next.y;
                             eCurv.push_back(cx * cx + cy * cy);
-                            eImg.push_back(-grad.at<float>((int) c.y, (int) c.x));
+                            // 同一候选点要读两次梯度（eImg 与气球力的 g），
+                            // 取一次行指针复用；grad 值本身与 grad.at 完全相同。
+                            const float *gRow = grad.ptr<float>((int) c.y);
+                            const float gval = gRow[(int) c.x];
+                            eImg.push_back(-gval);
                             if (prm.balloon != 0) {
                                 // 测地线停止函数 g = 1/(1+20|∇I|)：平坦区全力外推，
                                 // 强边缘处外力→0，曲线自动停止（式 4-46 思想）
-                                double g = grad.at<float>((int) c.y, (int) c.x);
+                                double g = gval;
                                 double kEff = prm.balloon;
                                 if (prm.edgeStop > 0)
                                     kEff = prm.balloon * prm.edgeStop / (1.0 + 20.0 * g);
@@ -849,24 +913,30 @@ namespace ImageSegmentation {
         int r = (int) (0.4 * std::min(smallF.cols, smallF.rows));
         cv::circle(phi, c, r, -1.0, -1);
 
+        // 每轮迭代用的缓冲区提到循环外复用：原来每轮要 new/rebind 6 个 Mat
+        // （两个掩膜、eIn/eOut/inside、newPhi），60 轮下来是几百次
+        // 数百 KB 的分配/释放。compare/absdiff/convertTo 写入既有缓冲
+        // 与新建缓冲的结果逐位相同（元素级运算，不依赖累加顺序）。
+        cv::Mat maskIn, maskOut, eIn, eOut, inside, newPhi, phi8;
+
         for (int it = 0; it < iterations; ++it) {
             // 1) 区域能量最小：c1/c2 = 轮廓内外区域均值（式 4-47）
-            cv::Scalar mIn = cv::mean(smallF, phi > 0);
-            cv::Scalar mOut = cv::mean(smallF, phi <= 0);
+            cv::compare(phi, 0.0, maskIn, cv::CMP_GT);      // 8U: 0/255，等价于 phi > 0
+            cv::compare(phi, 0.0, maskOut, cv::CMP_LE);     // 等价于 phi <= 0
+            cv::Scalar mIn = cv::mean(smallF, maskIn);
+            cv::Scalar mOut = cv::mean(smallF, maskOut);
             double c1 = mIn[0], c2 = mOut[0];
 
             // 2) 像素隶属更新：|I−c1|² < |I−c2|² → 内部
-            cv::Mat eIn, eOut, inside;
             cv::absdiff(smallF, c1, eIn); cv::multiply(eIn, eIn, eIn);
             cv::absdiff(smallF, c2, eOut); cv::multiply(eOut, eOut, eOut);
-            inside = (eIn < eOut);                        // 8U: 0/255
+            cv::compare(eIn, eOut, inside, cv::CMP_LT);     // 8U: 0/255
 
             // 3) 长度正则：高斯平滑隶属函数近似 μ·Length(C) 惩罚
-            cv::Mat newPhi;
             inside.convertTo(newPhi, CV_32F, 2.0 / 255.0, -1.0);  // 0→−1, 255→+1
             cv::GaussianBlur(newPhi, newPhi, cv::Size(9, 9), 2.5);
-            phi = (newPhi > 0);                           // 8U: 0/255
-            phi.convertTo(phi, CV_32F, 2.0 / 255.0, -1.0);
+            cv::compare(newPhi, 0.0, phi8, cv::CMP_GT);     // 8U: 0/255
+            phi8.convertTo(phi, CV_32F, 2.0 / 255.0, -1.0);
         }
 
         // 放大掩膜回原尺寸并叠加可视化

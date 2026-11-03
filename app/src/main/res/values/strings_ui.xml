@@ -138,4 +138,7 @@
     <string name="color_cb_false_green">⑦ 假彩色 细节赋绿 (式 2-97)</string>
     <string name="color_cb_false_blue">⑧ 假彩色 细节赋蓝 (式 2-97)</string>
     <string name="color_cb_false_multi">⑨ 多光谱合成 (式 2-98)</string>
+
+    <!-- 通用：后台运算异常兜底（各三级页共用） -->
+    <string name="op_failed_fmt">运算失败：%1$s</string>
 </resources>

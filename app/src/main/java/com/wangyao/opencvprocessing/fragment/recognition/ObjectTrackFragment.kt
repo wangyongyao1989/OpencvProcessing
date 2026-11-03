@@ -54,11 +54,17 @@ class ObjectTrackFragment : BaseFragment() {
     private lateinit var binding: FragmentObjectTrackLayoutBinding
     private lateinit var ffViewModel: FFViewModel
 
-    /** native 实物跟踪器句柄（onDestroy 释放）。 */
-    private var trackerHandle = 0L
+    /**
+     * native 实物跟踪器句柄（onDestroy 释放）。
+     * 与 [CameraRecognitionFragment] 同理：分析线程每帧读、主线程销毁时写 0，
+     * 需要 @Volatile 才有可见性保证。
+     */
+    @Volatile private var trackerHandle = 0L
 
     private var cameraHelper: CameraHelper? = null
-    private var previewing = false
+
+    /** 预览开关：主线程写、相机分析线程每帧读。 */
+    @Volatile private var previewing = false
     private var surfaceReady = false
 
     /** 离开页面时是否正在预览（返回本页自动恢复）。 */

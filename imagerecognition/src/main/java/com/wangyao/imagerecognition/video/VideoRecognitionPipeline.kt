@@ -366,7 +366,8 @@ class VideoRecognitionPipeline {
                 if (!inputDone) {
                     val inIdx = decoder.dequeueInputBuffer(10_000)
                     if (inIdx >= 0) {
-                        val buf = decoder.getInputBuffer(inIdx)!!
+                        val buf = decoder.getInputBuffer(inIdx)
+                            ?: throw IllegalStateException("decoder.getInputBuffer($inIdx) = null")
                         val size = extractor.readSampleData(buf, 0)
                         if (size < 0) {
                             decoder.queueInputBuffer(

@@ -26,21 +26,25 @@ namespace ImageSharpen {
         cv::Mat gray = toGray(src);
 
         const int rows = gray.rows, cols = gray.cols;
-        cv::Mat dst = cv::Mat::zeros(gray.size(), CV_8U);
-        for (int y = 0; y < rows; ++y) {
-            for (int x = 0; x < cols; ++x) {
-                // 下邻（最后一行用当前行近似）
-                int y1 = (y + 1 < rows) ? y + 1 : y;
-                // 右邻（最后一列用当前列近似）
-                int x1 = (x + 1 < cols) ? x + 1 : x;
-                int gx = std::abs(static_cast<int>(gray.at<uchar>(y1, x))
-                                  - static_cast<int>(gray.at<uchar>(y, x)));
-                int gy = std::abs(static_cast<int>(gray.at<uchar>(y, x1))
-                                  - static_cast<int>(gray.at<uchar>(y, x)));
-                // 式 2-58：g(i,j) = G[f(i,j)]
-                dst.at<uchar>(y, x) = cv::saturate_cast<uchar>(gx + gy);
+        cv::Mat dst;
+        dst.create(gray.size(), CV_8U);            // 每个像素都会被写一次，无需先置零
+        // 逐行并行 + 行指针：整数差分，行间互不依赖，与原串行实现逐位相同
+        cv::parallel_for_(cv::Range(0, rows), [&](const cv::Range &rg) {
+            for (int y = rg.start; y < rg.end; ++y) {
+                const uchar *rowC = gray.ptr<uchar>(y);
+                const uchar *rowD = gray.ptr<uchar>(y + 1 < rows ? y + 1 : y);
+                uchar *dRow = dst.ptr<uchar>(y);
+                for (int x = 0; x < cols; ++x) {
+                    const int xr = x + 1 < cols ? x + 1 : x;   // 右邻（最后一列用当前列近似）
+                    int gx = std::abs(static_cast<int>(rowD[x])
+                                      - static_cast<int>(rowC[x]));
+                    int gy = std::abs(static_cast<int>(rowC[xr])
+                                      - static_cast<int>(rowC[x]));
+                    // 式 2-58：g(i,j) = G[f(i,j)]
+                    dRow[x] = cv::saturate_cast<uchar>(gx + gy);
+                }
             }
-        }
+        });
         return dst;
     }
 
@@ -53,19 +57,23 @@ namespace ImageSharpen {
         cv::Mat gray = toGray(src);
 
         const int rows = gray.rows, cols = gray.cols;
-        cv::Mat dst = cv::Mat::zeros(gray.size(), CV_8U);
-        for (int y = 0; y < rows; ++y) {
-            for (int x = 0; x < cols; ++x) {
-                // 交叉差分的四个采样点（越界用当前点近似）
-                int y1 = (y + 1 < rows) ? y + 1 : y;
-                int x1 = (x + 1 < cols) ? x + 1 : x;
-                int g1 = std::abs(static_cast<int>(gray.at<uchar>(y1, x1))
-                                  - static_cast<int>(gray.at<uchar>(y, x)));
-                int g2 = std::abs(static_cast<int>(gray.at<uchar>(y, x1))
-                                  - static_cast<int>(gray.at<uchar>(y1, x)));
-                dst.at<uchar>(y, x) = cv::saturate_cast<uchar>(g1 + g2);
+        cv::Mat dst;
+        dst.create(gray.size(), CV_8U);            // 每个像素都会被写一次，无需先置零
+        cv::parallel_for_(cv::Range(0, rows), [&](const cv::Range &rg) {
+            for (int y = rg.start; y < rg.end; ++y) {
+                const uchar *rowC = gray.ptr<uchar>(y);                 // f(i,j) / f(i,j+1)
+                const uchar *rowD = gray.ptr<uchar>(y + 1 < rows ? y + 1 : y);  // 下邻，最后一行近似
+                uchar *dRow = dst.ptr<uchar>(y);
+                for (int x = 0; x < cols; ++x) {
+                    const int xr = x + 1 < cols ? x + 1 : x;            // 右邻，最后一列近似
+                    int g1 = std::abs(static_cast<int>(rowD[xr])
+                                      - static_cast<int>(rowC[x]));
+                    int g2 = std::abs(static_cast<int>(rowC[xr])
+                                      - static_cast<int>(rowD[x]));
+                    dRow[x] = cv::saturate_cast<uchar>(g1 + g2);
+                }
             }
-        }
+        });
         return dst;
     }
 
@@ -182,16 +190,20 @@ namespace ImageSharpen {
         //    式 2-79：高斯高通 H = 1 − e^(−D²/(2D0²))
         cv::Mat H(m, n, CV_32F);
         const int cu = m / 2, cvn = n / 2;
-        for (int u = 0; u < m; ++u) {
-            float *hRow = H.ptr<float>(u);
-            for (int v = 0; v < n; ++v) {
-                double D = std::sqrt(static_cast<double>(
-                        (u - cu) * (u - cu) + (v - cvn) * (v - cvn)));
-                hRow[v] = gaussian
-                          ? static_cast<float>(1.0 - std::exp(-D * D / (2.0 * D0 * D0)))
-                          : static_cast<float>(D > D0 ? 1.0 : 0.0);
+        // 逐行并行：hRow[v] 只依赖 (u,v) 自身，行间无依赖；表达式与串行版逐字相同，
+        // 未把 sqrt 换成 D² 比较（高斯路径 D*D ≠ sqrt(D2)²，会改最后一位），保证逐位一致。
+        cv::parallel_for_(cv::Range(0, m), [&](const cv::Range &rg) {
+            for (int u = rg.start; u < rg.end; ++u) {
+                float *hRow = H.ptr<float>(u);
+                for (int v = 0; v < n; ++v) {
+                    double D = std::sqrt(static_cast<double>(
+                            (u - cu) * (u - cu) + (v - cvn) * (v - cvn)));
+                    hRow[v] = gaussian
+                              ? static_cast<float>(1.0 - std::exp(-D * D / (2.0 * D0 * D0)))
+                              : static_cast<float>(D > D0 ? 1.0 : 0.0);
+                }
             }
-        }
+        });
 
         // 5. 频域相乘 G(u,v) = H(u,v)·F(u,v)（式 2-40）
         cv::split(complexI, planes);

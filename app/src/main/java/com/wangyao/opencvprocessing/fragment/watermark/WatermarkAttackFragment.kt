@@ -43,14 +43,31 @@ class WatermarkAttackFragment : BaseFragment() {
     /** 当前选中的攻击类型。 */
     private var attackType = WatermarkAttacks.Type.JPEG
 
-    /** 提取算法须与嵌入算法一致（由嵌入页写入 SharedPreferences）。 */
-    private var useLsb = true
+    /**
+     * 提取算法须与嵌入算法一致（由嵌入页写入 SharedPreferences）。
+     *
+     * 必须「用到时再读」，不能在 initData 里读一次存成字段：MainActivity 的
+     * selectFragment 只 hide/show，本 Fragment 在 app 内不会被销毁，
+     * initData 整个进程只跑一次。用户先去嵌入页切成 DCT、再回本页跑攻击，
+     * 缓存下来的还是旧的 lsb，提取口径和水印不符 → 正确率莫名崩塌。
+     * 脱离窗口时（后台线程回调里）退回上一次读到的值，避免 requireContext() 抛异常。
+     */
+    private var lastKnownUseLsb = true
+    private val useLsb: Boolean
+        get() {
+            val ctx = context ?: return lastKnownUseLsb
+            lastKnownUseLsb = ctx
+                .getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+                .getString(KEY_ALGO, "lsb") == "lsb"
+            return lastKnownUseLsb
+        }
 
     private lateinit var watermarkBits: BooleanArray
     private lateinit var watermarkedFile: File
     private lateinit var attackedFile: File
 
     private var busy = false
+
     private var applyingChecked = false
 
     override fun getLayoutBinding(
@@ -70,15 +87,29 @@ class WatermarkAttackFragment : BaseFragment() {
         watermarkedFile = File(requireContext().filesDir, "wm_watermarked.mp4")
         attackedFile = File(requireContext().filesDir, "wm_attacked.mp4")
 
-        useLsb = requireContext()
-            .getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
-            .getString(KEY_ALGO, "lsb") == "lsb"
-
         binding.tvFormula.text = getString(R.string.wm_attack_formula)
         binding.tvStatus.text = getString(
             R.string.wm_attack_status_idle,
             if (useLsb) getString(R.string.wm_algo_lsb) else getString(R.string.wm_algo_dct)
         )
+    }
+
+    /**
+     * 从嵌入页切回本页时（hide/show，不走 initData）刷新「当前提取算法」提示，
+     * 否则文案会一直停在 initData 那一次读到的算法。
+     *
+     * 判据用 busy 而不是「本页是否跑过攻击」：跑过一次之后状态栏是上一次的正确率，
+     * 但用户再切回来最先要确认的仍是「现在按哪个算法提取」，而结果文本在指标区
+     * 和图像面板里都还在。所以空闲时一律刷成 idle 文案；只在运算进行中不覆盖。
+     */
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden && !busy && isAdded && ::binding.isInitialized) {
+            binding.tvStatus.text = getString(
+                R.string.wm_attack_status_idle,
+                if (useLsb) getString(R.string.wm_algo_lsb) else getString(R.string.wm_algo_dct)
+            )
+        }
     }
 
     override fun initObserver() {

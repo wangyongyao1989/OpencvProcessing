@@ -255,7 +255,8 @@ class VideoSearchEngine {
                 if (!inputDone) {
                     val inIdx = decoder.dequeueInputBuffer(10_000)
                     if (inIdx >= 0) {
-                        val buf = decoder.getInputBuffer(inIdx)!!
+                        val buf = decoder.getInputBuffer(inIdx)
+                            ?: throw IllegalStateException("decoder.getInputBuffer($inIdx) = null")
                         val size = extractor.readSampleData(buf, 0)
                         if (size < 0) {
                             decoder.queueInputBuffer(
@@ -304,7 +305,15 @@ class VideoSearchEngine {
             return null
         }
 
-        /** 提取紧凑 Y 平面（适配 rowStride/pixelStride）。 */
+        /**
+         * 提取紧凑 Y 平面（适配 rowStride/pixelStride）。
+         *
+         * 边界加固（与 VideoQualityPipeline 同名实现的口径对齐）：原写法在慢路径
+         * 直接 `buf.position(initialPos + y*rowStride)` + 整行 `get`，末行不足
+         * rowStride 或 Image 尺寸与预期不符时抛 BufferUnderflow/IllegalArgument，
+         * 把抽帧线程打断。逐行夹紧后：数据充足时读到的字节与原实现逐位相同，
+         * 不足时缺失像素保持 0。
+         */
         private fun extractY(image: android.media.Image): ByteArray {
             val w = image.width
             val h = image.height
@@ -312,24 +321,31 @@ class VideoSearchEngine {
             if (h != height) height = h
 
             val plane = image.planes[0]
-            val buf = plane.buffer
+            val buf = plane.buffer.duplicate()   // 不改原 Image buffer 的 position
             val rowStride = plane.rowStride
             val pixelStride = plane.pixelStride
             val out = ByteArray(w * h)
 
             val initialPos = buf.position()
-            if (pixelStride == 1 && rowStride == w && buf.remaining() >= out.size) {
+            val limit = buf.limit()
+            if (pixelStride == 1 && rowStride == w && limit - initialPos >= out.size) {
                 buf.get(out)
             } else {
                 for (y in 0 until h) {
-                    buf.position(initialPos + y * rowStride)
+                    val lineStart = initialPos + y * rowStride
+                    if (lineStart >= limit) break
+                    buf.position(lineStart)
                     if (pixelStride == 1) {
-                        buf.get(out, y * w, w)
+                        val n = minOf(w, limit - lineStart)
+                        if (n > 0) buf.get(out, y * w, n)
                     } else {
                         for (x in 0 until w) {
+                            if (buf.position() >= limit) break
                             out[y * w + x] = buf.get()
                             if (x < w - 1) {
-                                buf.position(buf.position() + pixelStride - 1)
+                                val next = buf.position() + pixelStride - 1
+                                if (next > limit) break        // position(>limit) 会抛
+                                buf.position(next)
                             }
                         }
                     }

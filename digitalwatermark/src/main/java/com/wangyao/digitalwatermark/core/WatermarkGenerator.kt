@@ -18,13 +18,24 @@ object WatermarkGenerator {
     const val SIZE = 64
     const val BIT_COUNT = SIZE * SIZE
 
+    /** 默认水印文字（两行排版，各占一半高度）。 */
+    const val DEFAULT_TEXT = "数字水印"
+
     /**
      * 生成二值水印位阵（行优先）：文字图案阈值化为 0/1。
      * bit = 1 表示水印前景（黑字），bit = 0 表示背景。
      *
-     * @param text 水印文字（默认「数字水印」）
+     * @param text 水印文字（默认「数字水印」）：前一半渲染在第一行、
+     *             后一半在第二行。旧实现声明了该参数却写死「数字/水印」，
+     *             调用方传什么都没用；现在默认值「数字水印」按半切分
+     *             仍然是「数字」「水印」两行，与旧渲染逐像素相同。
      */
-    fun generateBits(text: String = "数字水印"): BooleanArray {
+    fun generateBits(text: String = DEFAULT_TEXT): BooleanArray {
+        val src = text.ifEmpty { DEFAULT_TEXT }
+        val half = (src.length + 1) / 2
+        val line1 = src.substring(0, half)
+        val line2 = src.substring(half)
+
         val bmp = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         canvas.drawColor(Color.WHITE)
@@ -35,8 +46,8 @@ object WatermarkGenerator {
             textSize = SIZE * 0.34f
         }
         val centerX = SIZE / 2f
-        canvas.drawText("数字", centerX, SIZE * 0.38f, paint)
-        canvas.drawText("水印", centerX, SIZE * 0.80f, paint)
+        canvas.drawText(line1, centerX, SIZE * 0.38f, paint)
+        canvas.drawText(line2, centerX, SIZE * 0.80f, paint)
 
         val bits = BooleanArray(BIT_COUNT)
         val px = IntArray(SIZE)

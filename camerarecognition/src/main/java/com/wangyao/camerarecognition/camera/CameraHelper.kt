@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -49,6 +50,9 @@ class CameraHelper(
         /** 朝向常量（沿用旧 legacy API 数值：0=后置 1=前置，调用方比较逻辑不变）。 */
         const val FACING_BACK = 0
         const val FACING_FRONT = 1
+
+        /** 停止分析线程时的最长等待（毫秒）：足够跑完一帧，又不至于卡住主线程。 */
+        private const val ANALYZER_SHUTDOWN_TIMEOUT_MS = 800L
     }
 
     /** 预览帧回调（运行在分析线程，上层直接送 JNI 检测）。 */
@@ -186,12 +190,30 @@ class CameraHelper(
         Log.i(TAG, "stopPreview: camera unbound, analyzer stopped")
     }
 
-    /** 关闭分析线程（等待在执行的分析任务自然结束）。 */
+    /**
+     * 关闭分析线程（等待在执行的分析任务自然结束）。
+     *
+     * 这里必须真的「等」：调用方（两个相机页的 onDestroy）在 stopPreview()
+     * 之后立刻 nativeDestroy(trackerHandle)，而分析线程可能正停在
+     * previewCallback → nativePostFrame 中间。只 shutdown() 不等待的话，
+     * 回调会拿着已释放的句柄进 native —— 表现为偶发 SIGSEGV。
+     * 单帧处理是 640×480 的检测，实测远小于下面的超时；超时后才强制中断，
+     * 避免极端情况下把主线程卡住（本方法只在主线程/生命周期回调里调用）。
+     */
     private fun shutdownAnalyzer() {
-        analysisExecutor?.let {
+        analysisExecutor?.let { ex ->
             try {
-                it.shutdown()
-            } catch (_: Exception) {
+                ex.shutdown()
+                if (!ex.awaitTermination(ANALYZER_SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+                    Log.w(TAG, "shutdownAnalyzer: frame still running after " +
+                            "${ANALYZER_SHUTDOWN_TIMEOUT_MS}ms, forcing stop")
+                    ex.shutdownNow()
+                }
+            } catch (ie: InterruptedException) {
+                Thread.currentThread().interrupt()
+                ex.shutdownNow()
+            } catch (t: Throwable) {
+                Log.e(TAG, "shutdownAnalyzer failed", t)
             }
         }
         analysisExecutor = null

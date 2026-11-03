@@ -9,6 +9,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -167,58 +168,72 @@ class ImageRecognitionFragment : BaseFragment() {
         binding.tvTmStatus.text = getString(R.string.ir_tm_status_running)
 
         thread(start = true) {
-            // 中央取模板（64×64，或图 1/6 边长取小者）
-            val ts = TEMPLATE_SIZE.coerceAtMost(minOf(w, h) / 4)
-            val tx = (w - ts) / 2
-            val ty = (h - ts) / 2
-            val tpl = ByteArray(ts * ts)
-            for (j in 0 until ts) {
-                System.arraycopy(gray, (ty + j) * w + tx, tpl, j * ts, ts)
-            }
-
-            activity?.runOnUiThread {
-                if (isAdded) binding.progressTm.progress = 30
-            }
-
-            // 粗到精全图搜索
-            val r = NccMatcher.searchFull(gray, w, h, tpl, ts, ts)
-
-            activity?.runOnUiThread {
-                if (isAdded) binding.progressTm.progress = 70
-            }
-
-            // 热力图（粗网格）
-            val heat = NccMatcher.similarityMap(gray, w, h, tpl, ts, ts, HEAT_STEP)
-
-            activity?.runOnUiThread {
-                if (!isAdded) return@runOnUiThread
-                binding.progressTm.visibility = View.GONE
-                binding.btnTm.isEnabled = true
-                busy = false
-
-                // 结果图：原图 + 红框标记最佳匹配 + 黄框标记模板原位置
-                val resultBmp = grayToBitmap(gray, w, h)
-                val canvas = Canvas(resultBmp)
-                val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    style = Paint.Style.STROKE
-                    strokeWidth = 3f
+            try {
+                // 中央取模板（64×64，或图 1/6 边长取小者）
+                val ts = TEMPLATE_SIZE.coerceAtMost(minOf(w, h) / 4)
+                val tx = (w - ts) / 2
+                val ty = (h - ts) / 2
+                val tpl = ByteArray(ts * ts)
+                for (j in 0 until ts) {
+                    System.arraycopy(gray, (ty + j) * w + tx, tpl, j * ts, ts)
                 }
-                paint.color = Color.YELLOW
-                canvas.drawRect(Rect(tx, ty, tx + ts, ty + ts), paint)
-                paint.color = Color.RED
-                canvas.drawRect(
-                    Rect(r[0].toInt(), r[1].toInt(), r[0].toInt() + ts, r[1].toInt() + ts),
-                    paint
-                )
-                binding.ivTmResult.setImageBitmap(resultBmp)
 
-                // 热力图：蓝→红
-                binding.ivTmHeatmap.setImageBitmap(heatToBitmap(heat, w, h, ts, HEAT_STEP))
+                activity?.runOnUiThread {
+                    if (isAdded) binding.progressTm.progress = 30
+                }
 
-                binding.tvTmStatus.text = getString(
-                    R.string.ir_tm_status_done, r[2], r[0].toInt(), r[1].toInt(),
-                    tx, ty, ts
-                )
+                // 粗到精全图搜索
+                val r = NccMatcher.searchFull(gray, w, h, tpl, ts, ts)
+
+                activity?.runOnUiThread {
+                    if (isAdded) binding.progressTm.progress = 70
+                }
+
+                // 热力图（粗网格）
+                val heat = NccMatcher.similarityMap(gray, w, h, tpl, ts, ts, HEAT_STEP)
+
+                activity?.runOnUiThread {
+                    if (!isAdded) return@runOnUiThread
+                    binding.progressTm.visibility = View.GONE
+                    binding.btnTm.isEnabled = true
+                    busy = false
+
+                    // 结果图：原图 + 红框标记最佳匹配 + 黄框标记模板原位置
+                    val resultBmp = grayToBitmap(gray, w, h)
+                    val canvas = Canvas(resultBmp)
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        style = Paint.Style.STROKE
+                        strokeWidth = 3f
+                    }
+                    paint.color = Color.YELLOW
+                    canvas.drawRect(Rect(tx, ty, tx + ts, ty + ts), paint)
+                    paint.color = Color.RED
+                    canvas.drawRect(
+                        Rect(r[0].toInt(), r[1].toInt(), r[0].toInt() + ts, r[1].toInt() + ts),
+                        paint
+                    )
+                    binding.ivTmResult.setImageBitmap(resultBmp)
+
+                    // 热力图：蓝→红
+                    binding.ivTmHeatmap.setImageBitmap(heatToBitmap(heat, w, h, ts, HEAT_STEP))
+
+                    binding.tvTmStatus.text = getString(
+                        R.string.ir_tm_status_done, r[2], r[0].toInt(), r[1].toInt(),
+                        tx, ty, ts
+                    )
+                }
+            } catch (t: Throwable) {
+                // 兜底：大图 OOM / 越界等异常原先会直接崩进程，
+                // 且 busy 与按钮永远停在「运行中」
+                Log.e(TAG, "template match failed", t)
+                activity?.runOnUiThread {
+                    if (!isAdded) return@runOnUiThread
+                    binding.progressTm.visibility = View.GONE
+                    binding.btnTm.isEnabled = true
+                    busy = false
+                    binding.tvTmStatus.text =
+                        getString(R.string.op_failed_fmt, t.javaClass.simpleName)
+                }
             }
         }
     }
@@ -248,30 +263,41 @@ class ImageRecognitionFragment : BaseFragment() {
         binding.btnClassify.isEnabled = false
 
         thread(start = true) {
-            // 特征提取 + 最近邻分类（第 11 章完整识别流程）
-            val recognizer = ShapeRecognizer()
-            val mask = renderQueryMask()
-            val result = recognizer.classify(mask, ShapeRecognizer.SIZE, ShapeRecognizer.SIZE)
-            // 查询特征与各类中心的距离
-            val distances = ShapeRecognizer.Shape.entries.joinToString("\n") { shape ->
-                val d = shapeDistances(recognizer, shape)
-                getString(R.string.ir_shape_dist_row, shapeName(shape), d)
-            }
+            try {
+                // 特征提取 + 最近邻分类（第 11 章完整识别流程）
+                val recognizer = ShapeRecognizer()
+                val mask = renderQueryMask()
+                val result = recognizer.classify(mask, ShapeRecognizer.SIZE, ShapeRecognizer.SIZE)
+                // 查询特征与各类中心的距离
+                val distances = ShapeRecognizer.Shape.entries.joinToString("\n") { shape ->
+                    val d = shapeDistances(recognizer, shape)
+                    getString(R.string.ir_shape_dist_row, shapeName(shape), d)
+                }
 
-            activity?.runOnUiThread {
-                if (!isAdded) return@runOnUiThread
-                binding.btnClassify.isEnabled = true
-                busy = false
-                binding.ivShapeQuery.setImageBitmap(maskToBitmap(mask))
-                binding.tvShapeResult.text = getString(
-                    R.string.ir_shape_result_done,
-                    shapeName(result.label),
-                    result.confidence,
-                    result.distance,
-                    shapeName(result.top3[0].first), result.top3[0].second,
-                    shapeName(result.top3[1].first), result.top3[1].second,
-                    shapeName(result.top3[2].first), result.top3[2].second
-                ) + "\n\n" + distances
+                activity?.runOnUiThread {
+                    if (!isAdded) return@runOnUiThread
+                    binding.btnClassify.isEnabled = true
+                    busy = false
+                    binding.ivShapeQuery.setImageBitmap(maskToBitmap(mask))
+                    binding.tvShapeResult.text = getString(
+                        R.string.ir_shape_result_done,
+                        shapeName(result.label),
+                        result.confidence,
+                        result.distance,
+                        shapeName(result.top3[0].first), result.top3[0].second,
+                        shapeName(result.top3[1].first), result.top3[1].second,
+                        shapeName(result.top3[2].first), result.top3[2].second
+                    ) + "\n\n" + distances
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "shape classify failed", t)
+                activity?.runOnUiThread {
+                    if (!isAdded) return@runOnUiThread
+                    binding.btnClassify.isEnabled = true
+                    busy = false
+                    binding.tvShapeResult.text =
+                        getString(R.string.op_failed_fmt, t.javaClass.simpleName)
+                }
             }
         }
     }
@@ -356,6 +382,7 @@ class ImageRecognitionFragment : BaseFragment() {
     }
 
     companion object {
+        private const val TAG = "IR_ImageRecognize"
         private const val ASSET_IMAGE = "IMG_20260821_190758.jpg"
         private const val MAX_DIM = 512
         private const val TEMPLATE_SIZE = 64
